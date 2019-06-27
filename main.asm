@@ -16,7 +16,6 @@ nes2end
     .word IRQ
 
 .segment "ZEROPAGE"
-sleeping: .res1
 
 .segment "BSS"
 
@@ -70,10 +69,6 @@ RESET:
     stx $2001   ; disable rendering
     stx $4010   ; disable DMC IRQs
 
-    ; set NMI to just RTI
-    lda #NMI_RTI
-    sta NMI_Instr
-
 :   ; First wait for VBlank to make sure PPU is ready.
     bit $2002   ; test this bit with ACC
     bpl :- ; Branch on result plus
@@ -92,13 +87,28 @@ RESET:
     inx
     bne :-  ; loop if != 0
 
+    ; set NMI to just RTI
+    lda #NMI_RTI
+    sta NMI_Instr
+
 :   ; Second wait for vblank.  PPU is ready after this
     bit $2002
     bpl :-
 
+    lda #$88
+    sta $2000
+
     jsr MMC1_Init
 
+Forever:
+    jsr WaitForNMI
+    jmp Forever
+
+; Maybe change this to use a sleeping flag
+; This can probably break if NMI goes long
 WaitForNMI:
+:   bit $2002
+    bpl :-
     rts
 
 MMC1_Init:
