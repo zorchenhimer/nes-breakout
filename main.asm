@@ -16,12 +16,24 @@ nes2end
     .word IRQ
 
 .segment "ZEROPAGE"
+AddressPointer0:    .res 2
+AddressPointer1:    .res 2
+AddressPointer2:    .res 2
+AddressPointer3:    .res 2
+
+TmpX:   .res 1
+TmpY:   .res 1
+TmpZ:   .res 1
 
 .segment "BSS"
+ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
+ChrWriteTileCount:  .res 1
+
+.include "credits_ram.asm"
 
 .segment "NMIRAM"
-NMI_Instr: .res 1
-NMI_Pointer: .res 2
+NMI_Instr:      .res 1
+NMI_Pointer:    .res 2
 
 NMI_RTI = $40
 NMI_JMP = $4C
@@ -45,8 +57,11 @@ Sprites: .res 256
 .segment "PAGE11"
 .segment "PAGE12"
 .segment "PAGE13"
+.include "credits_data.i"
+
 .segment "PAGE14"
 
+CreditsChrData:
     .incbin "credits.chr"
 
 .segment "PAGE_FIXED"
@@ -98,7 +113,8 @@ RESET:
     lda #$88
     sta $2000
 
-    jsr MMC1_Init
+    ;jsr MMC1_Init
+    jmp Credits_Init
 
 Forever:
     jsr WaitForNMI
@@ -163,4 +179,157 @@ MMC1_Select_Page:
     sta $E000
     rts
 
+WriteSprites:
+    bit $2002
+    lda #$00
+    sta $2003
+    lda #$02
+    sta $4014
+    rts
+
+; Write all eight palettes to the PPU directly from ROM space
+; Uses AddressPointer3 as input
+WritePaletteData:
+    bit $2002
+    lda #$3F
+    sta $2006
+    lda #$00
+    sta $2006
+
+    ldy #0
+:
+    lda (AddressPointer3), y
+    sta $2007
+    iny
+    cpy #16
+    bne :-
+
+    rts
+
+; Writes CHR data directly to RAM from ROM space
+; Input:
+;   AddressPointer3     source data location
+;   ChrWriteDest        destination pattern table
+;   ChrWriteTileCount   number of tiles
+WriteChrData:
+    bit $2002
+
+    bit ChrWriteDest
+    bmi @bottomTable
+    lda #$00
+    sta $2006
+    sta $2006
+    jmp @copyLoop
+
+@bottomTable:
+    lda #$10
+    sta $2006
+    lda #$00
+    sta $2006
+
+@copyLoop:
+    ldy #0
+:   lda (AddressPointer3), y
+    sta $2007
+    iny
+    cpy #16
+    bne :-
+
+    ; Increment pointer to next tile
+    lda AddressPointer3
+    clc
+    adc #16
+    sta AddressPointer3
+    bcc :+
+    inc AddressPointer3+1
+:
+    dec ChrWriteTileCount
+    bne @copyLoop
+
+    rts
+
+FillNametable0:
+    sta TmpX
+
+    bit $2002
+    lda #$20
+    sta $2006
+    jmp utils_FillNametable
+
+FillNametable1:
+    sta TmpX
+
+    bit $2002
+    lda #$24
+    sta $2006
+    jmp utils_FillNametable
+
+FillNametable2:
+    sta TmpX
+
+    bit $2002
+    lda #$28
+    sta $2006
+    jmp utils_FillNametable
+
+FillNametable3:
+    sta TmpX
+
+    bit $2002
+    lda #$2C
+    sta $2006
+    jmp utils_FillNametable
+
+utils_FillNametable:
+    lda #00
+    sta $2006
+
+    ldx #30
+    lda TmpX
+@loop2:
+.repeat 32
+    sta $2007
+.endrepeat
+    dex
+    bne @loop2
+    rts
+
+ClearAttrTable0:
+    bit $2002
+    lda #$23
+    sta $2006
+    jmp utils_ClearAttrTable
+
+ClearAttrTable1:
+    bit $2002
+    lda #$27
+    sta $2006
+    jmp utils_ClearAttrTable
+
+ClearAttrTable2:
+    bit $2002
+    lda #$2B
+    sta $2006
+    jmp utils_ClearAttrTable
+
+ClearAttrTable3:
+    bit $2002
+    lda #$2F
+    sta $2006
+    jmp utils_ClearAttrTable
+
+utils_ClearAttrTable:
+    lda #$C0
+    sta $2006
+    ldx #8
+    lda #$00
+@loop:
+.repeat 8
+    sta $2007
+.endrepeat
+    dex
+    bne @loop
+    rts
+
+.include "credits.asm"
 
