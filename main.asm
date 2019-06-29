@@ -21,6 +21,8 @@ AddressPointer1:    .res 2
 AddressPointer2:    .res 2
 AddressPointer3:    .res 2
 
+Sleeping: .res 1
+
 TmpX:   .res 1
 TmpY:   .res 1
 TmpZ:   .res 1
@@ -28,6 +30,9 @@ TmpZ:   .res 1
 .segment "BSS"
 ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
 ChrWriteTileCount:  .res 1
+
+; Overworld map
+CurrentMap:     .res 312
 
 .include "credits_ram.asm"
 
@@ -43,7 +48,12 @@ Sprites: .res 256
 
 .segment "WRAM"
 
+;; Just the mini map data for bricks that have been interacted with
+
+
 .segment "PAGE00"
+;; Game Code
+
 .segment "PAGE01"
 .segment "PAGE02"
 .segment "PAGE03"
@@ -54,8 +64,13 @@ Sprites: .res 256
 .segment "PAGE08"
 .segment "PAGE09"
 .segment "PAGE10"
+
 .segment "PAGE11"
+;; Minimap data
+
 .segment "PAGE12"
+;; Overworld map Data
+
 .segment "PAGE13"
 .include "credits_data.i"
 
@@ -63,6 +78,8 @@ Sprites: .res 256
 
 CreditsChrData:
     .incbin "credits.chr"
+GameChrData:
+    .incbin "game.chr"
 
 .segment "PAGE_FIXED"
 IRQ:
@@ -114,7 +131,8 @@ RESET:
     sta $2000
 
     ;jsr MMC1_Init
-    jmp Credits_Init
+    ;jmp Credits_Init
+    jmp NtSwapTest
 
 Forever:
     jsr WaitForNMI
@@ -123,9 +141,18 @@ Forever:
 ; Maybe change this to use a sleeping flag
 ; This can probably break if NMI goes long
 WaitForNMI:
-:   bit $2002
+:   bit Sleeping
     bpl :-
+    lda #0
+    sta Sleeping
     rts
+
+NMI_Bare:
+    pha
+    lda #$FF
+    sta Sleeping
+    pla
+    rti
 
 MMC1_Init:
     ; Set flag
@@ -330,6 +357,180 @@ utils_ClearAttrTable:
     dex
     bne @loop
     rts
+
+NtSwapTest:
+    ; "Disable" NMI
+    lda #NMI_JMP
+    sta NMI_Instr
+
+    lda #<NMI_Bare
+    sta NMI_Pointer+0
+    lda #>NMI_Bare
+    sta NMI_Pointer+1
+
+    ; Disable drawing BG and sprites
+    lda #$00
+    sta $2001
+
+    jsr MMC1_Select_Vert
+
+    bit $2002
+
+    ; NT00
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+
+    lda #0
+    ldx #240
+:
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+    dex
+    bne :-
+
+    ; attr table
+    ldx #64
+:
+    sta $2007
+    dex
+    bne :-
+
+    lda #$20
+    tax
+    sta $2006
+    sta $2006
+
+    lda #$11
+:
+    sta $2007
+    dex
+    bne :-
+
+    ; NT01
+    lda #$24
+    sta $2006
+    lda #$00
+    sta $2006
+    lda #$FF
+    ldx #240
+:
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+    dex
+    bne :-
+
+    ; attr table
+    ldx #64
+    lda #$00
+:
+    sta $2007
+    dex
+    bne :-
+
+; clear sprites
+    lda #$FF
+    ldx #0
+:
+    sta Sprites, x
+    inx
+    bne :-
+
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+    lda #$FF
+    sta $2007
+
+    lda #$3F
+    sta $2006
+    lda #$00
+    sta $2006
+
+    lda #$0F
+    sta $2007
+    lda #$11
+    sta $2007
+    lda #$14
+    sta $2007
+    lda #$1B
+    sta $2007
+
+
+    ; sprite zero
+    lda #1
+    sta Sprites+0
+    sta Sprites+3
+
+    lda #$FF
+    sta Sprites+1
+    lda #0
+    sta Sprites+2
+
+    jsr WriteSprites
+
+    lda #14
+    jsr MMC1_Select_Page
+
+    lda #<GameChrData
+    sta AddressPointer3
+    lda #>GameChrData
+    sta AddressPointer3+1
+    lda #$00
+    sta ChrWriteTileCount
+    lda #$00
+    sta ChrWriteDest
+    jsr WriteChrData
+
+    lda #00
+    jsr MMC1_Select_Page
+
+    lda #%00011110
+    sta $2001
+
+    lda #$80
+    sta $2000
+
+    ; reset scroll
+    bit $2002
+    lda #$00
+    sta $2005
+    sta $2005
+
+NtSwapFrame:
+    jsr WaitForNMI
+
+    lda #$80
+    sta $2000
+
+    ; Wait for SP Zero
+
+    ; wait for vblank to end
+:   bit $2002
+    bvs :-
+
+; wait for sprite zero hit
+:
+    bit $2002
+    bvc :-
+
+; wait loop
+    ldx #255
+:
+    nop
+    dex
+    bne :-
+
+    lda #$81
+    sta $2000
+
+    jmp NtSwapFrame
 
 .include "credits.asm"
 

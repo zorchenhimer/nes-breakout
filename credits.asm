@@ -114,7 +114,7 @@ Credits_Init:
     sta $2001
 
     ; reset scroll
-    bit $2001
+    bit $2002
     lda #$00
     sta $2005
     sta $2005

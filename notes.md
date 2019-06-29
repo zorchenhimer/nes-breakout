@@ -30,6 +30,20 @@ Overworld map has color-coded bricks.  Hitting a brick takes you into that
 brick's smaller map.  Clearing the smaller map breaks the brick on the
 overworld.
 
+Two board types: 
+- Overworld
+- Mini
+
+Each level will have a defined overworld world board, but will randomly pick
+the mini boards when they are interacted with.
+
+The mini boards will be decompressed to RAM on demand and removed when they are
+cleared from the overworld.
+
+The overworld board will be decompressed into main RAM at the start of the
+round and it will use two bytes per meta tile, and two byte per blank tile
+($FF).
+
 ## All games
 
 Ball bounce angle changes depending on where it bounces on the paddle.

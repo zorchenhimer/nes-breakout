@@ -1,5 +1,5 @@
 
-export PATH := $(PATH):../tools/cc65/bin
+export PATH := $(PATH):../tools/cc65/bin:../../../Program Files/Tiled
 #:../../golang/src/github.com/zorchenhimer/go-nes/cmd
 
 EXT=
@@ -24,7 +24,7 @@ GENCRED = generate-credits$(EXT)
 NAME = breakout
 
 # any CHR files included
-CHR = credits.chr
+CHR = credits.chr game.chr
 
 # List of all the sources files
 SOURCES = main.asm nes2header.inc \
@@ -33,7 +33,7 @@ SOURCES = main.asm nes2header.inc \
 # misc
 RM = rm
 
-.PHONY: clean default cleanSym symbols pal set_pal
+.PHONY: clean default cleanSym symbols pal set_pal map
 
 default: all
 all: bin/$(NAME).nes
@@ -69,3 +69,5 @@ bin/$(NAME).nes: bin/$(NAME).o $(NESCFG)
 credits_data.i: $(GENCRED)
 	./$(GENCRED) -x zorchenhimer -o credits_data.i -i subscriber-list.csv
 
+map:
+	tiled.exe --export-map json map.tmx map-exported.json
