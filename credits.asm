@@ -3,10 +3,9 @@
 CLEAR_TILE_ID   = 0
 CR_T2_SPEED     = 8     ; color cycle speed (in frames) for the tier two names
 
-Credits_Init:
+Init_Credits:
     ; "Disable" NMI
-    lda #NMI_RTI
-    sta NMI_Instr
+    NMI_Disable
 
     ; Disable drawing BG and sprites
     lda #$00
@@ -14,22 +13,8 @@ Credits_Init:
 
     jsr MMC1_Select_Horiz
 
-    lda #14
-    jsr MMC1_Select_Page
-
-    ;jsr MMC1_Pattern1
-    lda #<CreditsChrData
-    sta AddressPointer3
-    lda #>CreditsChrData
-    sta AddressPointer3+1
     lda #$00
-    sta ChrWriteTileCount
-    lda #$FF
-    sta ChrWriteDest
-    jsr WriteChrData
-
-    lda #13
-    jsr MMC1_Select_Page
+    jsr LoadChrData
 
     lda #<Credits_Palette
     sta AddressPointer3
@@ -48,13 +33,8 @@ Credits_Init:
     jsr ClearAttrTable0
     jsr ClearAttrTable2
 
-    lda #$FF
-    ldx #0
-:
-    sta Sprites, x
-    inx
-    bne :-
-    ;jsr ClearSprites
+    jsr ClearSprites
+    jsr WriteSprites
 
     lda #0
     sta cr_currentAttrOffset
@@ -99,14 +79,7 @@ Credits_Init:
     lda #CR_T2_SPEED
     sta cr_t2Count
 
-    lda #NMI_JMP
-    sta NMI_Instr
-
-    lda #<Credits_NMI
-    ;sta DoNMIPointer
-    sta NMI_Pointer
-    lda #>Credits_NMI
-    sta NMI_Pointer+1
+    NMI_Set Credits_NMI
 
     ;lda #$00
     ;sta $2000
@@ -728,6 +701,8 @@ Credits_NMI:
     jsr Credits_WriteBuffer
 
 @noUpdate:
+    dec Sleeping
+
     ; Scroll
     bit $2002
     ; X

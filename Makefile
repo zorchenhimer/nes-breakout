@@ -28,6 +28,7 @@ CHR = credits.chr game.chr
 
 # List of all the sources files
 SOURCES = main.asm nes2header.inc \
+		  game.asm \
 		  credits.asm credits_ram.asm credits_data.i
 
 # misc

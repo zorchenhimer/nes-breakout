@@ -1,5 +1,20 @@
 ; asmsyntax=ca65
 
+.macro NMI_Disable
+    lda #NMI_RTI
+    sta NMI_Instr
+.endmacro
+
+.macro NMI_Set addr
+    lda #NMI_JMP
+    sta NMI_Instr
+
+    lda #<addr
+    sta NMI_Pointer
+    lda #>addr
+    sta NMI_Pointer+1
+.endmacro
+
 .include "nes2header.inc"
 nes2mapper 1
 nes2prg 16 * 16 * 1024  ; 256k PRG
@@ -27,12 +42,30 @@ TmpX:   .res 1
 TmpY:   .res 1
 TmpZ:   .res 1
 
+; Coordinates with sub-pixel accuracy
+; These are unsigned
+; First byte is decimal, second is integer
+BallX:  .res 2
+BallY:  .res 2
+
+; These are signed
+; First byte is unsigned decimal, second is signed integer
+BallSpeedX: .res 2
+BallSpeedY: .res 2
+
+IgnoreInput: .res 1
+
 .segment "BSS"
 ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
 ChrWriteTileCount:  .res 1
 
 ; Overworld map
 CurrentMap:     .res 312
+
+controller1:        .res 1
+controller1_Old:    .res 1
+controller2:        .res 1
+controller2_Old:    .res 1
 
 .include "credits_ram.asm"
 
@@ -52,29 +85,46 @@ Sprites: .res 256
 
 
 .segment "PAGE00"
+    .byte 0
+    nop
 ;; Game Code
+.include "game.asm"
 
 .segment "PAGE01"
+    .byte 1
 .segment "PAGE02"
+    .byte 2
 .segment "PAGE03"
+    .byte 3
 .segment "PAGE04"
+    .byte 4
 .segment "PAGE05"
+    .byte 5
 .segment "PAGE06"
+    .byte 6
 .segment "PAGE07"
+    .byte 7
 .segment "PAGE08"
+    .byte 8
 .segment "PAGE09"
+    .byte 9
 .segment "PAGE10"
+    .byte 10
 
 .segment "PAGE11"
+    .byte 11
 ;; Minimap data
 
 .segment "PAGE12"
+    .byte 12
 ;; Overworld map Data
 
 .segment "PAGE13"
+    .byte 13
 .include "credits_data.i"
 
 .segment "PAGE14"
+    .byte 14
 
 CreditsChrData:
     .incbin "credits.chr"
@@ -82,6 +132,7 @@ GameChrData:
     .incbin "game.chr"
 
 .segment "PAGE_FIXED"
+    .byte 15
 IRQ:
     rti
 
@@ -130,9 +181,15 @@ RESET:
     lda #$88
     sta $2000
 
-    ;jsr MMC1_Init
-    ;jmp Credits_Init
-    jmp NtSwapTest
+    jsr MMC1_Init
+
+    lda #0
+    jsr MMC1_Select_Page
+
+    jmp Init_Game
+
+    ;jmp Init_Credits
+    ;jmp NtSwapTest
 
 Forever:
     jsr WaitForNMI
@@ -358,6 +415,16 @@ utils_ClearAttrTable:
     bne @loop
     rts
 
+ClearSprites:
+; clear sprites
+    lda #$FF
+    ldx #0
+:
+    sta Sprites, x
+    inx
+    bne :-
+    rts
+
 NtSwapTest:
     ; "Disable" NMI
     lda #NMI_JMP
@@ -433,13 +500,6 @@ NtSwapTest:
     dex
     bne :-
 
-; clear sprites
-    lda #$FF
-    ldx #0
-:
-    sta Sprites, x
-    inx
-    bne :-
 
     lda #$20
     sta $2006
@@ -531,6 +591,150 @@ NtSwapFrame:
     sta $2000
 
     jmp NtSwapFrame
+
+LoadChrData:
+    ldx $8000   ; Load the bank ID
+
+    ; A holds index to Index_ChrData
+    asl a
+    asl a
+    tay
+
+    ; Load up data pointer
+    lda Index_ChrData+0, y
+    sta AddressPointer3+0
+    lda Index_ChrData+1, y
+    sta AddressPointer3+1
+
+    ; Load up tile count
+    lda Index_ChrData+2, y
+    sta ChrWriteTileCount
+
+    ; Load the destination pattern table, and mapper
+    ; page that contains the CHR data.
+    lda Index_ChrData+3, y
+    sta ChrWriteDest
+
+    ; Right half contains page of data
+    and #$0F
+    jsr MMC1_Select_Page
+
+    jsr WriteChrData
+
+    ; Go back to the original page
+    txa
+    jsr MMC1_Select_Page
+
+    rts
+
+Index_ChrData:
+    .word CreditsChrData    ; Source address
+    .byte $00   ; Tile count
+    .byte $FE   ; Destination pattern table
+
+    .word GameChrData   ; Source address
+    .byte 64   ; Tile count
+    .byte $FE   ; Destination pattern table
+
+; Button Constants
+BUTTON_A        = 1 << 7
+BUTTON_B        = 1 << 6
+BUTTON_SELECT   = 1 << 5
+BUTTON_START    = 1 << 4
+BUTTON_UP       = 1 << 3
+BUTTON_DOWN     = 1 << 2
+BUTTON_LEFT     = 1 << 1
+BUTTON_RIGHT    = 1 << 0
+
+; Was a button pressed this frame?
+ButtonPressedP1:
+    sta TmpX
+
+    lda IgnoreInput
+    beq :+
+    dec IgnoreInput
+    lda #0
+    rts
+:
+
+    lda TmpX
+    and controller1
+    sta TmpY
+
+    lda controller1_Old
+    and TmpX
+
+    cmp TmpY
+    bne btnPress_stb
+
+    ; no button change
+    rts
+
+ButtonPressedP2:
+    sta TmpX
+
+    lda IgnoreInput
+    beq :+
+    dec IgnoreInput
+    lda #0
+    rts
+:
+
+    lda TmpX
+    and controller2
+    sta TmpY
+
+    lda controller2_Old
+    and TmpX
+
+    cmp TmpY
+    bne btnPress_stb
+
+    ; no button change
+    rts
+
+btnPress_stb:
+    ; button released
+    lda TmpY
+    bne btnPress_stc
+    rts
+
+btnPress_stc:
+    ; button pressed
+    lda #1
+    rts
+
+; Player input
+ReadControllers:
+    lda controller1
+    sta controller1_Old
+
+    lda controller2
+    sta controller2_Old
+
+    ; Freeze input
+    lda #1
+    sta $4016
+    lda #0
+    sta $4016
+
+    LDX #$08
+@player1:
+    lda $4016
+    lsr A           ; Bit0 -> Carry
+    rol controller1 ; Bit0 <- Carry
+    dex
+    bne @player1
+
+    ldx #$08
+@player2:
+    lda $4017
+    lsr A           ; Bit0 -> Carry
+    rol controller2 ; Bit0 <- Carry
+    dex
+    bne @player2
+    rts
+
 
 .include "credits.asm"
 
