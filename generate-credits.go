@@ -442,7 +442,6 @@ func main() {
 			},
 		},
 
-
 		// Special thanks for music
 		&GenericChunk{
 			Comment:   "Special thanks for music",
@@ -462,7 +461,7 @@ func main() {
 		},
 
 		&GenericChunk{
-			Comment: "Special thanks for music, pt2",
+			Comment:   "Special thanks for music, pt2",
 			Attribute: uint(0),
 			OpCodes: []*GenericData{
 				NewGenericData(CR_OP_RLE, 9, []byte(" ")),
@@ -483,7 +482,6 @@ func main() {
 				NewGenericData(CR_OP_ATTR, 0, []byte{0x0}),
 			},
 		},
-
 	}
 
 	footerChunks := []DataChunk{

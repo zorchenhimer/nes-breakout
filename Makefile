@@ -15,10 +15,12 @@ LD = ld65
 NESCFG = nes_snrom.cfg
 
 # Tool that generates CHR data from Bitmap images
-BMP2CHR = bmp2chr$(EXT)
+BMP2CHR = bin/bmp2chr$(EXT)
 
 # Tool that generates credits from an input CSV file
-GENCRED = generate-credits$(EXT)
+GENCRED = bin/generate-credits$(EXT)
+
+CONVMAP = bin/convert-map$(EXT)
 
 # Name of the main source file, minus the extension
 NAME = breakout
@@ -28,20 +30,21 @@ CHR = credits.chr game.chr
 
 # List of all the sources files
 SOURCES = main.asm nes2header.inc \
-		  game.asm \
+		  game.asm map_data.i \
 		  credits.asm credits_ram.asm credits_data.i
 
 # misc
 RM = rm
 
-.PHONY: clean default cleanSym symbols pal set_pal map
+.PHONY: clean default cleanSym symbols pal set_pal map maps
 
 default: all
 all: bin/$(NAME).nes
-names: clrNames credits_data.i bin/$(NAME).nes
+names: $(GENCRED) clrNames credits_data.i bin/$(NAME).nes
+maps: $(CONVMAP) map_data.i
 
 clean:
-	-$(RM) bin/*.* credits_data.i *.chr $(BMP2CHR) $(GENCRED)
+	-$(RM) bin/*.* credits_data.i *.chr map_data.i
 
 clrNames:
 	-$(RM) credits_data.i
@@ -49,11 +52,17 @@ clrNames:
 bin/:
 	-mkdir bin
 
-%.chr: %.bmp
-	./bmp2chr -i $< -o $@
+%.chr: %.bmp $(BMP2CHR)
+	$(BMP2CHR) -i $< -o $@
 
 $(GENCRED): generate-credits.go
-	go build generate-credits.go
+	go build -o $(GENCRED) generate-credits.go
+
+$(BMP2CHR): bmp2chr.go
+	go build -o $(BMP2CHR) bmp2chr.go
+
+$(CONVMAP): convert-map.go
+	go build -o $(CONVMAP) convert-map.go
 
 bin/$(NAME).o: bin/ $(SOURCES) $(CHR)
 	$(CA) -g \
@@ -68,7 +77,7 @@ bin/$(NAME).nes: bin/$(NAME).o $(NESCFG)
 		bin/$(NAME).o
 
 credits_data.i: $(GENCRED)
-	./$(GENCRED) -x zorchenhimer -o credits_data.i -i subscriber-list.csv
+	$(GENCRED) -x zorchenhimer -o credits_data.i -i subscriber-list.csv
 
-map:
-	tiled.exe --export-map json map.tmx map-exported.json
+map_data.i: $(CONVMAP) main-boards.tmx child-boards.tmx
+	$(CONVMAP) main-boards.tmx child-boards.tmx maps_data.i
