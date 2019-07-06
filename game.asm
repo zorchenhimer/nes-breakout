@@ -115,6 +115,19 @@ Init_Game:
     dex
     bne :-
 
+    ; Sprite zero
+    ; TODO: Try to change the background color
+    ; during H-Blank with this as the trigger
+    lda #247
+    sta Sprites+3
+    lda #120
+    sta Sprites+0
+
+    lda #0
+    sta Sprites+1
+    lda #1
+    sta Sprites+2
+
     lda #$00
     sta BallX
     sta BallY
