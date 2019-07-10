@@ -257,3 +257,124 @@ UpdateBallCoords:
     sbc #4
     sta Sprites+4
     rts
+
+; Row witdh of 26
+BOARD_WIDTH = 26
+BOARD_HEIGHT = 12
+BOARD_OFFSET_Y = 24
+BOARD_OFFSET_X = 24
+; Row with of 24
+;BOARD_WIDTH = 24
+;BOARD_HEIGHT = 12
+;BOARD_OFFSET_Y = 24
+;BOARD_OFFSET_X = 32
+
+; Reads sprite coordinates and returns map tile index
+; TODO: do this correctly, lol
+; AddressPointer0 holds a pointer to the start of the
+; row in memory.  Y holds the offset from that pointer.
+SpriteToTile:
+    lda BallY+1
+    sec
+    ; Subtract offset
+    sbc #BOARD_OFFSET_Y
+    ; divide by 8
+    lsr a
+    lsr a
+    lsr a
+    ; Lookup that row's pointer
+    tax
+    lda Row_Addresses_Low, x
+    sta AddressPointer0
+    lda Row_Addresses_High, x
+    sta AddressPointer0+1
+
+    lda BallX+1
+    sec
+    ; Subtract offset
+    sbc #BOARD_OFFSET_X
+    ; divide by 8
+    lsr a
+    lsr a
+    lsr a
+    ; "Store" it
+    tay
+    rts
+
+; TODO: Check side of brick collision for bounce.
+CheckCollide:
+    lda BallY+1
+    ; Y >= BOARD_OFFSET_Y, continue
+    cmp #BOARD_OFFSET_Y
+    bcs :+
+    ; Above board
+    rts
+:
+    ; Y <= BOARD_HEIGHT + BOARD_OFFSET_Y, continue
+    cmp #((BOARD_HEIGHT * 8) + BOARD_OFFSET_Y)
+    beq :+
+    bcc :+
+    ; Below board
+    rts
+:
+
+    lda BallX+1
+    ; X >= BOARD_OFFSET_X, continue
+    cmp #BOARD_OFFSET_X
+    bcs :+
+    ; Left of board
+    rts
+:
+    ; X <= BOARD_WIDTH + BOARD_OFFSET_X, continue
+    cmp #((BOARD_WIDTH * 8) + BOARD_OFFSET_X)
+    beq :+
+    bcc :+
+    ; Right of board
+    rts
+:
+
+    ; Ball is in board area.  Check for brick collision
+    jsr SpriteToTile
+    lda (AddressPointer0), y
+    bne :+
+    ; No tile
+    rts
+:
+    bpl @DecodeFirstByte
+    ; TODO: verify that this can never happen on first column
+    dey
+    lda (AddressPointer0), y
+
+@DecodeFirstByte:
+    ; Mask the brick type
+    and #$0F
+    asl a
+    tax
+
+    ; JMP to collision code for the given brick type
+    lda Index_TileType+1, x
+    pha
+    lda Index_TileType, x
+    pha
+    rts
+
+Index_TileTypes:
+    .word Collide_Health-1
+    .word Collide_Spawn-1
+    .word Collide_Powerup-1
+    .word Collide_Powerdown-1
+    ; Add some more? idk
+
+; Decriment health.  Break when it rolls under.
+Collide_Health:
+    rts
+
+; Go to the child board
+Collide_Spawn:
+    rts
+
+; Delete the brick, and spawn a sprite
+Collide_Powerup:
+    rts
+Collide_PowerDown:
+    rts
