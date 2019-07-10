@@ -44,7 +44,7 @@ TmpZ:   .res 1
 
 ; Coordinates with sub-pixel accuracy
 ; These are unsigned
-; First byte is decimal, second is integer
+; First byte is fraction, second is whole
 BallX:  .res 2
 BallY:  .res 2
 
@@ -61,6 +61,7 @@ ChrWriteTileCount:  .res 1
 
 ; Overworld map
 CurrentMap:     .res 312
+;CurrentMap:     .res 288
 
 controller1:        .res 1
 controller1_Old:    .res 1
@@ -86,12 +87,13 @@ Sprites: .res 256
 
 .segment "PAGE00"
     .byte 0
-    nop
 ;; Game Code
 .include "game.asm"
 
 .segment "PAGE01"
     .byte 1
+.include "map_data.i"
+
 .segment "PAGE02"
     .byte 2
 .segment "PAGE03"
@@ -630,11 +632,11 @@ LoadChrData:
 Index_ChrData:
     .word CreditsChrData    ; Source address
     .byte $00   ; Tile count
-    .byte $FE   ; Destination pattern table
+    .byte $FE   ; Destination pattern table & PRG bank
 
     .word GameChrData   ; Source address
-    .byte 64   ; Tile count
-    .byte $FE   ; Destination pattern table
+    .byte 64    ; Tile count
+    .byte $FE   ; Destination pattern table & PRG bank
 
 ; Button Constants
 BUTTON_A        = 1 << 7
@@ -734,7 +736,6 @@ ReadControllers:
     dex
     bne @player2
     rts
-
 
 .include "credits.asm"
 
