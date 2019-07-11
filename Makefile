@@ -62,8 +62,8 @@ $(GENCRED): generate-credits.go
 $(BMP2CHR): bmp2chr.go
 	go build -o $(BMP2CHR) bmp2chr.go
 
-$(CONVMAP): convert-map.go
-	go build -o $(CONVMAP) convert-map.go
+$(CONVMAP): convert-map/*.go
+	cd convert-map && go build -o ../$(CONVMAP)
 
 bin/$(NAME).o: bin/ $(SOURCES) $(CHR)
 	$(CA) -g \
