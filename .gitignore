@@ -2,3 +2,4 @@ bin/
 *.exe
 *.chr
 *.json
+*.i

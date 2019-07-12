@@ -1,15 +1,17 @@
 package main
 
 import (
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"strings"
 )
 
 type MapXml struct {
-	XMLName  string       `xml:"map"`
-	Boards   []XmlLayer   `xml:"layer"`
-	Tilesets []XmlTileset `xml:"tileset"`
-	SourceFile string `xml:"-"`
+	XMLName    string       `xml:"map"`
+	Boards     []XmlLayer   `xml:"layer"`
+	Tilesets   []XmlTileset `xml:"tileset"`
+	SourceFile string       `xml:"-"`
 }
 
 type XmlTileset struct {
@@ -18,11 +20,12 @@ type XmlTileset struct {
 }
 
 type XmlLayer struct {
-	Id     int    `xml:"id,attr"`
-	Name   string `xml:"name,attr"`
-	Width  int    `xml:"width,attr"`
-	Height int    `xml:"height,attr"`
-	Data   string `xml:"data"`
+	Id         int             `xml:"id,attr"`
+	Name       string          `xml:"name,attr"`
+	Width      int             `xml:"width,attr"`
+	Height     int             `xml:"height,attr"`
+	Data       string          `xml:"data"`
+	Properties XmlPropertyList `xml:"properties>property"`
 }
 
 func (m MapXml) String() string {
@@ -35,7 +38,13 @@ func (m MapXml) String() string {
 }
 
 func (l XmlLayer) String() string {
-	return fmt.Sprintf("<Layer Id:%d Name:%q Width:%d Height:%d DataLength:%d>", l.Id, l.Name, l.Width, l.Height, len(l.Data))
+	props := []string{}
+	//for _, p := range l.Properties.Props {
+	for _, p := range l.Properties {
+		props = append(props, p.String())
+	}
+
+	return fmt.Sprintf("<Layer Id:%d Name:%q Width:%d Height:%d DataLength:%d Properties:[%s]>", l.Id, l.Name, l.Width, l.Height, len(l.Data), strings.Join(props, "; "))
 }
 
 func (l XmlLayer) GetData() [][]int {
@@ -59,4 +68,30 @@ func (l XmlLayer) GetData() [][]int {
 	}
 
 	return data
+}
+
+func (xl XmlLayer) GetId() int {
+	var id int
+	_, err := fmt.Sscanf(strings.ToLower(xl.Name), "board-%d", &id)
+	if err != nil {
+		return -1
+	}
+	return id
+}
+
+func LoadMap(filename string) (*MapXml, error) {
+	rawxml, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("Error reading XML file: %v\n", err)
+	}
+
+	var mapData MapXml
+	err = xml.Unmarshal(rawxml, &mapData)
+	if err != nil {
+		return nil, fmt.Errorf("Error unmarshaling XML: %v\n", err)
+	}
+
+	mapData.SourceFile = filename
+
+	return &mapData, nil
 }

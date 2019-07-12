@@ -44,8 +44,7 @@ names: $(GENCRED) clrNames credits_data.i bin/$(NAME).nes
 maps: $(CONVMAP) map_data.i
 
 clean:
-	-$(RM) bin/*.* credits_data.i *.chr 
-	#map_data.i
+	-$(RM) bin/*.* credits_data.i *.chr map_data.i
 
 clrNames:
 	-$(RM) credits_data.i
@@ -81,4 +80,4 @@ credits_data.i: $(GENCRED)
 	$(GENCRED) -x zorchenhimer -o credits_data.i -i subscriber-list.csv
 
 map_data.i: $(CONVMAP) main-boards.tmx child-boards.tmx
-	$(CONVMAP) main-boards.tmx child-boards.tmx maps_data.i
+	$(CONVMAP) main-boards.tmx child-boards.tmx map_data.i

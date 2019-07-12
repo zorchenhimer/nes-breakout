@@ -8,10 +8,9 @@ package main
 */
 
 import (
-	"encoding/xml"
 	"fmt"
-	"io/ioutil"
 	"os"
+	"strings"
 )
 
 func usage() {
@@ -25,58 +24,136 @@ func main() {
 		os.Exit(1)
 	}
 
-	rawMain, err := ioutil.ReadFile(os.Args[1])
+	mapData, err := LoadMap(os.Args[1])
 	if err != nil {
-		fmt.Printf("Error reading XML file %q: %v\n", os.Args[1], err)
+		fmt.Printf("Unable to load main map %q: %v\n", os.Args[1], err)
 		os.Exit(1)
 	}
 
-	rawChild, err := ioutil.ReadFile(os.Args[2])
+	childData, err := LoadMap(os.Args[2])
 	if err != nil {
-		fmt.Printf("Error reading XML file %q: %v\n", os.Args[2], err)
-	}
-
-	var mapData MapXml
-	err = xml.Unmarshal(rawMain, &mapData)
-	if err != nil {
-		fmt.Printf("Error unmarshaling XML: %s\n", err)
+		fmt.Printf("Unable to load child map %q: %v\n", os.Args[2], err)
 		os.Exit(1)
 	}
 
-	var childData MapXml
-	err = xml.Unmarshal(rawChild, &childData)
-	if err != nil {
-		fmt.Printf("Error unmarshaling XML: %s\n", err)
-		os.Exit(1)
-	}
-
-	mapData.SourceFile = os.Args[1]
-	childData.SourceFile = os.Args[2]
-
-	mainTilesets := []TilesetXml{}
+	mainTilesets := NewTileset()
 	for _, ts := range mapData.Tilesets {
-		tsRaw, err := ioutil.ReadFile(ts.Source)
+		fmt.Println("Adding tileset", ts.Source)
+		err := mainTilesets.Add(ts.Source, ts.FirstId)
 		if err != nil {
 			fmt.Printf("Unable to load tileset %q: %v\n", ts.Source, err)
-			continue
+			os.Exit(1)
 		}
-		var tsXml TilesetXml
-		if err = xml.Unmarshal(tsRaw, &tsXml); err != nil {
-			fmt.Printf("Unable to unmarshal tileset XML %q: %v\n", ts.Source, err)
-			continue
-		}
-		mainTilesets = append(mainTilesets, tsXml)
 	}
 
-	for _, ts := range mainTilesets {
-		fmt.Println(ts)
-	}
+	//fmt.Println(mainTilesets)
 
-	//fmt.Printf("%s\n", rawMain)
-	//fmt.Println("main map data")
-	fmt.Println(mapData)
-	//fmt.Println("child map data")
+	//fmt.Println(mapData)
 	//fmt.Println(childData)
-	//intData := mapData.Boards[0].GetData()
-	//fmt.Println(intData)
+
+	_ = childData
+
+	//fmt.Println("Main tileset:")
+	//fmt.Println(mainTilesets)
+
+	mainMaps := []*GameMap{}
+	//childMaps := []*GameMap{}
+
+	for _, m := range mapData.Boards {
+		if m.GetId() < 0 {
+			fmt.Printf("Skipping layer %q\n", m.Name)
+			continue
+		}
+
+		gm, err := LoadGameMap(m, mainTilesets)
+		if err != nil {
+			fmt.Printf("Unable to load map %q: %v\n", m.Name, err)
+			continue
+		}
+		mainMaps = append(mainMaps, gm)
+	}
+
+	outfile, err := os.Create(os.Args[3])
+	if err != nil {
+		fmt.Printf("Unable to open output file %q for writing: %v\n", os.Args[3], err)
+		os.Exit(1)
+	}
+	defer outfile.Close()
+
+	fmt.Printf("Main maps: %q\nChild maps: %q\nOutput file: %q\n", os.Args[1], os.Args[2], os.Args[3])
+
+	fmt.Fprintf(outfile, "; asmsyntax=ca65\n\nNUMBER_OF_MAPS = %d\n\nIndex_Maps:\n", len(mainMaps))
+	for i := 0; i < len(mainMaps); i++ {
+		fmt.Fprintf(outfile, "    .word Meta_Map%02d\n", i)
+	}
+	fmt.Fprintln(outfile, "")
+
+	// %0        No brick
+	// %10       Standard brick (health)
+	// %110      Child spawn
+	// %1110     Powerup
+	// %11110    PowerDown
+	for _, m := range mainMaps {
+		//fmt.Println("Map:", m.Id)
+		data := []string{}
+
+		currentByte := uint8(0)
+		count := 0
+		for _, tile := range m.Tiles {
+			for i := 0; i < int(tile.Type); i++ {
+				currentByte = (currentByte << uint8(1)) | uint8(1)
+				count += 1
+				if count >= 8 {
+					data = append(data, fmt.Sprintf("%%%08b", currentByte))
+					currentByte = uint8(0)
+					count = 0
+				}
+			}
+
+			currentByte = (currentByte << uint8(1))
+			count += 1
+			if count >= 8 {
+				data = append(data, fmt.Sprintf("%%%08b", currentByte))
+				currentByte = uint8(0)
+				count = 0
+			}
+		}
+
+		spawns := []string{}
+		for _, spawn := range m.ChildSpawns {
+			spawns = append(spawns, fmt.Sprintf("$%02X" ,spawn))
+		}
+		if len(spawns) == 0 {
+			spawns = append(spawns, "$00")
+		}
+
+		powerups := []string{}
+		for _, pu := range m.Powerups {
+			powerups = append(powerups, fmt.Sprintf("$%02X" ,pu))
+		}
+		if len(powerups) == 0 {
+			powerups = append(powerups, "$00")
+		}
+
+		powerdowns := []string{}
+		for _, pd := range m.Powerdowns {
+			powerdowns = append(powerdowns, fmt.Sprintf("$%02X" ,pd))
+		}
+		if len(powerdowns) == 0 {
+			powerdowns = append(powerdowns, "$00")
+		}
+
+		fmt.Fprintf(outfile, "Meta_Map%02d:\n    .word Data_Map%02d_Tiles\n    .word Data_Map%02d_Spawn\n    .word Data_Map%02d_Powerup\n    .word Data_Map%02d_Powerdown\n\n", 
+			m.Id, m.Id, m.Id, m.Id, m.Id)
+
+		fmt.Fprintf(outfile, "Data_Map%02d_Spawn:\n", m.Id)
+		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(spawns, ", "))
+		fmt.Fprintf(outfile, "Data_Map%02d_Powerup:\n", m.Id)
+		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(powerups, ", "))
+		fmt.Fprintf(outfile, "Data_Map%02d_Powerdown:\n", m.Id)
+		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(powerdowns, ", "))
+		fmt.Fprintf(outfile, "Data_Map%02d_Tiles:\n", m.Id)
+		fmt.Fprintf(outfile, "    .byte %s\n\n", strings.Join(data, ", "))
+	}
+
 }
