@@ -118,12 +118,12 @@ Init_Game:
     ; Sprite zero
     ; TODO: Try to change the background color
     ; during H-Blank with this as the trigger
-    lda #247
+    lda #0
     sta Sprites+3
     lda #120
     sta Sprites+0
 
-    lda #0
+    lda #1
     sta Sprites+1
     lda #1
     sta Sprites+2
@@ -215,11 +215,49 @@ Frame_Game:
     sta BallSpeedX+1
 :
     jsr UpdateBallCoords
+
+; Attempted to change the BG color on sprite zero.
+; Doesn't work.
+;    lda #$3F
+;    ldx #$00
+;    ldy #%10011000
+;    jsr WaitForSpriteZero
+;
+;.repeat 37
+;    nop
+;.endrepeat
+;
+;    sty $2000
+;
+;    sta $2006
+;    stx $2006
+;    stx $2007
+;
+;    ; Select first nametable
+;    sty $2000
+;    stx $2005
+;    stx $2005
+
     jsr WaitForNMI
     jmp Frame_Game
 
 NMI_Game:
     jsr WriteSprites
+
+    lda #$3F
+    sta $2006
+    lda #$00
+    sta $2006
+    lda #$0F
+    sta $2007
+
+    lda #0
+    sta $2005
+    sta $2005
+
+    lda #%10011000
+    sta $2000
+
     dec Sleeping
     rti
 

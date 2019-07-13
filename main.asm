@@ -212,6 +212,16 @@ WaitForNMI:
     sta Sleeping
     rts
 
+WaitForSpriteZero:
+; Wait for VBlank to end
+:   bit $2002
+    bvs :-
+
+; Wait for sprite zero hit
+:   bit $2002
+    bvc :-
+    rts
+
 NMI_Bare:
     pha
     lda #$FF
