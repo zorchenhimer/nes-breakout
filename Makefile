@@ -30,7 +30,7 @@ CHR = credits.chr game.chr
 
 # List of all the sources files
 SOURCES = main.asm nes2header.inc \
-		  game.asm map_data.i \
+		  game.asm map_decode.asm map_data.i \
 		  credits.asm credits_ram.asm credits_data.i
 
 # misc

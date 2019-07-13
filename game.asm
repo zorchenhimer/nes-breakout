@@ -137,6 +137,10 @@ Init_Game:
     lda #$70
     sta BallY+1
 
+    lda #4
+    jsr LoadMap
+    jsr DrawCurrentMap
+
     ; Select first nametable
     lda #%10011000
     sta $2000
@@ -296,17 +300,6 @@ UpdateBallCoords:
     sta Sprites+4
     rts
 
-; Row witdh of 26
-BOARD_WIDTH = 26
-BOARD_HEIGHT = 12
-BOARD_OFFSET_Y = 24
-BOARD_OFFSET_X = 24
-; Row with of 24
-;BOARD_WIDTH = 24
-;BOARD_HEIGHT = 12
-;BOARD_OFFSET_Y = 24
-;BOARD_OFFSET_X = 32
-
 ; Reads sprite coordinates and returns map tile index
 ; TODO: do this correctly, lol
 ; AddressPointer0 holds a pointer to the start of the
@@ -425,4 +418,86 @@ Row_Addresses_Low:
 Row_Addresses_High:
 .repeat BOARD_HEIGHT, i
     .byte .hibyte(CurrentMap+(i*BOARD_WIDTH))
+.endrepeat
+
+; Read the current map in RAM and draw it to the screen
+DrawCurrentMap:
+    lda #$90
+    sta $2000
+
+    ldy #0
+    sty TmpX
+
+@loop:
+    ; Load up current row's RAM address
+    ldy TmpX
+    lda Row_Addresses_Low, y
+    sta AddressPointer0
+    lda Row_Addresses_High, y
+    sta AddressPointer0+1
+
+    ; Draw it
+    jsr game_DrawRow
+
+    ; Are we done?
+    inc TmpX
+    lda TmpX
+    cmp #BOARD_HEIGHT
+    bne @loop
+    rts
+
+
+game_DrawRow:
+    ; Lookup ppu address for row
+    lda TmpX
+    asl a
+    tax
+    bit $2002
+    lda Index_PpuBrickRows+1, x
+    sta $2006
+    lda Index_PpuBrickRows+0, x
+    sta $2006
+
+    ldy #0
+@loop:
+    lda (AddressPointer0), y
+    beq @noTile
+
+    ; Id -> lookup index
+    and #$0F
+    sec
+    sbc #1  ; "health" is id 1, but index 0
+    asl a
+    tax
+
+    lda Index_TileDefs, x
+    sta $2007
+    lda Index_TileDefs+1, x
+    sta $2007
+
+    iny
+    iny
+    cpy #BOARD_WIDTH
+    bne @loop
+    rts
+
+@noTile:
+    lda #NoTileID
+    sta $2007
+
+    iny
+    cpy #BOARD_WIDTH
+    bne @loop
+    rts
+
+NoTileID = $00
+Index_TileDefs:
+    .byte $02, $03  ; Health
+    .byte $04, $05  ; Spawn
+    .byte $06, $07  ; Powerup/down
+
+Index_PpuBrickRows:
+.repeat BOARD_HEIGHT, i
+    .word $2000 + (((BOARD_OFFSET_Y/8) * 32) + (BOARD_OFFSET_X/8)) + i * 32
+    ;.out .sprintf("PPU Row Address: %x", ($2000 + (((BOARD_OFFSET_Y/8) * 32) + (BOARD_OFFSET_X/8) + i * 32)))
 .endrepeat

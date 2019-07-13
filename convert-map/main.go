@@ -116,49 +116,42 @@ func main() {
 				count = 0
 			}
 		}
+		// Pad the last byte
+		for ; count < 8; count++ {
+			currentByte = (currentByte << uint8(1))
+		}
+		data = append(data, fmt.Sprintf("%%%08b", currentByte))
 
-		spawns := []string{}
-		for _, spawn := range m.ChildSpawns {
-			spawns = append(spawns, fmt.Sprintf("$%02X" ,spawn))
+		tileValues := []string{}
+		for _, val := range m.TileValues {
+			tileValues = append(tileValues, fmt.Sprintf("$%02X" ,val))
 		}
-		if len(spawns) == 0 {
-			spawns = append(spawns, "$00")
-		}
-
-		powerups := []string{}
-		for _, pu := range m.Powerups {
-			powerups = append(powerups, fmt.Sprintf("$%02X" ,pu))
-		}
-		if len(powerups) == 0 {
-			powerups = append(powerups, "$00")
+		if len(tileValues) == 0 {
+			tileValues = append(tileValues, "$00")
 		}
 
-		powerdowns := []string{}
-		for _, pd := range m.Powerdowns {
-			powerdowns = append(powerdowns, fmt.Sprintf("$%02X" ,pd))
-		}
-		if len(powerdowns) == 0 {
-			powerdowns = append(powerdowns, "$00")
-		}
+		fmt.Fprintf(outfile, "Meta_Map%02d:\n    .word Data_Map%02d_Tiles\n    .word Data_Map%02d_TileValues\n    .byte %d\n\n",
+			m.Id, m.Id, m.Id, m.Health)
 
-		fmt.Fprintf(outfile, "Meta_Map%02d:\n    .word Data_Map%02d_Tiles\n    .word Data_Map%02d_Spawn\n    .word Data_Map%02d_Powerup\n    .word Data_Map%02d_Powerdown\n    .byte %d\n\n",
-			m.Id, m.Id, m.Id, m.Id, m.Id, m.Health)
-
-		fmt.Fprintf(outfile, "Data_Map%02d_Spawn:\n", m.Id)
-		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(spawns, ", "))
-		fmt.Fprintf(outfile, "Data_Map%02d_Powerup:\n", m.Id)
-		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(powerups, ", "))
-		fmt.Fprintf(outfile, "Data_Map%02d_Powerdown:\n", m.Id)
-		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(powerdowns, ", "))
+		fmt.Fprintf(outfile, "Data_Map%02d_TileValues:\n", m.Id)
+		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(tileValues, ", "))
 		fmt.Fprintf(outfile, "Data_Map%02d_Tiles:\n", m.Id)
 		fmt.Fprintf(outfile, "    .byte %s\n\n", strings.Join(data, ", "))
+
+		if len(tileValues) > 256 {
+			fmt.Printf("Board %d has too much value data! %d bytes\n", m.Id, len(tileValues))
+			os.Exit(1)
+		}
 
 		if len(data) > 256 {
 			fmt.Printf("Board %d has too much data! %d bytes\n", m.Id, len(data))
 			os.Exit(1)
 		}
 
-		fmt.Printf("  Board %d: %d\n", m.Id, len(data))
+		fmt.Printf("  Board %d: % 4d% 4d% 4d | % 4d% 4d% 4d% 4d\n",
+			m.Id, len(tileValues), len(data), m.BrickCount,
+			m.CountHealth, m.CountSpawn, m.CountPowerUp, m.CountPowerDown,
+		)
 	}
 
 }

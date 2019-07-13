@@ -1,5 +1,18 @@
 ; asmsyntax=ca65
 
+.ifdef ROW26
+    BOARD_WIDTH = 26
+    BOARD_HEIGHT = 12
+    BOARD_OFFSET_Y = 32
+    BOARD_OFFSET_X = 24
+.else
+; I've only got map data at a width of 24 for now
+    BOARD_WIDTH = 24
+    BOARD_HEIGHT = 12
+    BOARD_OFFSET_Y = 24
+    BOARD_OFFSET_X = 32
+.endif
+
 .macro NMI_Disable
     lda #NMI_RTI
     sta NMI_Instr
@@ -42,6 +55,12 @@ TmpX:   .res 1
 TmpY:   .res 1
 TmpZ:   .res 1
 
+IdxA:   .res 1
+IdxB:   .res 1
+IdxC:   .res 1
+
+LastBank:   .res 1
+
 ; Coordinates with sub-pixel accuracy
 ; These are unsigned
 ; First byte is fraction, second is whole
@@ -60,8 +79,11 @@ ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
 ChrWriteTileCount:  .res 1
 
 ; Overworld map
-CurrentMap:     .res 312
-;CurrentMap:     .res 288
+.ifdef ROW26
+CurrentMap: .res 312
+.else
+CurrentMap: .res 288
+.endif
 
 controller1:        .res 1
 controller1_Old:    .res 1
@@ -753,5 +775,11 @@ ReadControllers:
     bne @player2
     rts
 
-.include "credits.asm"
+IncPointer0:
+    inc AddressPointer0
+    bne :+
+    inc AddressPointer0+1
+:   rts
 
+.include "credits.asm"
+.include "map_decode.asm"

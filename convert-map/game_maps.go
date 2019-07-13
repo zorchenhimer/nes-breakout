@@ -25,15 +25,14 @@ type GameMap struct {
 	// regardless of actual tile size.
 	Tiles []Tile
 
-	// List of tile spawns.  Used when loading
-	// the map into RAM.
-	ChildSpawns []int
+	// List of tile values
+	TileValues []int
 
-	// IDs of powerups
-	Powerups []int
-
-	// IDs of power-downs
-	Powerdowns []int
+	BrickCount int
+	CountSpawn int
+	CountHealth int
+	CountPowerUp int
+	CountPowerDown int
 }
 
 type TileType int
@@ -44,7 +43,7 @@ const (
 	TILE_SPAWN
 	TILE_POWERUP
 	TILE_POWERDOWN
-	TILE_NOTHING
+	//TILE_NOTHING
 )
 
 func (tt TileType) String() string {
@@ -89,9 +88,7 @@ func (t Tile) String() string {
 
 func LoadGameMap(layer XmlLayer, tileset Tileset) (*GameMap, error) {
 	gm := &GameMap{
-		ChildSpawns: []int{},
-		Powerups: []int{},
-		Powerdowns: []int{},
+		TileValues: []int{},
 	}
 
 	gm.RandomChildren = layer.Properties.GetBoolProperty("random-children", true)
@@ -119,18 +116,29 @@ func LoadGameMap(layer XmlLayer, tileset Tileset) (*GameMap, error) {
 			}
 			gm.Tiles = append(gm.Tiles, *tile)
 
-			switch tile.Type {
-			case TILE_SPAWN:
-				gm.ChildSpawns = append(gm.ChildSpawns, tile.Value)
-			case TILE_POWERUP:
-				gm.Powerups = append(gm.Powerups, tile.Value)
-			case TILE_POWERDOWN:
-				gm.Powerdowns = append(gm.Powerdowns, tile.Value)
+			if tile.Type > TILE_HEALTH {
+				gm.TileValues = append(gm.TileValues, tile.Value)
 			}
+
+			switch tile.Type {
+			case TILE_HEALTH:
+				gm.CountHealth += 1
+
+			case TILE_SPAWN:
+				gm.CountSpawn += 1
+
+			case TILE_POWERUP:
+				gm.CountPowerUp += 1
+
+			case TILE_POWERDOWN:
+				gm.CountPowerDown += 1
+			}
+
 		}
 
 		if val != 0 {
 			tileodd = true
+			gm.BrickCount += 1
 		} else {
 			tileodd = false
 		}
@@ -145,7 +153,7 @@ type Tileset []Tile
 
 func NewTileset() Tileset {
 	return Tileset{
-		Tile{Id:0, Type:TILE_NOTHING, Value:0},
+		Tile{Id:0, Type:TILE_UNKNOWN, Value:0},
 	}
 }
 
