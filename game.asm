@@ -378,3 +378,13 @@ Collide_Powerup:
     rts
 Collide_Powerdown:
     rts
+
+Row_Addresses_Low:
+.repeat BOARD_HEIGHT, i
+    .byte .lobyte(CurrentMap+(i*BOARD_WIDTH))
+.endrepeat
+
+Row_Addresses_High:
+.repeat BOARD_HEIGHT, i
+    .byte .hibyte(CurrentMap+(i*BOARD_WIDTH))
+.endrepeat
