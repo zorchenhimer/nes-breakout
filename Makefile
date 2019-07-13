@@ -44,7 +44,7 @@ names: $(GENCRED) clrNames credits_data.i bin/$(NAME).nes
 maps: $(CONVMAP) map_data.i
 
 clean:
-	-$(RM) bin/*.* credits_data.i *.chr map_data.i
+	-$(RM) bin/*.* *.i *.chr
 
 clrNames:
 	-$(RM) credits_data.i
@@ -76,7 +76,10 @@ bin/$(NAME).nes: bin/$(NAME).o $(NESCFG)
 		--dbgfile bin/$(NAME).dbg \
 		bin/$(NAME).o
 
-credits_data.i: $(GENCRED)
+subscriber-list.csv: sample-credit-names.csv
+	cp -u $< $@
+
+credits_data.i: $(GENCRED) subscriber-list.csv
 	$(GENCRED) -x zorchenhimer -o $@ -i subscriber-list.csv
 
 map_data.i: $(CONVMAP) maps/main-boards.tmx maps/child-boards.tmx
