@@ -38,7 +38,6 @@ func main() {
 
 	mainTilesets := NewTileset()
 	for _, ts := range mapData.Tilesets {
-		fmt.Println("Adding tileset", ts.Source)
 		err := mainTilesets.Add(ts.Source, ts.FirstId)
 		if err != nil {
 			fmt.Printf("Unable to load tileset %q: %v\n", ts.Source, err)
@@ -80,14 +79,13 @@ func main() {
 	}
 	defer outfile.Close()
 
-	fmt.Printf("Main maps: %q\nChild maps: %q\nOutput file: %q\n", os.Args[1], os.Args[2], os.Args[3])
-
 	fmt.Fprintf(outfile, "; asmsyntax=ca65\n\nNUMBER_OF_MAPS = %d\n\nIndex_Maps:\n", len(mainMaps))
 	for i := 0; i < len(mainMaps); i++ {
 		fmt.Fprintf(outfile, "    .word Meta_Map%02d\n", i)
 	}
 	fmt.Fprintln(outfile, "")
 
+	fmt.Println("Map data lengths:")
 	// %0        No brick
 	// %10       Standard brick (health)
 	// %110      Child spawn
@@ -143,8 +141,8 @@ func main() {
 			powerdowns = append(powerdowns, "$00")
 		}
 
-		fmt.Fprintf(outfile, "Meta_Map%02d:\n    .word Data_Map%02d_Tiles\n    .word Data_Map%02d_Spawn\n    .word Data_Map%02d_Powerup\n    .word Data_Map%02d_Powerdown\n\n", 
-			m.Id, m.Id, m.Id, m.Id, m.Id)
+		fmt.Fprintf(outfile, "Meta_Map%02d:\n    .word Data_Map%02d_Tiles\n    .word Data_Map%02d_Spawn\n    .word Data_Map%02d_Powerup\n    .word Data_Map%02d_Powerdown\n    .byte %d\n\n",
+			m.Id, m.Id, m.Id, m.Id, m.Id, m.Health)
 
 		fmt.Fprintf(outfile, "Data_Map%02d_Spawn:\n", m.Id)
 		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(spawns, ", "))
@@ -154,6 +152,13 @@ func main() {
 		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(powerdowns, ", "))
 		fmt.Fprintf(outfile, "Data_Map%02d_Tiles:\n", m.Id)
 		fmt.Fprintf(outfile, "    .byte %s\n\n", strings.Join(data, ", "))
+
+		if len(data) > 256 {
+			fmt.Printf("Board %d has too much data! %d bytes\n", m.Id, len(data))
+			os.Exit(1)
+		}
+
+		fmt.Printf("  Board %d: %d\n", m.Id, len(data))
 	}
 
 }
