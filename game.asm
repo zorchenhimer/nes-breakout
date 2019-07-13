@@ -352,9 +352,9 @@ CheckCollide:
     tax
 
     ; JMP to collision code for the given brick type
-    lda Index_TileType+1, x
+    lda Index_TileTypes+1, x
     pha
-    lda Index_TileType, x
+    lda Index_TileTypes, x
     pha
     rts
 
@@ -376,5 +376,5 @@ Collide_Spawn:
 ; Delete the brick, and spawn a sprite
 Collide_Powerup:
     rts
-Collide_PowerDown:
+Collide_Powerdown:
     rts
