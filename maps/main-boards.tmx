@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.2" tiledversion="1.2.4" orientation="orthogonal" renderorder="right-down" width="24" height="12" tilewidth="8" tileheight="8" infinite="0" nextlayerid="6" nextobjectid="1">
  <tileset firstgid="1" source="MetaTiles.tsx"/>
- <layer id="3" name="board-00" width="24" height="12">
+ <layer id="3" name="board-00" width="24" height="12" visible="0">
+  <properties>
+   <property name="health" type="int" value="0"/>
+   <property name="random-children" type="bool" value="false"/>
+   <property name="random-drops" type="bool" value="false"/>
+  </properties>
   <data encoding="csv">
 22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,
 22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,
@@ -18,6 +23,11 @@
 </data>
  </layer>
  <layer id="2" name="board-01" width="24" height="12" visible="0">
+  <properties>
+   <property name="health" type="int" value="0"/>
+   <property name="random-children" type="bool" value="false"/>
+   <property name="random-drops" type="bool" value="false"/>
+  </properties>
   <data encoding="csv">
 0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,0,
 0,22,0,5,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,14,0,22,0,0,
@@ -34,6 +44,11 @@
 </data>
  </layer>
  <layer id="1" name="board-02" width="24" height="12" visible="0">
+  <properties>
+   <property name="health" type="int" value="0"/>
+   <property name="random-children" type="bool" value="false"/>
+   <property name="random-drops" type="bool" value="false"/>
+  </properties>
   <data encoding="csv">
 11,0,22,0,22,0,22,0,22,0,22,0,27,0,22,0,22,0,22,0,22,0,12,0,
 22,0,22,0,0,0,0,0,0,0,22,0,0,0,0,0,0,0,0,0,22,0,22,0,
@@ -49,7 +64,12 @@
 13,0,22,0,22,0,22,0,22,0,26,0,22,0,22,0,22,0,22,0,22,0,14,0
 </data>
  </layer>
- <layer id="4" name="board-03" width="24" height="12" visible="0">
+ <layer id="4" name="board-03" width="24" height="12">
+  <properties>
+   <property name="health" type="int" value="0"/>
+   <property name="random-children" type="bool" value="false"/>
+   <property name="random-drops" type="bool" value="false"/>
+  </properties>
   <data encoding="csv">
 0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,
 0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,
@@ -66,6 +86,11 @@
 </data>
  </layer>
  <layer id="5" name="board-04" width="24" height="12" visible="0">
+  <properties>
+   <property name="health" type="int" value="0"/>
+   <property name="random-children" type="bool" value="false"/>
+   <property name="random-drops" type="bool" value="false"/>
+  </properties>
   <data encoding="csv">
 19,0,19,0,22,0,22,0,22,0,16,0,22,0,22,0,22,0,22,0,22,0,3,0,
 0,22,0,22,0,14,0,24,0,22,0,22,0,25,0,18,0,22,0,22,0,22,0,0,

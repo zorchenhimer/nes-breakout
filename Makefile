@@ -77,7 +77,7 @@ bin/$(NAME).nes: bin/$(NAME).o $(NESCFG)
 		bin/$(NAME).o
 
 credits_data.i: $(GENCRED)
-	$(GENCRED) -x zorchenhimer -o credits_data.i -i subscriber-list.csv
+	$(GENCRED) -x zorchenhimer -o $@ -i subscriber-list.csv
 
-map_data.i: $(CONVMAP) main-boards.tmx child-boards.tmx
-	$(CONVMAP) main-boards.tmx child-boards.tmx map_data.i
+map_data.i: $(CONVMAP) maps/main-boards.tmx maps/child-boards.tmx
+	cd maps && ../$(CONVMAP) main-boards.tmx child-boards.tmx ../$@
