@@ -200,6 +200,12 @@ Forever:
 ; Maybe change this to use a sleeping flag
 ; This can probably break if NMI goes long
 WaitForNMI:
+    lda NMI_Instr
+    cmp #NMI_RTI
+    bne :+
+
+    NMI_Set NMI_Bare
+
 :   bit Sleeping
     bpl :-
     lda #0
