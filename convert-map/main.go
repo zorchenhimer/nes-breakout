@@ -82,7 +82,10 @@ func main() {
 	}
 	defer outfile.Close()
 
-	fmt.Fprintf(outfile, "; asmsyntax=ca65\n\nNUMBER_OF_MAPS = %d\n\nIndex_Maps:\n", len(mainMaps))
+	fmt.Fprintln(outfile, "; asmsyntax=ca65\n")
+	fmt.Fprintln(outfile, ".segment \"PAGE01\"")
+	fmt.Fprintln(outfile, ".export Index_Maps, BOARD_DATA_WIDTH, BOARD_DATA_HEIGHT")
+	fmt.Fprintf(outfile, "NUMBER_OF_MAPS = %d\n\nIndex_Maps:\n", len(mainMaps))
 	for i := 0; i < len(mainMaps); i++ {
 		fmt.Fprintf(outfile, "    .word Meta_Map%02d\n", i)
 	}

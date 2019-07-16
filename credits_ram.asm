@@ -47,3 +47,5 @@ CR_OP_BYTE_LIST = 4
 CR_OP_ATTR      = 5
 CR_OP_NAME      = 6
 CR_OP_EOD       = 7 ; End of Data
+
+.exportzp CR_OP_CLEAR_ROW, CR_OP_ATTR, CR_OP_RLE, CR_OP_INC_BYTE, CR_OP_NAME, CR_OP_EOD

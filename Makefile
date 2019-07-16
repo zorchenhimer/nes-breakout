@@ -11,6 +11,9 @@ endif
 CA = ca65
 LD = ld65
 
+CAFLAGS = -g -t nes
+LDFLAGS = -C $(NESCFG) --dbgfile bin/$(NAME).dbg -m bin/$(NAME).map
+
 # Mapper configuration for linker
 NESCFG = nes_snrom.cfg
 
@@ -29,25 +32,28 @@ NAME = breakout
 CHR = credits.chr game.chr
 
 # List of all the sources files
-SOURCES = main.asm nes2header.inc \
-		  game.asm map_decode.asm map_data.i \
-		  credits.asm credits_ram.asm credits_data.i
+SOURCES := main.asm nes2header.inc \
+		  game.asm map_decode.asm \
+		  credits.asm credits_ram.asm
+
+DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
 # misc
 RM = rm
 
-.PHONY: clean default cleanSym symbols pal set_pal map maps
+.PHONY: clean default cleanSym symbols pal set_pal map maps utils
 
 default: all
-all: bin/$(NAME).nes
-names: $(GENCRED) clrNames credits_data.i bin/$(NAME).nes
-maps: $(CONVMAP) map_data.i
+all: utils bin/$(NAME).nes
+names: clrNames credits_data.i bin/$(NAME).nes
+maps: map_data.i utils
+utils: $(CONVMAP) $(GENCRED)
 
 clean:
-	-$(RM) bin/*.* *.i *.chr
+	-rm bin/*.* *.i *.chr
 
 clrNames:
-	-$(RM) credits_data.i
+	-rm credits_data.i
 
 bin/:
 	-mkdir bin
@@ -64,23 +70,20 @@ $(BMP2CHR): bmp2chr.go
 $(CONVMAP): convert-map/*.go
 	cd convert-map && go build -o ../$(CONVMAP)
 
-bin/$(NAME).o: bin/ $(SOURCES) $(CHR)
-	$(CA) -g \
-		-t nes \
-		-o bin/$(NAME).o\
-		main.asm
+bin/main.o: bin/ $(SOURCES) $(CHR)
+	$(CA) $(CAFLAGS) -o $@ main.asm
 
-bin/$(NAME).nes: bin/$(NAME).o $(NESCFG)
-	$(LD) -o bin/$(NAME).nes \
-		-C $(NESCFG) \
-		--dbgfile bin/$(NAME).dbg \
-		bin/$(NAME).o
+bin/%.o: %.i
+	$(CA) $(CAFLAGS) -o $@ $^
+
+bin/$(NAME).nes: bin/main.o $(DATA_OBJ)
+	$(LD) $(LDFLAGS) -o $@ $^
 
 subscriber-list.csv: sample-credit-names.csv
 	cp -u $< $@
 
-credits_data.i: $(GENCRED) subscriber-list.csv
-	$(GENCRED) -x zorchenhimer -o $@ -i subscriber-list.csv
+credits_data.i: subscriber-list.csv $(GENCRED)
+	$(GENCRED) -x zorchenhimer -o $@ -i $<
 
 map_data.i: $(CONVMAP) maps/main-boards.tmx maps/child-boards.tmx
 	cd maps && ../$(CONVMAP) main-boards.tmx child-boards.tmx ../$@

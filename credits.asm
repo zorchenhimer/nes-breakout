@@ -1,5 +1,7 @@
 ; asmsyntax=ca65
 
+.import credits_data_chunks
+
 CLEAR_TILE_ID   = 0
 CR_T2_SPEED     = 8     ; color cycle speed (in frames) for the tier two names
 

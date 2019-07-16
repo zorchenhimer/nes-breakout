@@ -1,5 +1,7 @@
 ; asmsyntax=ca65
 
+.import Index_Maps
+
 ; Expects a map Id in A and loads the map with that Id
 ; into RAM starting at the CurrentMap label
 LoadMap:

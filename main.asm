@@ -1,5 +1,7 @@
 ; asmsyntax=ca65
 
+.importzp BOARD_DATA_WIDTH, BOARD_DATA_HEIGHT
+
 .ifdef ROW26
     BOARD_WIDTH = 26
     BOARD_HEIGHT = 12
@@ -114,7 +116,7 @@ Sprites: .res 256
 
 .segment "PAGE01"
     .byte 1
-.include "map_data.i"
+;.include "map_data.i"
 
 .assert BOARD_WIDTH = BOARD_DATA_WIDTH, error, "Board data width does not match code!"
 .assert BOARD_HEIGHT = BOARD_DATA_HEIGHT, error, "Board data height does not match code!"
@@ -151,7 +153,8 @@ Sprites: .res 256
 
 .segment "PAGE13"
     .byte 13
-.include "credits_data.i"
+;.include "credits_data.i"
+;.incbin "bin/credits_data.o"
 
 .segment "PAGE14"
     .byte 14

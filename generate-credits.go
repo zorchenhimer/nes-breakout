@@ -527,6 +527,12 @@ func main() {
 		fmt.Println("ERROR: Unable to create credits_data.i: ", err)
 		os.Exit(1)
 	}
+	defer outFile.Close()
+
+	fmt.Fprintln(outFile, "; asmsyntax=ca65\n\n")
+	fmt.Fprintln(outFile, ".importzp CR_OP_CLEAR_ROW, CR_OP_ATTR, CR_OP_RLE, CR_OP_INC_BYTE, CR_OP_NAME, CR_OP_EOD")
+	fmt.Fprintln(outFile, ".export credits_data_chunks\n")
+	fmt.Fprintln(outFile, ".segment \"PAGE13\"\n")
 
 	fmt.Fprintln(outFile, "credits_data_chunks:")
 	//for i, _ := range allChunks {
