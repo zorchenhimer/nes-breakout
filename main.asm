@@ -9,7 +9,7 @@
 ; I've only got map data at a width of 24 for now
     BOARD_WIDTH = 24
     BOARD_HEIGHT = 12
-    BOARD_OFFSET_Y = 24
+    BOARD_OFFSET_Y = 32
     BOARD_OFFSET_X = 32
 .endif
 
@@ -115,6 +115,12 @@ Sprites: .res 256
 .segment "PAGE01"
     .byte 1
 .include "map_data.i"
+
+.assert BOARD_WIDTH = BOARD_DATA_WIDTH, error, "Board data width does not match code!"
+.assert BOARD_HEIGHT = BOARD_DATA_HEIGHT, error, "Board data height does not match code!"
+
+.out .sprintf("Board Width: %d", BOARD_WIDTH)
+.out .sprintf("Board Height: %d", BOARD_HEIGHT)
 
 .segment "PAGE02"
     .byte 2
@@ -667,6 +673,7 @@ LoadChrData:
 
     rts
 
+; TODO: find a way to auto-generate this table
 Index_ChrData:
     .word CreditsChrData    ; Source address
     .byte $00   ; Tile count

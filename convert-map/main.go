@@ -58,6 +58,8 @@ func main() {
 	mainMaps := []*GameMap{}
 	//childMaps := []*GameMap{}
 
+	layerSizes := [][]int{}
+
 	for _, m := range mapData.Boards {
 		if m.GetId() < 0 {
 			fmt.Printf("Skipping layer %q\n", m.Name)
@@ -70,6 +72,7 @@ func main() {
 			continue
 		}
 		mainMaps = append(mainMaps, gm)
+		layerSizes = append(layerSizes, []int{m.Width, m.Height})
 	}
 
 	outfile, err := os.Create(os.Args[3])
@@ -154,4 +157,20 @@ func main() {
 		)
 	}
 
+	width := 0
+	height := 0
+
+	for id, layer := range layerSizes {
+
+		if width == 0 && height == 0 {
+			width = layer[0]
+			height = layer[1]
+		} else if width != layer[0] || height != layer[1]  {
+			fmt.Printf("  [%d] %d, %d vs %d %d\n", id, width, height, layer[0], layer[1])
+			fmt.Printf("Missmatched layer sizes!")
+			os.Exit(1)
+		}
+	}
+
+	fmt.Fprintf(outfile, "BOARD_DATA_WIDTH = %d\nBOARD_DATA_HEIGHT = %d\n", width, height)
 }

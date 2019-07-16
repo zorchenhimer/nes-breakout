@@ -4,7 +4,7 @@ Pal_Game:
     .byte $0F, $0A, $1A, $2A
 
 Pal_GameSprites:
-    .byte $0F, $07, $17, $27
+    .byte $0F, $07, $17, $30
 
 Init_Game:
     NMI_Disable
@@ -118,15 +118,15 @@ Init_Game:
     ; Sprite zero
     ; TODO: Try to change the background color
     ; during H-Blank with this as the trigger
-    lda #0
-    sta Sprites+3
-    lda #120
-    sta Sprites+0
+    ;lda #0
+    ;sta Sprites+3
+    ;lda #120
+    ;sta Sprites+0
 
-    lda #1
-    sta Sprites+1
-    lda #1
-    sta Sprites+2
+    ;lda #1
+    ;sta Sprites+1
+    ;lda #1
+    ;sta Sprites+2
 
     lda #$00
     sta BallX
@@ -137,7 +137,7 @@ Init_Game:
     lda #$70
     sta BallY+1
 
-    lda #4
+    lda #3
     jsr LoadMap
     jsr DrawCurrentMap
 
