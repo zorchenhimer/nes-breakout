@@ -1,5 +1,13 @@
 ; asmsyntax=ca65
 
+Initial_Ball_Speed_WHOLE = 3
+Initial_Ball_Speed_FRACT = 0
+
+WALL_RIGHT = $F5
+WALL_LEFT = $0A
+WALL_TOP = $11
+WALL_BOTTOM = $DC
+
 Pal_Game:
     .byte $0F, $0A, $1A, $2A
 
@@ -137,6 +145,17 @@ Init_Game:
     lda #$70
     sta BallY+1
 
+    lda #Initial_Ball_Speed_FRACT
+    sta BallSpeedY
+    ;lda #$00
+    sta BallSpeedX
+
+    ;lda #$01
+    lda #Initial_Ball_Speed_WHOLE
+    sta BallSpeedY+1
+    ;lda #$00
+    sta BallSpeedX+1
+
     lda #3
     jsr LoadMap
     jsr DrawCurrentMap
@@ -219,6 +238,8 @@ Frame_Game:
     sta BallSpeedX+1
 :
     jsr UpdateBallCoords
+    jsr CheckWallCollide
+    jsr UpdateBallSprite
 
 ; Attempted to change the BG color on sprite zero.
 ; Doesn't work.
@@ -287,16 +308,18 @@ UpdateBallCoords:
     lda BallY+1
     adc BallSpeedY+1
     sta BallY+1
+    rts
 
+UpdateBallSprite:
     ; Update sprite coordinates
     lda BallX+1
     sec
-    sbc #4
+    sbc #2
     sta Sprites+7
 
     lda BallY+1
     sec
-    sbc #4
+    sbc #2
     sta Sprites+4
     rts
 
@@ -330,6 +353,134 @@ SpriteToTile:
     lsr a
     ; "Store" it
     tay
+    rts
+
+GetBallHorizDirection:
+    lda BallSpeedX+1
+    beq @fractional
+    jmp @chk
+
+@fractional:
+    lda BallSpeedX
+
+@chk:
+    bpl @positive
+    lda #0
+    rts
+@positive:
+    lda #1
+    rts
+
+GetBallVertDirection:
+    lda BallSpeedY+1
+    beq @fractional
+    jmp @chk
+
+@fractional:
+    lda BallSpeedY
+
+@chk:
+    bpl @positive
+    lda #0
+    rts
+@positive:
+    lda #1
+    rts
+
+CheckWallCollide:
+    jsr GetBallVertDirection
+    bne @goingDown
+    ; Going up
+    lda BallY+1
+    cmp #WALL_TOP
+    beq @bounceVertTop
+    bcc @bounceVertTop
+    jmp @checkHoriz
+
+@goingDown:
+    lda BallY+1
+    cmp #WALL_BOTTOM
+    bcs @bounceVertBottom
+    jmp @checkHoriz
+
+@bounceVertTop:
+    lda #WALL_TOP
+    sec
+    sbc BallY+1
+
+    clc
+    adc #WALL_TOP
+    sta BallY+1
+    jmp @bounceVert
+
+@bounceVertBottom:
+    lda BallY+1
+    sec
+    sbc #WALL_BOTTOM
+    sta TmpX
+
+    lda #WALL_BOTTOM
+    sbc TmpX
+    sta BallY+1
+
+@bounceVert:
+    lda #$00
+    sec
+    sbc BallSpeedY
+    sta BallSpeedY
+
+    lda #$00
+    sbc BallSpeedY+1
+    sta BallSpeedY+1
+
+@checkHoriz:
+    jsr GetBallHorizDirection
+    bne @goingRight
+    ; Going left
+    lda BallX+1
+    cmp #WALL_LEFT
+    beq @bounceHorizLeft
+    bcc @bounceHorizLeft
+    rts ; return early
+
+@goingRight:
+    lda BallX+1
+    cmp #WALL_RIGHT
+    bcs @bounceHorizRight
+    rts ; return early
+
+@bounceHorizLeft:
+    ; Get diff = (wall - ball)
+    lda #WALL_LEFT
+    sec
+    sbc BallX+1
+    ; diff in A
+
+    ; Add difference to wall coord
+    clc
+    adc #WALL_LEFT
+    sta BallX+1
+    jmp @bounceHoriz
+
+@bounceHorizRight:
+    lda BallX+1
+    sec
+    sbc #WALL_RIGHT
+    sta TmpX    ; wall - ball difference
+
+    lda #WALL_RIGHT
+    sbc TmpX
+    sta BallX+1
+
+@bounceHoriz:
+    lda #$00
+    sec
+    sbc BallSpeedX
+    sta BallSpeedX
+
+    lda #$00
+    sbc BallSpeedX+1
+    sta BallSpeedX+1
     rts
 
 ; TODO: Check side of brick collision for bounce.

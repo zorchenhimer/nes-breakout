@@ -81,11 +81,7 @@ ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
 ChrWriteTileCount:  .res 1
 
 ; Overworld map
-.ifdef ROW26
-CurrentMap: .res 312
-.else
-CurrentMap: .res 288
-.endif
+CurrentMap: .res (BOARD_WIDTH * BOARD_HEIGHT)
 
 controller1:        .res 1
 controller1_Old:    .res 1
