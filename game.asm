@@ -8,11 +8,14 @@ WALL_LEFT = $0A
 WALL_TOP = $11
 WALL_BOTTOM = $DC
 
+BALL_SPRITE_OFFSET_X = 3
+BALL_SPRITE_OFFSET_Y = 3
+
 Pal_Game:
     .byte $0F, $0A, $1A, $2A
 
 Pal_GameSprites:
-    .byte $0F, $07, $17, $30
+    .byte $0F, $26, $00, $30
 
 Init_Game:
     NMI_Disable
@@ -156,7 +159,7 @@ Init_Game:
     ;lda #$00
     sta BallSpeedX+1
 
-    lda #3
+    lda #4
     jsr LoadMap
     jsr DrawCurrentMap
 
@@ -314,12 +317,12 @@ UpdateBallSprite:
     ; Update sprite coordinates
     lda BallX+1
     sec
-    sbc #2
+    sbc #BALL_SPRITE_OFFSET_X
     sta Sprites+7
 
     lda BallY+1
     sec
-    sbc #2
+    sbc #BALL_SPRITE_OFFSET_Y
     sta Sprites+4
     rts
 
