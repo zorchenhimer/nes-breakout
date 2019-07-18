@@ -1,5 +1,5 @@
 
-export PATH := $(PATH):../tools/cc65/bin:../../../Program Files/Tiled
+export PATH := $(PATH):../tools/cc65/bin:../../../Program Files/Tiled:/c/Program Files/Aseprite/
 #:../../golang/src/github.com/zorchenhimer/go-nes/cmd
 
 EXT=
@@ -87,3 +87,6 @@ credits_data.i: subscriber-list.csv $(GENCRED)
 
 map_data.i: $(CONVMAP) maps/main-boards.tmx maps/child-boards.tmx
 	cd maps && ../$(CONVMAP) main-boards.tmx child-boards.tmx ../$@
+
+game.bmp: tiles.aseprite
+	aseprite -b --all-layers $< --save-as $@
