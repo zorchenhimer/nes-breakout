@@ -88,6 +88,19 @@ controller1_Old:    .res 1
 controller2:        .res 1
 controller2_Old:    .res 1
 
+
+; Bit 7 is set when these have a valid value
+BrickRowIndex_Horiz:    .res 1
+BrickColIndex_Horiz:    .res 1
+BrickRowIndex_Vert:    .res 1
+BrickColIndex_Vert:    .res 1
+
+BrickCollide1_Row:  .res 1
+BrickCollide1_Col:  .res 1
+BrickCollide2_Row:  .res 1
+BrickCollide2_Col:  .res 1
+
+
 .include "credits_ram.asm"
 
 .segment "NMIRAM"

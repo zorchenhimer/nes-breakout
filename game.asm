@@ -1,6 +1,6 @@
 ; asmsyntax=ca65
 
-Initial_Ball_Speed_WHOLE = 3
+Initial_Ball_Speed_WHOLE = 1
 Initial_Ball_Speed_FRACT = 0
 
 WALL_RIGHT = $F5
@@ -10,6 +10,12 @@ WALL_BOTTOM = $DC
 
 BALL_SPRITE_OFFSET_X = 3
 BALL_SPRITE_OFFSET_Y = 3
+
+BALL_INIT_X = $80
+BALL_INIT_Y = $C0
+
+EDGE_COLLIDE_OFFSET = 3
+POINT_COLLIDE_OFFSET = 2
 
 Pal_Game:
     .byte $0F, $0A, $1A, $2A
@@ -55,11 +61,6 @@ Init_Game:
     jsr LoadChrData
 
     jsr ClearSprites
-
-    ; Y, X
-    lda #$80
-    sta Sprites+4
-    sta Sprites+7
 
     ; Tile
     lda #$10
@@ -139,13 +140,14 @@ Init_Game:
     ;lda #1
     ;sta Sprites+2
 
+
     lda #$00
     sta BallX
     sta BallY
 
-    lda #$80
+    lda #BALL_INIT_X
     sta BallX+1
-    lda #$70
+    lda #BALL_INIT_Y
     sta BallY+1
 
     lda #Initial_Ball_Speed_FRACT
@@ -159,7 +161,7 @@ Init_Game:
     ;lda #$00
     sta BallSpeedX+1
 
-    lda #4
+    lda #6
     jsr LoadMap
     jsr DrawCurrentMap
 
@@ -242,29 +244,9 @@ Frame_Game:
 :
     jsr UpdateBallCoords
     jsr CheckWallCollide
+    jsr CheckBrickCollide
+    ;jsr CheckPaddleCollide ; todo
     jsr UpdateBallSprite
-
-; Attempted to change the BG color on sprite zero.
-; Doesn't work.
-;    lda #$3F
-;    ldx #$00
-;    ldy #%10011000
-;    jsr WaitForSpriteZero
-;
-;.repeat 37
-;    nop
-;.endrepeat
-;
-;    sty $2000
-;
-;    sta $2006
-;    stx $2006
-;    stx $2007
-;
-;    ; Select first nametable
-;    sty $2000
-;    stx $2005
-;    stx $2005
 
     jsr WaitForNMI
     jmp Frame_Game
@@ -326,12 +308,13 @@ UpdateBallSprite:
     sta Sprites+4
     rts
 
-; Reads sprite coordinates and returns map tile index
-; TODO: do this correctly, lol
+; Returns a pointer to the brick at the coordinate given
+; by TmpX and TmpY
+;
 ; AddressPointer0 holds a pointer to the start of the
 ; row in memory.  Y holds the offset from that pointer.
-SpriteToTile:
-    lda BallY+1
+PointToTile:
+    lda TmpY
     sec
     ; Subtract offset
     sbc #BOARD_OFFSET_Y
@@ -346,7 +329,7 @@ SpriteToTile:
     lda Row_Addresses_High, x
     sta AddressPointer0+1
 
-    lda BallX+1
+    lda TmpX
     sec
     ; Subtract offset
     sbc #BOARD_OFFSET_X
@@ -358,6 +341,8 @@ SpriteToTile:
     tay
     rts
 
+; 0 - Left
+; 1 - Right
 GetBallHorizDirection:
     lda BallSpeedX+1
     beq @fractional
@@ -374,6 +359,8 @@ GetBallHorizDirection:
     lda #1
     rts
 
+; 0 - Up
+; 1 - Down
 GetBallVertDirection:
     lda BallSpeedY+1
     beq @fractional
@@ -427,14 +414,7 @@ CheckWallCollide:
     sta BallY+1
 
 @bounceVert:
-    lda #$00
-    sec
-    sbc BallSpeedY
-    sta BallSpeedY
-
-    lda #$00
-    sbc BallSpeedY+1
-    sta BallSpeedY+1
+    jsr BounceVert
 
 @checkHoriz:
     jsr GetBallHorizDirection
@@ -476,6 +456,303 @@ CheckWallCollide:
     sta BallX+1
 
 @bounceHoriz:
+    jmp BounceHoriz
+
+CheckBrickCollide:
+    ;lda #(BallX+1 - POINT_COLLIDE_OFFSET)
+    lda BallX+1
+    sec
+    sbc #POINT_COLLIDE_OFFSET
+    sta TmpX
+
+    jsr GetBallVertDirection
+    beq @goingUpLeft
+    ; Get the two collide points, and check them
+
+    ; Left point
+    ;lda #(BallY+1 + EDGE_COLLIDE_OFFSET)
+    lda BallY+1
+    clc
+    adc #EDGE_COLLIDE_OFFSET
+    sta TmpY
+    jmp @pointLeftCheck
+
+@goingUpLeft:
+    ;lda #(BallY+1 - EDGE_COLLIDE_OFFSET)
+    lda BallY+1
+    sec
+    sbc #EDGE_COLLIDE_OFFSET
+    sta TmpY
+
+@pointLeftCheck:
+    jsr CheckPointCollide
+    beq @clearPointLeft
+    ;; TODO if collide, set a flag and check other point
+
+    stx BrickCollide1_Row
+    sty BrickCollide1_Col
+
+    lda #$80
+    ora BrickCollide1_Row
+    sta BrickCollide1_Row
+    jmp @pointRightCheck
+
+@clearPointLeft:
+    lda #0
+    sta BrickCollide1_Row
+
+@pointRightCheck:
+    ;lda #(BallX+1 + POINT_COLLIDE_OFFSET)
+    lda BallX+1
+    clc
+    adc #POINT_COLLIDE_OFFSET
+    sta TmpX
+
+    jsr GetBallVertDirection
+    beq @goingUpRight
+
+    ; Right point
+    ;lda #(BallY+1 + EDGE_COLLIDE_OFFSET)
+    lda BallY+1
+    clc
+    adc #EDGE_COLLIDE_OFFSET
+    sta TmpY
+    jmp @checkPointRight
+
+@goingUpRight:
+    ;lda #(BallY+1 - EDGE_COLLIDE_OFFSET)
+    lda BallY+1
+    sec
+    sbc #EDGE_COLLIDE_OFFSET
+    sta TmpY
+
+@checkPointRight:
+    jsr CheckPointCollide
+    beq @clearPointRight
+
+    stx BrickCollide2_Row
+    sty BrickCollide2_Col
+
+    lda #$80
+    ora BrickCollide2_Row
+    sta BrickCollide2_Row
+    jmp @checkPointsVert
+
+@clearPointRight:
+    lda #0
+    sta BrickCollide2_Row
+
+@checkPointsVert:
+    bit BrickCollide1_Row
+    bpl @noPointLeft
+    bit BrickCollide2_Row
+    bpl @noPointRight
+    ; both collided
+
+    ; Find collision between left and right points
+    lda BallX+1
+    sta TmpX
+
+    ;lda #(BallY+1 + EDGE_COLLIDE_OFFSET)
+    lda BallY+1
+    clc
+    adc #EDGE_COLLIDE_OFFSET
+    jsr CheckPointCollide
+
+    stx BrickCollide1_Row
+    sty BrickColIndex_Vert
+
+    lda #$80
+    ora BrickCollide1_Row
+    sta BrickRowIndex_Vert
+
+    jmp @checkHorizontal
+
+@noPointLeft:
+    bit BrickCollide2_Row
+    bpl @noVertCollide
+    ; just Right collided
+
+    lda BrickCollide2_Row
+    sta BrickRowIndex_Vert
+    lda BrickCollide2_Col
+    sta BrickColIndex_Vert
+
+    jmp @checkHorizontal
+
+@noPointRight:
+    ; just Left collided
+    lda BrickCollide1_Row
+    sta BrickRowIndex_Vert
+    lda BrickCollide1_Col
+    sta BrickColIndex_Vert
+
+    jmp @checkHorizontal
+
+@noVertCollide:
+    ; neither collided
+    lda #0
+    sta BrickRowIndex_Vert
+    sta BrickColIndex_Vert
+    jmp @checkHorizontal
+
+@checkHorizontal:
+    ;lda #(BallY+1 - POINT_COLLIDE_OFFSET)
+    lda BallY+1
+    sec
+    sbc #POINT_COLLIDE_OFFSET
+    sta TmpY
+
+    jsr GetBallHorizDirection
+    beq @goingLeftTop
+
+    ;lda #(BallX+1 + EDGE_COLLIDE_OFFSET)
+    lda BallX+1
+    clc
+    adc #EDGE_COLLIDE_OFFSET
+    sta TmpX
+    jmp @pointTopCheck
+
+@goingLeftTop:
+    ;lda #(BallX+1 - EDGE_COLLIDE_OFFSET)
+    lda BallX+1
+    sec
+    sbc #EDGE_COLLIDE_OFFSET
+    sta TmpX
+
+@pointTopCheck:
+    jsr CheckPointCollide
+    beq @clearPointTop
+
+    stx BrickCollide1_Row
+    sty BrickCollide1_Col
+
+    lda #$80
+    ora BrickCollide1_Row
+    sta BrickCollide1_Row
+    jmp @pointBottomCheck
+
+@clearPointTop:
+    lda #0
+    sta BrickCollide1_Row
+
+@pointBottomCheck:
+    ;lda #(BallY+1 - POINT_COLLIDE_OFFSET)
+    lda BallY+1
+    sec
+    sbc #POINT_COLLIDE_OFFSET
+    sta TmpY
+
+    jsr GetBallHorizDirection
+    beq @goingLeftBottom
+
+    ;lda #(BallX+1 + EDGE_COLLIDE_OFFSET)
+    lda BallX+1
+    clc
+    adc #EDGE_COLLIDE_OFFSET
+    sta TmpX
+    jmp @checkPointBottom
+
+@goingLeftBottom:
+    ;lda #(BallX+1 - EDGE_COLLIDE_OFFSET)
+    lda BallX+1
+    sec
+    sbc #EDGE_COLLIDE_OFFSET
+    sta TmpX
+
+@checkPointBottom:
+    jsr CheckPointCollide
+    beq @clearPointBottom
+
+    stx BrickCollide2_Row
+    sty BrickCollide2_Col
+
+    lda #$80
+    ora BrickCollide2_Row
+    sta BrickCollide2_Row
+    jmp @checkPointsHoriz
+
+@clearPointBottom:
+    lda #0
+    sta BrickCollide2_Row
+
+@checkPointsHoriz:
+    bit BrickCollide1_Row
+    bpl @noPointTop
+    bit BrickCollide2_Row
+    bpl @noPointBottom
+
+    ; Find collision between left and right points
+    lda BallX+1
+    sta TmpX
+    ;lda #(BallY+1 + EDGE_COLLIDE_OFFSET)
+    lda BallY+1
+    clc
+    adc #EDGE_COLLIDE_OFFSET
+    jsr CheckPointCollide
+
+    stx BrickCollide1_Row
+    sty BrickColIndex_Vert
+
+    lda #$80
+    and BrickCollide1_Row
+    sta BrickRowIndex_Vert
+
+    jmp @actOnCollide
+
+@noPointTop:
+    bit BrickCollide2_Row
+    bpl @noHorizCollide
+    ; Just bottom collided
+
+    lda BrickCollide2_Row
+    sta BrickRowIndex_Horiz
+    lda BrickCollide2_Col
+    sta BrickColIndex_Horiz
+
+@noPointBottom:
+    ; Just top collided
+    lda BrickCollide1_Row
+    sta BrickRowIndex_Vert
+    lda BrickCollide1_Col
+    sta BrickColIndex_Vert
+    jmp @actOnCollide
+
+@noHorizCollide:
+    ; neither collided
+    lda #0
+    sta BrickRowIndex_Horiz
+    sta BrickColIndex_Horiz
+    jmp @actOnCollide
+
+@actOnCollide:
+    jsr DoVerticalBrickCollide
+    jmp DoHorizontalBrickCollide
+    ;rts
+
+DoVerticalBrickCollide:
+    bit BrickRowIndex_Vert
+    bmi BounceVert
+    rts
+
+
+DoHorizontalBrickCollide:
+    bit BrickRowIndex_Horiz
+    bmi BounceHoriz
+    rts
+
+BounceVert:
+    lda #$00
+    sec
+    sbc BallSpeedY
+    sta BallSpeedY
+
+    lda #$00
+    sbc BallSpeedY+1
+    sta BallSpeedY+1
+    rts
+
+BounceHoriz:
     lda #$00
     sec
     sbc BallSpeedX
@@ -486,13 +763,15 @@ CheckWallCollide:
     sta BallSpeedX+1
     rts
 
-; TODO: Check side of brick collision for bounce.
-CheckCollide:
-    lda BallY+1
+; Check collision point for a brick
+; Point coords in TmpX and TmpY for X and Y, respectively
+CheckPointCollide:
+    lda TmpY
     ; Y >= BOARD_OFFSET_Y, continue
     cmp #BOARD_OFFSET_Y
     bcs :+
     ; Above board
+    lda #0
     rts
 :
     ; Y <= BOARD_HEIGHT + BOARD_OFFSET_Y, continue
@@ -500,14 +779,16 @@ CheckCollide:
     beq :+
     bcc :+
     ; Below board
+    lda #0
     rts
 :
 
-    lda BallX+1
+    lda TmpX
     ; X >= BOARD_OFFSET_X, continue
     cmp #BOARD_OFFSET_X
     bcs :+
     ; Left of board
+    lda #0
     rts
 :
     ; X <= BOARD_WIDTH + BOARD_OFFSET_X, continue
@@ -515,16 +796,19 @@ CheckCollide:
     beq :+
     bcc :+
     ; Right of board
+    lda #0
     rts
 :
 
     ; Ball is in board area.  Check for brick collision
-    jsr SpriteToTile
+    jsr PointToTile
     lda (AddressPointer0), y
-    bne :+
+    ;bne :+
     ; No tile
     rts
-:
+
+; TODO
+ExecuteCollision:
     bpl @DecodeFirstByte
     ; TODO: verify that this can never happen on first column
     dey
