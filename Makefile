@@ -89,4 +89,4 @@ map_data.i: $(CONVMAP) maps/main-boards.tmx maps/child-boards.tmx
 	cd maps && ../$(CONVMAP) main-boards.tmx child-boards.tmx ../$@
 
 game.bmp: tiles.aseprite
-	aseprite -b --all-layers $< --save-as $@
+	aseprite -b $< --save-as $@
