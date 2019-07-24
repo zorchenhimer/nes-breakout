@@ -77,11 +77,11 @@ BallSpeedY: .res 2
 IgnoreInput: .res 1
 
 .segment "BSS"
-ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
-ChrWriteTileCount:  .res 1
-
 ; Overworld map
 CurrentMap: .res (BOARD_WIDTH * BOARD_HEIGHT)
+
+ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
+ChrWriteTileCount:  .res 1
 
 controller1:        .res 1
 controller1_Old:    .res 1
@@ -95,11 +95,24 @@ BrickColIndex_Horiz:    .res 1
 BrickRowIndex_Vert:    .res 1
 BrickColIndex_Vert:    .res 1
 
+CollideRow_A:  .res 1
+CollideCol_A:  .res 1
+CollideRow_B:  .res 1
+CollideCol_B:  .res 1
+
+CollisionRow_Ret:   .res 1
+CollisionCol_Ret:   .res 1
+
+; TODO: Remove these
 BrickCollide1_Row:  .res 1
 BrickCollide1_Col:  .res 1
 BrickCollide2_Row:  .res 1
 BrickCollide2_Col:  .res 1
 
+PointA_X:   .res 1
+PointA_Y:   .res 1
+PointB_X:   .res 1
+PointB_Y:   .res 1
 
 .include "credits_ram.asm"
 
