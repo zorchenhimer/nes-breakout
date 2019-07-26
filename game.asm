@@ -1,7 +1,7 @@
 ; asmsyntax=ca65
 
 Initial_Ball_Speed_WHOLE = 1
-Initial_Ball_Speed_FRACT = 128
+Initial_Ball_Speed_FRACT = 0
 
 WALL_RIGHT = $F5
 WALL_LEFT = $0A
@@ -11,8 +11,8 @@ WALL_BOTTOM = $DD
 BALL_SPRITE_OFFSET_X = 3
 BALL_SPRITE_OFFSET_Y = 3
 
-BALL_INIT_X = 40 ; $80
-BALL_INIT_Y = 20 ; $C0
+BALL_INIT_X = 56 + 32 ; $80
+BALL_INIT_Y = 144 ; $C0
 
 EDGE_COLLIDE_OFFSET = 3
 POINT_COLLIDE_OFFSET = 2
@@ -146,6 +146,8 @@ Init_Game:
     lda #$00
     sta BallX
     sta BallY
+
+    lda #$C0
     sta BallDirection
 
     lda #BALL_INIT_X
@@ -206,6 +208,32 @@ NMI_Game:
     sta $2006
     lda #$0F
     sta $2007
+
+    ; Destroy any bricks that need destroying
+    lda HorizDestroy
+    beq :+
+    bit $2002
+    sta $2006
+    lda HorizDestroy+1
+    sta $2006
+
+    lda #0
+    sta $2007
+    sta $2007
+    sta HorizDestroy
+:
+    lda VertDestroy
+    beq :+
+    bit $2002
+    sta $2006
+    lda VertDestroy+1
+    sta $2006
+
+    lda #0
+    sta $2007
+    sta $2007
+    sta VertDestroy
+:
 
     lda #0
     sta $2005
@@ -560,6 +588,44 @@ CheckBrickCollide:
     sta BrickColIndex_Horiz
     rts
 
+; Take the brick X and Y (in TmpX and TmpY, respectively)
+; and return the start address for that brick in AddressPointer0
+GetPpuAddressForBrick:
+    ;rts
+    ; Find the first byte of brick
+    ldx BrickRow
+    lda Row_Addresses_Low, x
+    sta BrickPpuTmpAddress
+    lda Row_Addresses_High, x
+    sta BrickPpuTmpAddress+1
+
+    ; Correct for brick's second byte
+    ; (needs to be pointing to the first byte)
+    ldy BrickCol
+    lda (BrickPpuTmpAddress), y
+    bpl :+
+    dec BrickCol
+:
+
+    lda BrickRow
+    asl a
+    tax
+
+    lda Index_PpuBrickRows+1, x
+    sta BrickPpuAddress
+    lda Index_PpuBrickRows, x
+
+    clc
+    adc BrickCol
+    sta BrickPpuAddress+1
+
+    ; handle overflow
+    bcc :+
+    inc BrickPpuAddress
+:
+
+    rts
+
 DoVerticalBrickCollide:
     ; Determine up or down travel
     ; find the brick coordinate bounds
@@ -567,6 +633,34 @@ DoVerticalBrickCollide:
     ; add that distance to the opposite direction of the ball
     lda BrickRowIndex_Vert
     and #$7F
+    tax
+    pha
+
+    sta BrickRow
+    lda BrickColIndex_Vert
+    sta BrickCol
+
+    jsr GetPpuAddressForBrick
+    ; Buffer nametable removal
+    lda BrickPpuAddress
+    sta VertDestroy
+    lda BrickPpuAddress+1
+    sta VertDestroy+1
+
+    ; Remove brick from RAM
+    ldx BrickRow
+    lda Row_Addresses_Low, x
+    sta AddressPointer3
+    lda Row_Addresses_High, x
+    sta AddressPointer3+1
+
+    ldy BrickCol
+    lda #0
+    sta (AddressPointer3), y
+    iny
+    sta (AddressPointer3), y
+
+    pla
     tax
 
     bit BallDirection
@@ -598,6 +692,32 @@ DoVerticalBrickCollide:
     jmp BounceVert
 
 DoHorizontalBrickCollide:
+    lda BrickRowIndex_Horiz
+    and #$7F
+    sta BrickRow
+    lda BrickColIndex_Horiz
+    sta BrickCol
+
+    jsr GetPpuAddressForBrick
+    ; Buffer nametable removal
+    lda BrickPpuAddress
+    sta HorizDestroy
+    lda BrickPpuAddress+1
+    sta HorizDestroy+1
+
+    ; Remove brick from RAM
+    ldx BrickRow
+    lda Row_Addresses_Low, x
+    sta AddressPointer3
+    lda Row_Addresses_High, x
+    sta AddressPointer3+1
+
+    ldy BrickCol
+    lda #0
+    sta (AddressPointer3), y
+    iny
+    sta (AddressPointer3), y
+
     ldx BrickColIndex_Horiz
 
     bit BallDirection

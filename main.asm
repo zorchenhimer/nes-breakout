@@ -82,6 +82,11 @@ BallSpeedY: .res 2
 
 IgnoreInput: .res 1
 
+BrickPpuAddress:    .res 2
+BrickPpuTmpAddress: .res 2
+BrickRow:           .res 1
+BrickCol:           .res 1
+
 .segment "BSS"
 ; Overworld map
 CurrentMap: .res (BOARD_WIDTH * BOARD_HEIGHT)
@@ -119,6 +124,10 @@ PointA_X:   .res 1
 PointA_Y:   .res 1
 PointB_X:   .res 1
 PointB_Y:   .res 1
+
+; PPU Addresses to destroy bricks on the PPU
+HorizDestroy:   .res 2
+VertDestroy:    .res 2
 
 .include "credits_ram.asm"
 
