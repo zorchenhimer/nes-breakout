@@ -61,7 +61,13 @@ IdxA:   .res 1
 IdxB:   .res 1
 IdxC:   .res 1
 
-LastBank:   .res 1
+LastBank:      .res 1
+
+; Bit 7, 0 - Down
+; Bit 7, 1 - Up
+; Bit 6, 0 - Left
+; Bit 6, 1 - Right
+BallDirection: .res 1
 
 ; Coordinates with sub-pixel accuracy
 ; These are unsigned

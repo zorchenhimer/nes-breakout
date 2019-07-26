@@ -1,7 +1,7 @@
 ; asmsyntax=ca65
 
 Initial_Ball_Speed_WHOLE = 1
-Initial_Ball_Speed_FRACT = 0
+Initial_Ball_Speed_FRACT = 128
 
 WALL_RIGHT = $F5
 WALL_LEFT = $0A
@@ -11,8 +11,8 @@ WALL_BOTTOM = $DD
 BALL_SPRITE_OFFSET_X = 3
 BALL_SPRITE_OFFSET_Y = 3
 
-BALL_INIT_X = 100 ; $80
-BALL_INIT_Y = 100 ; $C0
+BALL_INIT_X = 40 ; $80
+BALL_INIT_Y = 20 ; $C0
 
 EDGE_COLLIDE_OFFSET = 3
 POINT_COLLIDE_OFFSET = 2
@@ -146,6 +146,7 @@ Init_Game:
     lda #$00
     sta BallX
     sta BallY
+    sta BallDirection
 
     lda #BALL_INIT_X
     sta BallX+1
@@ -180,75 +181,18 @@ Init_Game:
 
     NMI_Set NMI_Game
 
-AccelSpeed = 1
-
 Frame_Game:
     jsr ReadControllers
 
-    lda #BUTTON_UP
-    and controller1
-    ;jsr ButtonPressedP1
-    beq :+
-
-    ; Move ball up
-    lda BallSpeedY
-    sec
-    sbc #AccelSpeed
-    sta BallSpeedY
-
-    lda BallSpeedY+1
-    sbc #0
-    sta BallSpeedY+1
-:
-
-    lda #BUTTON_DOWN
-    ;jsr ButtonPressedP1
-    and controller1
-    beq :+
-
-    ; Move ball down
-    lda BallSpeedY
-    clc
-    adc #AccelSpeed
-    sta BallSpeedY
-
-    lda BallSpeedY+1
-    adc #0
-    sta BallSpeedY+1
-:
-
-    lda #BUTTON_LEFT
-    and controller1
-    beq :+
-
-    lda BallSpeedX
-    sec
-    sbc #AccelSpeed
-    sta BallSpeedX
-
-    lda BallSpeedX+1
-    sbc #0
-    sta BallSpeedX+1
-:
-
-    lda #BUTTON_RIGHT
-    and controller1
-    beq :+
-
-    lda BallSpeedX
-    clc
-    adc #AccelSpeed
-    sta BallSpeedX
-
-    lda BallSpeedX+1
-    adc #0
-    sta BallSpeedX+1
-:
     jsr UpdateBallCoords
     jsr CheckWallCollide
     jsr CheckBrickCollide
+
+    ;jsr UpdatePaddleCoords ; todo
     ;jsr CheckPaddleCollide ; todo
+
     jsr UpdateBallSprite
+    ;jsr UpdatePaddleSprite ; todo
 
     jsr WaitForNMI
     jmp Frame_Game
@@ -277,6 +221,20 @@ NMI_Game:
 ; them to sprite coords
 UpdateBallCoords:
     ; Update coords in memory using the speeds
+    bit BallDirection
+    bvs @right
+    ; left
+    lda BallX
+    sec
+    sbc BallSpeedX
+    sta BallX
+
+    lda BallX+1
+    sbc BallSpeedX+1
+    sta BallX+1
+    jmp @vertical
+
+@right:
     lda BallX
     clc
     adc BallSpeedX
@@ -287,6 +245,9 @@ UpdateBallCoords:
     sta BallX+1
 
 @vertical:
+    bit BallDirection
+    bmi @up
+    ; down
     lda BallY
     clc
     adc BallSpeedY
@@ -294,6 +255,17 @@ UpdateBallCoords:
 
     lda BallY+1
     adc BallSpeedY+1
+    sta BallY+1
+    rts
+
+@up:
+    lda BallY
+    sec
+    sbc BallSpeedY
+    sta BallY
+
+    lda BallY+1
+    sbc BallSpeedY+1
     sta BallY+1
     rts
 
@@ -339,45 +311,9 @@ PointToTile:
     tay
     rts
 
-; 0 - Left
-; 1 - Right
-GetBallHorizDirection:
-    lda BallSpeedX+1
-    beq @fractional
-    jmp @chk
-
-@fractional:
-    lda BallSpeedX
-
-@chk:
-    bpl @positive
-    lda #0
-    rts
-@positive:
-    lda #1
-    rts
-
-; 0 - Up
-; 1 - Down
-GetBallVertDirection:
-    lda BallSpeedY+1
-    beq @fractional
-    jmp @chk
-
-@fractional:
-    lda BallSpeedY
-
-@chk:
-    bpl @positive
-    lda #0
-    rts
-@positive:
-    lda #1
-    rts
-
 CheckWallCollide:
-    jsr GetBallVertDirection
-    bne @goingDown
+    bit BallDirection
+    bpl @goingDown
     ; Going up
     lda BallY+1
     cmp #WALL_TOP
@@ -415,8 +351,8 @@ CheckWallCollide:
     jsr BounceVert
 
 @checkHoriz:
-    jsr GetBallHorizDirection
-    bne @goingRight
+    bit BallDirection
+    bvs @goingRight
     ; Going left
     lda BallX+1
     cmp #WALL_LEFT
@@ -475,8 +411,8 @@ CheckBrickCollide:
     sta PointB_X
 
     ; Y is different depending on direction.
-    jsr GetBallVertDirection
-    beq @ballGoingUp
+    bit BallDirection
+    bmi @ballGoingUp
 
     ;; Ball is going down
     lda BallY+1
@@ -507,14 +443,18 @@ CheckBrickCollide:
     ldy CollisionCol_Ret
 
     ; get direction
-    jsr GetBallVertDirection
-    beq :+
+    bit BallDirection
+    bmi :+
     ; going down, check for top brick
     dex
-    jmp :++
+    bpl :++
+    ;; Underflow
+    jmp @vertDoCollide
 :
     ; going up, check for bottom brick
     inx
+    cpx #BOARD_HEIGHT
+    beq @vertDoCollide
 :
 
     lda Row_Addresses_Low, x
@@ -525,6 +465,7 @@ CheckBrickCollide:
     lda (AddressPointer0), y
     bne @noVertCollide ; there is a brick, do not collide
 
+@vertDoCollide:
     ; Something collided, store it
     lda CollisionRow_Ret
     sta BrickRowIndex_Vert
@@ -552,8 +493,9 @@ CheckBrickCollide:
     adc #POINT_COLLIDE_OFFSET
     sta PointB_Y
 
-    jsr GetBallHorizDirection
-    beq @ballGoingLeft
+    bit BallDirection
+    bvc @ballGoingLeft
+    ;beq @ballGoingLeft
     ; going right
     lda BallX+1
     clc
@@ -581,14 +523,18 @@ CheckBrickCollide:
     ldy CollisionCol_Ret
 
     ; get direction
-    jsr GetBallHorizDirection
-    beq :+
+    bit BallDirection
+    bvc :+
+    ;beq :+
     ; gong right, check for left brick
     dey
-    jmp :++
+    bpl :++
+    jmp @horizDoCollide
 :
     ; going left, check for right brick
     iny
+    cpy #BOARD_WIDTH
+    beq @horizDoCollide
 :
 
     lda Row_Addresses_Low, x
@@ -599,6 +545,7 @@ CheckBrickCollide:
     lda (AddressPointer0), y
     bne @noHorizCollide ; there is a brick, do not collide
 
+@horizDoCollide:
     ; Something collided, store it
     lda CollisionRow_Ret
     sta BrickRowIndex_Horiz
@@ -622,8 +569,8 @@ DoVerticalBrickCollide:
     and #$7F
     tax
 
-    jsr GetBallVertDirection
-    beq @goingUp
+    bit BallDirection
+    bmi @goingUp
 
     ; going down
     ; distance into brick = BallY - Wall
@@ -653,8 +600,8 @@ DoVerticalBrickCollide:
 DoHorizontalBrickCollide:
     ldx BrickColIndex_Horiz
 
-    jsr GetBallHorizDirection
-    beq @goingLeft
+    bit BallDirection
+    bvc @goingLeft
 
     ; going Right
     ; distance into wall = (BallX + edge offset) - LeftWall
@@ -681,25 +628,17 @@ DoHorizontalBrickCollide:
     jmp BounceHoriz
 
 BounceVert:
-    lda #$00
-    sec
-    sbc BallSpeedY
-    sta BallSpeedY
-
-    lda #$00
-    sbc BallSpeedY+1
-    sta BallSpeedY+1
+    ; Bit 7 is vertical
+    lda BallDirection
+    eor #$80
+    sta BallDirection
     rts
 
 BounceHoriz:
-    lda #$00
-    sec
-    sbc BallSpeedX
-    sta BallSpeedX
-
-    lda #$00
-    sbc BallSpeedX+1
-    sta BallSpeedX+1
+    ; Bit 6 is horizontal
+    lda BallDirection
+    eor #$40
+    sta BallDirection
     rts
 
 ; Check collision point for a brick
