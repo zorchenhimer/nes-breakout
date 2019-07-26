@@ -69,7 +69,7 @@ func main() {
 		gm, err := LoadGameMap(m, mainTilesets)
 		if err != nil {
 			fmt.Printf("Unable to load map %q: %v\n", m.Name, err)
-			continue
+			os.Exit(1)
 		}
 		mainMaps = append(mainMaps, gm)
 		layerSizes = append(layerSizes, []int{m.Width, m.Height})
