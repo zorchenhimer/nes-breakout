@@ -64,7 +64,7 @@
 13,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,21,0
 </data>
  </layer>
- <layer id="4" name="board-03" width="24" height="12">
+ <layer id="4" name="board-03" width="24" height="12" visible="0">
   <properties>
    <property name="health" type="int" value="0"/>
    <property name="random-children" type="bool" value="false"/>
@@ -122,7 +122,7 @@
 3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer id="7" name="board-06" width="24" height="12" visible="0">
+ <layer id="7" name="board-06" width="24" height="12">
   <properties>
    <property name="health" type="int" value="0"/>
    <property name="random-children" type="bool" value="false"/>

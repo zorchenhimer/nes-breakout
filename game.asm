@@ -11,13 +11,13 @@ WALL_BOTTOM = $DD
 BALL_SPRITE_OFFSET_X = 3
 BALL_SPRITE_OFFSET_Y = 3
 
-BALL_INIT_X = 60 ; $80
-BALL_INIT_Y = 32 ; $C0
+BALL_INIT_X = 100 ; $80
+BALL_INIT_Y = 100 ; $C0
 
 EDGE_COLLIDE_OFFSET = 3
 POINT_COLLIDE_OFFSET = 2
 
-START_MAP = 7
+START_MAP = 3
 
 Pal_Game:
     .byte $0F, $0A, $1A, $2A
@@ -158,9 +158,9 @@ Init_Game:
     sta BallSpeedX
 
     ;lda #$01
-    lda #$00
-    sta BallSpeedY+1
     lda #Initial_Ball_Speed_WHOLE
+    sta BallSpeedY+1
+    ;lda #$00
     sta BallSpeedX+1
 
     lda #START_MAP
@@ -477,8 +477,8 @@ CheckBrickCollide:
     ; Y is different depending on direction.
     jsr GetBallVertDirection
     beq @ballGoingUp
-    ;; Ball is going down
 
+    ;; Ball is going down
     lda BallY+1
     clc
     adc #EDGE_COLLIDE_OFFSET
@@ -500,11 +500,39 @@ CheckBrickCollide:
     bit CollisionRow_Ret
     bpl @noVertCollide
 
+    ; something collided, check for adjacent brick
+    lda CollisionRow_Ret
+    and #$7F
+    tax
+    ldy CollisionCol_Ret
+
+    ; get direction
+    jsr GetBallVertDirection
+    beq :+
+    ; going down, check for top brick
+    dex
+    jmp :++
+:
+    ; going up, check for bottom brick
+    inx
+:
+
+    lda Row_Addresses_Low, x
+    sta AddressPointer0
+    lda Row_Addresses_High, x
+    sta AddressPointer0+1
+
+    lda (AddressPointer0), y
+    bne @noVertCollide ; there is a brick, do not collide
+
     ; Something collided, store it
     lda CollisionRow_Ret
     sta BrickRowIndex_Vert
     lda CollisionCol_Ret
     sta BrickColIndex_Vert
+
+    ; Act on collide
+    jsr DoVerticalBrickCollide
     jmp @checkHoriz
 
 @noVertCollide:
@@ -546,35 +574,46 @@ CheckBrickCollide:
     bit CollisionRow_Ret
     bpl @noHorizCollide
 
+    ; something collided, check for adjacent brick
+    lda CollisionRow_Ret
+    and #$7F
+    tax
+    ldy CollisionCol_Ret
+
+    ; get direction
+    jsr GetBallHorizDirection
+    beq :+
+    ; gong right, check for left brick
+    dey
+    jmp :++
+:
+    ; going left, check for right brick
+    iny
+:
+
+    lda Row_Addresses_Low, x
+    sta AddressPointer0
+    lda Row_Addresses_High, x
+    sta AddressPointer0+1
+
+    lda (AddressPointer0), y
+    bne @noHorizCollide ; there is a brick, do not collide
+
     ; Something collided, store it
     lda CollisionRow_Ret
     sta BrickRowIndex_Horiz
     lda CollisionCol_Ret
     sta BrickColIndex_Horiz
-    jmp @actOnVert
+    jmp DoHorizontalBrickCollide
+    ;jmp @actOnVert
 
 @noHorizCollide:
     lda #0
     sta BrickRowIndex_Horiz
     sta BrickColIndex_Horiz
-
-@actOnVert:
-    ;; Act on vertictal collision
-    bit BrickRowIndex_Vert
-    bpl :+
-    jsr DoVerticalBrickCollide
-
-:   ; no vertical collide
-    ;; Act on horizontal collision
-    bit BrickRowIndex_Horiz
-    bpl :+
-    jmp DoHorizontalBrickCollide
-
-:   ; no horizontal collide
     rts
 
 DoVerticalBrickCollide:
-    ; FIXME: this math is probably wrong
     ; Determine up or down travel
     ; find the brick coordinate bounds
     ; find the distance into the brick the ball is
@@ -587,18 +626,20 @@ DoVerticalBrickCollide:
     beq @goingUp
 
     ; going down
+    ; distance into brick = BallY - Wall
     lda BallY+1
     sec
-    ;ldx BrickRowIndex_Vert
     sbc Row_Coord_Top, x    ; top brick coord in A
     sta TmpX ; Difference
 
-    sbc Row_Coord_Top, x    ; top brick coord in A
+    lda Row_Coord_Top, x    ; top brick coord in A
+    sec
     sbc TmpX
     sta BallY+1
+    jmp BounceVert
 
 @goingUp:
-    ;ldx BrickRowIndex_Vert
+    ; distance into brick = Wall - BallY
     lda Row_Coord_Bot, x
     sec
     sbc BallY+1
@@ -608,8 +649,6 @@ DoVerticalBrickCollide:
     sta BallY+1
 
     jmp BounceVert
-    ;rts
-
 
 DoHorizontalBrickCollide:
     ldx BrickColIndex_Horiz
@@ -617,33 +656,29 @@ DoHorizontalBrickCollide:
     jsr GetBallHorizDirection
     beq @goingLeft
 
-    ; FIXME: this math is wrong
     ; going Right
-    lda Row_Coord_Left, x
-    sec
-    sbc BallX+1
-
-    clc
-    adc Row_Coord_Left, x
-    sta BallX+1
-
-@goingLeft:
+    ; distance into wall = (BallX + edge offset) - LeftWall
     lda BallX+1
     sec
-    ; Get the collision point, not the center point of the ball
-    sbc #EDGE_COLLIDE_OFFSET
-    sta TmpX
+    sbc Row_Coord_Left, x
+    sta TmpX    ; distance
 
+    lda Row_Coord_Left, x
+    sec
+    sbc TmpX
+    sta BallX+1
+    jmp BounceHoriz
+
+@goingLeft:
+    ; distance into wall = RightWall - BallX - EdgeOffset
     lda Row_Coord_Right, x
-    sbc TmpX ; subtract collision point
+    sbc BallX+1 ; subtract collision point
 
     clc
     adc Row_Coord_Right, x
-    adc #EDGE_COLLIDE_OFFSET
     sta BallX+1
 
     jmp BounceHoriz
-    ;rts
 
 BounceVert:
     lda #$00
@@ -949,7 +984,7 @@ CheckTwoPointCollision:
     lda PointA_Y
     clc
     adc #POINT_COLLIDE_OFFSET
-    sta TmpX
+    sta TmpY
 
 @thirdPointCoords:
     jsr PointToTile
@@ -985,20 +1020,20 @@ Row_Addresses_High:
 ; Lookup tables for tile pixel bounds
 Row_Coord_Top:
 .repeat BOARD_HEIGHT, i
-    .byte (BOARD_OFFSET_Y + (8 * i))
+    .byte (BOARD_OFFSET_Y + (8 * i)) - EDGE_COLLIDE_OFFSET
 .endrepeat
 
 Row_Coord_Bot:
 .repeat BOARD_HEIGHT, i
-    .byte (BOARD_OFFSET_Y + (8 * i)) + 7
+    .byte (BOARD_OFFSET_Y + (8 * i)) + 7 + EDGE_COLLIDE_OFFSET
 .endrepeat
 
 Row_Coord_Left:
 .repeat BOARD_WIDTH, i
-    .byte (BOARD_OFFSET_X + (8 * i))
+    .byte (BOARD_OFFSET_X + (8 * i)) - EDGE_COLLIDE_OFFSET
 .endrepeat
 
 Row_Coord_Right:
 .repeat BOARD_WIDTH, i
-    .byte (BOARD_OFFSET_X + (8 * i)) + 7
+    .byte (BOARD_OFFSET_X + (8 * i)) + 7 + EDGE_COLLIDE_OFFSET
 .endrepeat
