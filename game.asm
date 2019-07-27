@@ -1,10 +1,20 @@
 ; asmsyntax=ca65
 
+BALL_UP = $80
+BALL_DOWN = $00
+BALL_LEFT = $00
+BALL_RIGHT = $40
+
 Initial_Ball_Speed_WHOLE = 1
 Initial_Ball_Speed_FRACT = 0
 
+Initial_Ball_Direction = BALL_DOWN | BALL_LEFT
+
 Initial_Paddle_Speed_WHOLE = 2
 Initial_Paddle_Speed_FRACT = 0
+
+Initial_Ball_X = 138 + 55 ; $80
+Initial_Ball_Y = 154 ; $C0
 
 Paddle_Speed_Slow_WHOLE = 1
 Paddle_Speed_Slow_FRACT = 0
@@ -23,16 +33,15 @@ WALL_BOTTOM = $DD
 BALL_SPRITE_OFFSET_X = 3
 BALL_SPRITE_OFFSET_Y = 3
 
-BALL_INIT_X = 56 + 32 ; $80
-BALL_INIT_Y = 144 ; $C0
-
 EDGE_COLLIDE_OFFSET = 3
 POINT_COLLIDE_OFFSET = 2
 
 START_MAP = 2
 
 ; For collision
-PADDLE_VERT_OFFSET = EDGE_COLLIDE_OFFSET + 2
+PADDLE_VERT_OFFSET = 3
+PADDLE_VERT_COLLIDE_OFFSET = EDGE_COLLIDE_OFFSET + PADDLE_VERT_OFFSET
+PADDLE_CENTER_WIDTH = 11
 
 ; For drawing
 PADDLE_SPRITE_OFFSET_X = 3
@@ -187,23 +196,20 @@ Init_Game:
     sta BallX
     sta BallY
 
-    lda #$C0
+    lda #Initial_Ball_Direction
     sta BallDirection
 
-    lda #BALL_INIT_X
+    lda #Initial_Ball_X
     sta BallX+1
-    lda #BALL_INIT_Y
+    lda #Initial_Ball_Y
     sta BallY+1
 
     lda #Initial_Ball_Speed_FRACT
     sta BallSpeedY
-    ;lda #$00
     sta BallSpeedX
 
-    ;lda #$01
     lda #Initial_Ball_Speed_WHOLE
     sta BallSpeedY+1
-    ;lda #$00
     sta BallSpeedX+1
 
     lda #0
@@ -604,7 +610,41 @@ CheckWallCollide:
     jmp BounceHoriz
 
 CheckPaddleCollide:
-    rts
+    lda BallY+1
+    clc
+    adc #PADDLE_VERT_OFFSET
+    cmp PaddleY+1
+    bcs :+
+    rts ; Ball too high
+:
+
+    lda BallY+1
+    clc
+    adc #PADDLE_VERT_OFFSET
+    cmp PaddleY+1
+    beq :+
+    bcc :+
+    rts ; Ball is too low
+:
+
+    lda PaddleX+1
+    clc
+    adc #PADDLE_CENTER_WIDTH
+    cmp BallX+1
+    bcs :+
+    rts ; Ball is to the right of paddle
+:
+    lda PaddleX+1
+    sec
+    sbc #PADDLE_CENTER_WIDTH
+    cmp BallX+1
+    beq :+
+    bcc :+
+    rts ; Ball is to the left of paddle
+:
+
+    jmp BounceVert
+    ;rts
 
 ;; Brick Collision
 CheckBrickCollide:
