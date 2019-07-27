@@ -6,8 +6,8 @@ Initial_Ball_Speed_FRACT = 0
 Initial_Paddle_Speed_WHOLE = 2
 Initial_Paddle_Speed_FRACT = 0
 
-Paddle_Speed_Slow_WHOLE = 0
-Paddle_Speed_Slow_FRACT = 128
+Paddle_Speed_Slow_WHOLE = 1
+Paddle_Speed_Slow_FRACT = 0
 
 Paddle_Speed_Fast_WHOLE = 3
 Paddle_Speed_Fast_FRACT = 128
@@ -304,6 +304,39 @@ NMI_Game:
 
 ; Read the button inputs and update the paddle coords accordingly
 UpdatePaddleCoords:
+    lda #Initial_Paddle_Speed_FRACT
+    sta PaddleSpeed
+    lda #Initial_Paddle_Speed_WHOLE
+    sta PaddleSpeed+1
+
+    ; Do not change speed if both A and B are pressed
+    lda #BUTTON_A | BUTTON_B
+    and controller1
+    cmp #BUTTON_A | BUTTON_B
+    beq @skipAB
+
+    ; Go faster with A pressed
+    lda #BUTTON_A
+    and controller1
+    beq :+
+    lda #Paddle_Speed_Fast_FRACT
+    sta PaddleSpeed
+    lda #Paddle_Speed_Fast_WHOLE
+    sta PaddleSpeed+1
+    jmp @skipAB
+:
+
+    ; Go slower with B pressed
+    lda #BUTTON_B
+    and controller1
+    beq :+
+    lda #Paddle_Speed_Slow_FRACT
+    sta PaddleSpeed
+    lda #Paddle_Speed_Slow_WHOLE
+    sta PaddleSpeed+1
+:
+
+@skipAB:
     ; Left bounds
     lda PaddleX+1
     cmp #PADDLE_WALL_LEFT
