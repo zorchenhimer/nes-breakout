@@ -3,6 +3,18 @@
 Initial_Ball_Speed_WHOLE = 1
 Initial_Ball_Speed_FRACT = 0
 
+Initial_Paddle_Speed_WHOLE = 2
+Initial_Paddle_Speed_FRACT = 0
+
+Paddle_Speed_Slow_WHOLE = 0
+Paddle_Speed_Slow_FRACT = 128
+
+Paddle_Speed_Fast_WHOLE = 3
+Paddle_Speed_Fast_FRACT = 128
+
+Initial_Paddle_X = 128
+Initial_Paddle_Y = 208
+
 WALL_RIGHT = $F5
 WALL_LEFT = $0A
 WALL_TOP = $11
@@ -17,13 +29,29 @@ BALL_INIT_Y = 144 ; $C0
 EDGE_COLLIDE_OFFSET = 3
 POINT_COLLIDE_OFFSET = 2
 
-START_MAP = 3
+START_MAP = 2
+
+; For collision
+PADDLE_VERT_OFFSET = EDGE_COLLIDE_OFFSET + 2
+
+; For drawing
+PADDLE_SPRITE_OFFSET_X = 3
+PADDLE_SPRITE_OFFSET_Y = 2
+
+PADDLE_WALL_LEFT = $14
+PADDLE_WALL_RIGHT = $EC
+
+Paddle_Sprite_Start = $0208
+Paddle_Sprite_X = Paddle_Sprite_Start + 3
+Paddle_Sprite_Y = Paddle_Sprite_Start + 0
+Paddle_Sprite_Tile = Paddle_Sprite_Start + 1
+Paddle_Sprite_Attr = Paddle_Sprite_Start + 2
 
 Pal_Game:
     .byte $0F, $0A, $1A, $2A
 
 Pal_GameSprites:
-    .byte $0F, $26, $00, $30
+    .byte $0F, $00, $10, $20
 
 Init_Game:
     NMI_Disable
@@ -71,6 +99,18 @@ Init_Game:
     ; Attributes
     lda #0
     sta Sprites+6
+    sta Paddle_Sprite_Attr
+    sta Paddle_Sprite_Attr+4
+
+    lda #$40
+    sta Paddle_Sprite_Attr+8
+
+    lda #$21
+    sta Paddle_Sprite_Tile
+
+    lda #$20
+    sta Paddle_Sprite_Tile+4
+    sta Paddle_Sprite_Tile+8
 
     jsr WriteSprites
 
@@ -166,6 +206,23 @@ Init_Game:
     ;lda #$00
     sta BallSpeedX+1
 
+    lda #0
+    sta PaddleX
+    sta PaddleY
+
+    lda #Initial_Paddle_X
+    sta PaddleX+1
+    lda #Initial_Paddle_Y
+    sta PaddleY+1
+
+    lda #Initial_Paddle_Speed_FRACT
+    sta PaddleSpeed
+    lda #Initial_Paddle_Speed_WHOLE
+    sta PaddleSpeed+1
+
+
+    jsr UpdatePaddleSprite
+
     lda #START_MAP
     jsr LoadMap
     jsr DrawCurrentMap
@@ -187,14 +244,14 @@ Frame_Game:
     jsr ReadControllers
 
     jsr UpdateBallCoords
+    jsr UpdatePaddleCoords
+
     jsr CheckWallCollide
     jsr CheckBrickCollide
-
-    ;jsr UpdatePaddleCoords ; todo
-    ;jsr CheckPaddleCollide ; todo
+    jsr CheckPaddleCollide
 
     jsr UpdateBallSprite
-    ;jsr UpdatePaddleSprite ; todo
+    jsr UpdatePaddleSprite
 
     jsr WaitForNMI
     jmp Frame_Game
@@ -244,6 +301,63 @@ NMI_Game:
 
     dec Sleeping
     rti
+
+; Read the button inputs and update the paddle coords accordingly
+UpdatePaddleCoords:
+    ; Left bounds
+    lda PaddleX+1
+    cmp #PADDLE_WALL_LEFT
+    bcc :+
+
+    lda #BUTTON_LEFT
+    and controller1
+    beq :+
+    ; Move left
+    lda PaddleX
+    sec
+    sbc PaddleSpeed
+    sta PaddleX
+
+    lda PaddleX+1
+    sbc PaddleSpeed+1
+    sta PaddleX+1
+:
+    ; snap to wall
+    lda PaddleX+1
+    cmp #PADDLE_WALL_LEFT
+    bcs :+
+    lda #PADDLE_WALL_LEFT-1
+    sta PaddleX+1
+:
+
+    ; Right bounds
+    lda PaddleX+1
+    cmp #PADDLE_WALL_RIGHT
+    bcs :+
+
+    lda #BUTTON_RIGHT
+    and controller1
+    beq :+
+    ; Move right
+    lda PaddleX
+    clc
+    adc PaddleSpeed
+    sta PaddleX
+
+    lda PaddleX+1
+    adc PaddleSpeed+1
+    sta PaddleX+1
+:
+
+    ; snap to wall
+    lda PaddleX+1
+    cmp #PADDLE_WALL_RIGHT
+    bcc :+
+    lda #PADDLE_WALL_RIGHT
+    sta PaddleX+1
+:
+
+    rts
 
 ; Read BallX and BallY coords and translate
 ; them to sprite coords
@@ -295,6 +409,40 @@ UpdateBallCoords:
     lda BallY+1
     sbc BallSpeedY+1
     sta BallY+1
+    rts
+
+UpdatePaddleSprite:
+    ; Center sprite
+    lda PaddleX+1
+    sec
+    sbc #PADDLE_SPRITE_OFFSET_X
+    sta TmpX
+    sta Paddle_Sprite_X
+
+    lda PaddleY+1
+    sec
+    sbc #PADDLE_SPRITE_OFFSET_Y
+    sta TmpY
+    sta Paddle_Sprite_Y
+
+    ; Left sprite
+    lda TmpY
+    sta Paddle_Sprite_Y+4
+
+    lda TmpX
+    sec
+    sbc #8
+    sta Paddle_Sprite_X+4
+
+    ; Right sprite
+    lda TmpY
+    sta Paddle_Sprite_Y+8
+
+    lda TmpX
+    clc
+    adc #7
+    sta Paddle_Sprite_X+8
+
     rts
 
 UpdateBallSprite:
@@ -366,6 +514,7 @@ CheckWallCollide:
     jmp @bounceVert
 
 @bounceVertBottom:
+    ; TODO: kill wall
     lda BallY+1
     sec
     sbc #WALL_BOTTOM
@@ -420,6 +569,9 @@ CheckWallCollide:
 
 @bounceHoriz:
     jmp BounceHoriz
+
+CheckPaddleCollide:
+    rts
 
 ;; Brick Collision
 CheckBrickCollide:
@@ -1063,7 +1215,6 @@ Index_TileDefs:
 Index_PpuBrickRows:
 .repeat BOARD_HEIGHT, i
     .word $2000 + (((BOARD_OFFSET_Y/8) * 32) + (BOARD_OFFSET_X/8)) + i * 32
-    ;.out .sprintf("PPU Row Address: %x", ($2000 + (((BOARD_OFFSET_Y/8) * 32) + (BOARD_OFFSET_X/8) + i * 32)))
 .endrepeat
 
 Row_Addresses_Low:

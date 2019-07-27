@@ -75,6 +75,13 @@ BallDirection: .res 1
 BallX:  .res 2
 BallY:  .res 2
 
+PaddleX:  .res 2
+PaddleY:  .res 2
+
+; Only added/subtracted to/from the Paddle's X/Y while
+; movement buttons are held down.
+PaddleSpeed:    .res 2
+
 ; These are signed
 ; First byte is unsigned decimal, second is signed integer
 BallSpeedX: .res 2
