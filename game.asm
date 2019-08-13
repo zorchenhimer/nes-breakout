@@ -196,26 +196,7 @@ Init_Game:
     ;lda #1
     ;sta Sprites+2
 
-
-    lda #$00
-    sta BallX
-    sta BallY
-
-    lda #Initial_Ball_Direction
-    sta BallDirection
-
-    lda #Initial_Ball_X
-    sta BallX+1
-    lda #Initial_Ball_Y
-    sta BallY+1
-
-    lda #Initial_Ball_Speed_FRACT
-    sta BallSpeedY
-    sta BallSpeedX
-
-    lda #Initial_Ball_Speed_WHOLE
-    sta BallSpeedY+1
-    sta BallSpeedX+1
+    jsr ResetBall
 
     lda #0
     sta PaddleX
@@ -312,6 +293,28 @@ NMI_Game:
 
     dec Sleeping
     rti
+
+ResetBall:
+    lda #$00
+    sta BallX
+    sta BallY
+
+    lda #Initial_Ball_Direction
+    sta BallDirection
+
+    lda #Initial_Ball_X
+    sta BallX+1
+    lda #Initial_Ball_Y
+    sta BallY+1
+
+    lda #Initial_Ball_Speed_FRACT
+    sta BallSpeedY
+    sta BallSpeedX
+
+    lda #Initial_Ball_Speed_WHOLE
+    sta BallSpeedY+1
+    sta BallSpeedX+1
+    rts
 
 ; Read the button inputs and update the paddle coords accordingly
 UpdatePaddleCoords:
@@ -559,14 +562,7 @@ CheckWallCollide:
 
 @bounceVertBottom:
     ; TODO: kill wall
-    lda BallY+1
-    sec
-    sbc #WALL_BOTTOM
-    sta TmpX
-
-    lda #WALL_BOTTOM
-    sbc TmpX
-    sta BallY+1
+    jmp ResetBall
 
 @bounceVert:
     jsr BounceVert
