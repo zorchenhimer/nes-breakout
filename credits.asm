@@ -15,14 +15,14 @@ Init_Credits:
 
     jsr MMC1_Select_Horiz
 
-    lda #$00
-    jsr LoadChrData
-
     lda #<Credits_Palette
     sta AddressPointer3
     lda #>Credits_Palette
     sta AddressPointer3+1
     jsr WritePaletteData
+
+    lda #$00
+    jsr LoadChrData
 
     ;jsr LoadPalettes
     ;jsr WritePalettes

@@ -1,6 +1,5 @@
 
-export PATH := $(PATH):../tools/cc65/bin:../../../Program Files/Tiled:/c/Program Files/Aseprite/
-#:../../golang/src/github.com/zorchenhimer/go-nes/cmd
+export PATH := $(PATH):../tools/cc65/bin:../../../Program Files/Tiled:/c/Program Files/Aseprite/:../../golang/src/github.com/zorchenhimer/go-nes/bin
 
 EXT=
 ifeq ($(OS),Windows_NT)
@@ -18,7 +17,7 @@ LDFLAGS = -C $(NESCFG) --dbgfile bin/$(NAME).dbg -m bin/$(NAME).map
 NESCFG = nes_snrom.cfg
 
 # Tool that generates CHR data from Bitmap images
-BMP2CHR = bin/bmp2chr$(EXT)
+#BMP2CHR = bin/bmp2chr$(EXT)
 
 # Tool that generates credits from an input CSV file
 GENCRED = bin/generate-credits$(EXT)
@@ -59,8 +58,9 @@ clrNames:
 bin/:
 	-mkdir bin
 
-%.chr: %.bmp $(BMP2CHR)
-	$(BMP2CHR) -i $< -o $@
+%.chr: %.bmp
+	chrutil $< -o $@
+#	$(BMP2CHR) -i $< -o $@
 
 $(GENCRED): generate-credits.go
 	go build -o $(GENCRED) generate-credits.go
