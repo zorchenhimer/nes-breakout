@@ -5,6 +5,10 @@ BALL_DOWN = $00
 BALL_LEFT = $00
 BALL_RIGHT = $40
 
+SPRITE_ID_BALL = $0A
+SPRITE_ID_PADDLE_MID = $09
+SPRITE_ID_PADDLE_SIDE = $08
+
 Initial_Ball_Speed_WHOLE = 1
 Initial_Ball_Speed_FRACT = 0
 
@@ -50,6 +54,7 @@ PADDLE_SPRITE_OFFSET_Y = 2
 PADDLE_WALL_LEFT = $14
 PADDLE_WALL_RIGHT = $EC
 
+; These are RAM addresses
 Paddle_Sprite_Start = $0208
 Paddle_Sprite_X = Paddle_Sprite_Start + 3
 Paddle_Sprite_Y = Paddle_Sprite_Start + 0
@@ -102,7 +107,7 @@ Init_Game:
     jsr ClearSprites
 
     ; Tile
-    lda #$10
+    lda #SPRITE_ID_BALL
     sta Sprites+5
 
     ; Attributes
@@ -114,10 +119,10 @@ Init_Game:
     lda #$40
     sta Paddle_Sprite_Attr+8
 
-    lda #$21
+    lda #SPRITE_ID_PADDLE_MID
     sta Paddle_Sprite_Tile
 
-    lda #$20
+    lda #SPRITE_ID_PADDLE_SIDE
     sta Paddle_Sprite_Tile+4
     sta Paddle_Sprite_Tile+8
 
