@@ -29,12 +29,13 @@ CONVMAP = bin/convert-map$(EXT)
 NAME = breakout
 
 # any CHR files included
-CHR = credits.chr game.chr
+CHR = credits.chr game.chr title.chr
 
 # List of all the sources files
 SOURCES := main.asm nes2header.inc \
 		  game.asm map_decode.asm \
-		  credits.asm credits_ram.asm
+		  credits.asm credits_ram.asm \
+		  title.asm
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
@@ -89,4 +90,7 @@ map_data.i: $(CONVMAP) maps/main-boards.tmx maps/child-boards.tmx
 	cd maps && ../$(CONVMAP) main-boards.tmx child-boards.tmx ../$@
 
 game.bmp: tiles.aseprite
+	aseprite -b $< --save-as $@
+
+title.bmp: title-tiles.aseprite
 	aseprite -b $< --save-as $@

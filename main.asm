@@ -170,6 +170,8 @@ Sprites: .res 256
 
 .segment "PAGE02"
     .byte 2
+.include "title.asm"
+
 .segment "PAGE03"
     .byte 3
 .segment "PAGE04"
@@ -260,11 +262,18 @@ RESET:
 
     jsr MMC1_Init
 
-    lda #0
-    jsr MMC1_Select_Page
+    lda #<Init_Title
+    sta AddressPointer0
+    lda #>Init_Title
+    sta AddressPointer0+1
+    lda #2
+    jmp LongJump
 
-    jmp Init_Game
+    ;lda #2
+    ;jsr MMC1_Select_Page
 
+    ;jmp Init_Title
+    ;jmp Init_Game
     ;jmp Init_Credits
     ;jmp NtSwapTest
 
@@ -382,6 +391,12 @@ WritePaletteData:
     bne :-
 
     rts
+
+; Take a bank in A, and pointer in AddressPointer0.
+; Swap to the bank in A, and jump to the pointer.
+LongJump:
+    jsr MMC1_Select_Page
+    jmp (AddressPointer0)
 
 ; Writes CHR data directly to RAM from ROM space
 ; Input:
