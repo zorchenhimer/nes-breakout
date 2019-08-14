@@ -12,12 +12,12 @@ SPRITE_ID_PADDLE_SIDE = $08
 Initial_Ball_Speed_WHOLE = 1
 Initial_Ball_Speed_FRACT = 0
 
-Initial_Ball_Direction = BALL_DOWN | BALL_LEFT
+Initial_Ball_Direction = BALL_DOWN | BALL_RIGHT
 
 Initial_Paddle_Speed_WHOLE = 2
 Initial_Paddle_Speed_FRACT = 0
 
-Initial_Ball_X = 138 + 55 ; $80
+Initial_Ball_X = 50 ; 200
 Initial_Ball_Y = 154 ; $C0
 
 Paddle_Speed_Slow_WHOLE = 1
@@ -234,6 +234,12 @@ Init_Game:
 
 Frame_Game:
     jsr ReadControllers
+
+    lda #BUTTON_SELECT
+    jsr ButtonPressedP1
+    beq :+
+    jsr ResetBall
+:
 
     jsr UpdateBallCoords
     jsr UpdatePaddleCoords
@@ -611,6 +617,11 @@ CheckWallCollide:
     jmp BounceHoriz
 
 CheckPaddleCollide:
+    bit BallDirection
+    bpl :+
+    rts ; ball is traveling up
+:
+
     lda BallY+1
     clc
     adc #PADDLE_VERT_OFFSET
@@ -620,8 +631,9 @@ CheckPaddleCollide:
 :
 
     lda BallY+1
-    clc
-    adc #PADDLE_VERT_OFFSET
+    sec
+    sbc #PADDLE_VERT_OFFSET
+    ;adc #PADDLE_VERT_OFFSET + EDGE_COLLIDE_OFFSET
     cmp PaddleY+1
     beq :+
     bcc :+
@@ -633,7 +645,8 @@ CheckPaddleCollide:
     adc #PADDLE_CENTER_WIDTH
     cmp BallX+1
     bcs :+
-    rts ; Ball is to the right of paddle
+    ;rts ; Ball is to the right of paddle
+    jmp CheckPaddleHorizCollide
 :
     lda PaddleX+1
     sec
@@ -641,10 +654,46 @@ CheckPaddleCollide:
     cmp BallX+1
     beq :+
     bcc :+
-    rts ; Ball is to the left of paddle
+    ;rts ; Ball is to the left of paddle
+    jmp CheckPaddleHorizCollide
+:
+    jmp BounceVert
+
+CheckPaddleHorizCollide:
+    lda BallX+1
+    cmp PaddleX+1
+    bcc @onLeft
+
+    ; on right
+    bit BallDirection
+    bvc :+
+    ; bit set, traveling right; don't collide
+    rts
 :
 
-    jmp BounceVert
+    lda PaddleX+1
+    clc
+    adc #PADDLE_CENTER_WIDTH + EDGE_COLLIDE_OFFSET
+    cmp BallX+1
+    bcs :+
+    rts ; ball is to the right of paddle
+:
+    jmp BounceHoriz
+
+@onLeft:
+    bit BallDirection
+    bvs :+
+    ; bit clear, traveling left; don't collide
+    rts
+:
+    lda PaddleX+1
+    sec
+    sbc #PADDLE_CENTER_WIDTH + EDGE_COLLIDE_OFFSET + 1
+    cmp BallX+1
+    bcc :+
+    rts ; ball is to the right of paddle
+:
+    jmp BounceHoriz
     ;rts
 
 ;; Brick Collision
