@@ -657,7 +657,109 @@ CheckPaddleCollide:
     ;rts ; Ball is to the left of paddle
     jmp CheckPaddleHorizCollide
 :
+    jsr GetBallPaddleDistance
     jmp BounceVert
+
+GetBallPaddleDistance:
+    ; get the horizontal distance between the center points of the
+    ; ball and paddle as a positive number.
+    lda #0
+    sta IdxA
+
+    lda BallX+1
+    sec
+    sbc PaddleX+1
+    bpl :+
+    sec
+    sta TmpX
+    lda #0
+    sbc TmpX
+    inc IdxA
+:
+    tax
+    lda Deltas_Fract, x
+    sta TmpZ
+    ;lda Deltas_Whole, x
+    ;sta AddressPointer3+1
+
+    ; IdxA - if zero, ball on right; if one, ball on left
+    lda IdxA
+    bne @left
+    ; ball on right
+
+    bit BallDirection
+    bvc @right_movingLeft
+    jmp PaddleBounceWith
+
+@right_movingLeft:
+    jmp PaddleBounceAgainst
+
+@left:
+    bit BallDirection
+    bvs @left_movingRight
+    jmp PaddleBounceWith
+
+@left_movingRight:
+    jmp PaddleBounceAgainst
+
+PaddleBounceWith:
+    ; right, moving right
+    ; add X, sub Y
+    lda BallSpeedX
+    clc
+    adc TmpZ
+    sta BallSpeedX
+    lda BallSpeedX+1
+    adc #0
+    sta BallSpeedX+1
+
+    lda BallSpeedY
+    sec
+    sbc TmpZ
+    sta BallSpeedY
+    lda BallSpeedY+1
+    sbc #0
+    sta BallSpeedY+1
+
+    bpl :+
+    brk     ; PANIC
+:
+    rts
+
+PaddleBounceAgainst:
+    lda BallSpeedX
+    sec
+    sbc TmpZ
+    sta BallSpeedX
+    lda BallSpeedX+1
+    sbc #0
+    sta BallSpeedX+1
+    bpl :+
+    ; If speed goes negative, subtract it form zero and
+    ; swap direction.
+    lda #0
+    sec
+    sbc BallSpeedX
+    sta BallSpeedX
+    lda #0
+    sbc BallSpeedX+1
+    sta BallSpeedX+1
+
+    ; Change direction to right
+    lda #$40
+    ora BallDirection
+    sta BallDirection
+:
+
+    lda BallSpeedY
+    clc
+    adc TmpZ
+    sta BallSpeedY
+    lda BallSpeedY+1
+    adc #0
+    sta BallSpeedY+1
+
+    rts
 
 CheckPaddleHorizCollide:
     lda BallX+1
@@ -1370,3 +1472,42 @@ Row_Coord_Right:
 .repeat BOARD_WIDTH, i
     .byte (BOARD_OFFSET_X + (8 * i)) + 7 + EDGE_COLLIDE_OFFSET
 .endrepeat
+
+; Amount of change on the X and Y.  Index is the distance from center.
+;Deltas_Whole:
+;    .byte $00   ; dead zone
+;    .byte $00   ; dead zone
+;
+;    .byte $00
+;    .byte $00
+;
+;    .byte $01
+;    .byte $01
+;
+;    .byte $01
+;    .byte $02
+;
+;    .byte $02
+;    .byte $02
+;
+;    .byte $02
+;    .byte $02
+
+Deltas_Fract:
+    .byte $00   ; dead zone
+    .byte $00   ; dead zone
+
+    .byte 20
+    .byte 40
+
+    .byte 60
+    .byte 80
+
+    .byte 100
+    .byte 120
+
+    .byte 140
+    .byte 160
+
+    .byte 180
+    .byte 200
