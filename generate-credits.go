@@ -1,156 +1,51 @@
 package main
 
 import (
-	//"bytes"
 	"encoding/csv"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 )
 
 const CLEAR_TILE_ID = "$20"
+const CR_EOD = "    .byte $00"
+
+type Group struct {
+	Name string
+	Label string
+	Tenure int
+	Subs []Subscriber
+}
+
+var SubGroups = []*Group{
+	&Group{"1 Year",   "cr_data_1year", 12, []Subscriber{}},
+	&Group{"9 Months", "cr_data_9months", 9, []Subscriber{}},
+	&Group{"6 Months", "cr_data_6months", 6, []Subscriber{}},
+	&Group{"3 Months", "cr_data_3months", 3, []Subscriber{}},
+	&Group{"1 Month",  "cr_data_1month", 1, []Subscriber{}},
+}
+
+type SortSubs []Subscriber
+func (ss SortSubs) Len() int { return len(ss) }
+func (ss SortSubs) Less(i, j int) bool { return ss[i].SubDate.Before(ss[j].SubDate) }
+func (ss SortSubs) Swap(i, j int) { ss[i], ss[j] = ss[j], ss[i] }
 
 var excludeNames = []string{}
 
 var verbose bool
 
-type DataChunk interface {
-	AsmString(num int) string
-	String() string
-	AttributeValue() uint
-}
-
 type OP_CODE int
-
-const (
-	CR_OP_EOC       OP_CODE = iota
-	CR_OP_CLEAR_ROW         // Clear 32 tiles
-	CR_OP_INC_BYTE          // Increment byte N times given the start value
-	CR_OP_RLE               // Run Length Encoded
-	CR_OP_BYTE_LIST         // List of bytes, NULL terminated
-	CR_OP_ATTR              // One bite value for the row, as well as End of Data
-	CR_OP_NAME
-	CR_OP_EOD
-)
-
-type GenericChunk struct {
-	Comment   string
-	OpCodes   []*GenericData
-	Attribute uint
-}
-
-func (c *GenericChunk) AsmString(num int) string {
-	length := 0
-	codestrings := []string{}
-	for _, code := range c.OpCodes {
-		codestrings = append(codestrings, code.AsmString())
-		length += code.Length
-	}
-
-	if length > 64 {
-		panic("Generic code chunk length greater than 64")
-	}
-
-	comment := ""
-	if len(c.Comment) > 0 {
-		comment = "; " + c.Comment + "\n"
-	}
-
-	return fmt.Sprintf("%scr_data_chunk_%02d:\n    %s\n", comment, num, strings.Join(codestrings, "\n    "))
-
-}
-
-func (c GenericChunk) AttributeValue() uint {
-	return c.Attribute
-}
-
-func (c *GenericChunk) String() string {
-	return "idk, lol"
-}
-
-type GenericData struct {
-	OpCode OP_CODE
-	Length int
-	Data   []byte
-}
-
-// will hold the twitch logo and header and things
-func NewGenericData(code OP_CODE, length int, data []byte) *GenericData {
-	gc := &GenericData{OpCode: code}
-	switch code {
-	case CR_OP_INC_BYTE:
-		if length == 0 || len(data) == 0 {
-			panic("Missing length or data for CR_OP_INC_BYTE")
-		}
-		if len(data) > 1 {
-			panic("Too much data for CR_OP_INC_BYTE")
-		}
-		gc.Length = length
-		gc.Data = data
-
-	case CR_OP_RLE:
-		if length == 0 || len(data) == 0 {
-			panic("Missing length or data for CR_OP_RLE")
-		}
-		if len(data) > 1 {
-			panic("Too much data for CR_OP_RLE")
-		}
-		gc.Length = length
-		gc.Data = data
-
-	case CR_OP_BYTE_LIST:
-		if len(data) == 0 {
-			panic("Missing data for CR_OP_BYTE_LIST")
-		}
-		gc.Length = len(data)
-		gc.Data = data
-
-	case CR_OP_ATTR:
-		if len(data) == 0 {
-			panic("Missing data for CR_OP_ATTR")
-		}
-		if len(data) > 1 {
-			panic("Too much data for CR_OP_ATTR")
-		}
-		gc.Data = data
-	}
-	return gc
-}
-
-func (c *GenericData) AsmString() string {
-	switch c.OpCode {
-	case CR_OP_EOD:
-		return ".byte CR_OP_EOD"
-
-	case CR_OP_EOC:
-		return ".byte CR_OP_EOC"
-
-	case CR_OP_CLEAR_ROW:
-		return ".byte CR_OP_CLEAR_ROW"
-
-	case CR_OP_INC_BYTE:
-		return fmt.Sprintf(".byte CR_OP_INC_BYTE, %d, $%02X", c.Length, c.Data[0])
-
-	case CR_OP_RLE:
-		return fmt.Sprintf(".byte CR_OP_RLE, %d, $%02X", c.Length, c.Data[0])
-
-	case CR_OP_BYTE_LIST:
-		bytes := []string{}
-		for _, b := range c.Data {
-			bytes = append(bytes, fmt.Sprintf("$%02X", b))
-		}
-		return fmt.Sprintf(".byte CR_OP_BYTE_LIST, %s, $00", strings.Join(bytes, ", "))
-
-	case CR_OP_ATTR:
-		return fmt.Sprintf(".byte CR_OP_ATTR, $%02X", c.Data[0])
-	}
-	panic(fmt.Sprintf("Invalid OP Code: %d", c.OpCode))
-}
 
 type Subscriber struct {
 	Username string
 	Tier     int
+	Tenure   int
+	Streak   int
+	SubDate  time.Time
 }
 
 func NewSub(row []string) (*Subscriber, error) {
@@ -158,24 +53,54 @@ func NewSub(row []string) (*Subscriber, error) {
 		return nil, fmt.Errorf("Invalid row: %q", row)
 	}
 
-	sub := &Subscriber{
+	tier := 1
+	if _, err := fmt.Sscanf(row[2], "Tier %d", &tier); err != nil {
+		return nil, err
+	}
+
+	tenure := 1
+	if _, err := fmt.Sscanf(row[3], "%d", &tenure); err != nil {
+		return nil, err
+	}
+
+	streak := 1
+	if _, err := fmt.Sscanf(row[4], "%d", &streak); err != nil {
+		return nil, err
+	}
+
+	date, err := time.Parse(time.RFC3339, row[1])
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing time: %v", err)
+	}
+
+	return &Subscriber{
 		Username: row[0],
-		Tier:     1,
-	}
-
-	switch string(row[2][5]) {
-	case "2":
-		sub.Tier = 2
-	case "3":
-		sub.Tier = 3
-	}
-
-	return sub, nil
+		Tier:     tier,
+		Tenure:   tenure,
+		Streak:   streak,
+		SubDate:  date,
+	}, nil
 }
 
-const asmTemplate = "cr_data_chunk_%02d: .byte CR_OP_NAME, $%02X, %q" // prefix, suffix, attribute, name
+type SubList []Subscriber
 
-func (s *Subscriber) AsmString(num int) string {
+func (sl SubList) Add(sub Subscriber) SubList {
+	for _, s := range sl {
+		if s.Username == sub.Username {
+			if sub.Tenure > s.Tenure {
+				if verbose { fmt.Printf("Found newer tenure for %q\n", sub.Username) }
+				s.Tenure = sub.Tenure
+			}
+			return sl
+		}
+	}
+
+	return append(sl, sub)
+}
+
+const asmTemplate = "    .byte $%02X, %q" // prefix, suffix, attribute, name
+
+func (s *Subscriber) AsmString() string {
 	length := len(s.Username)
 	half := int(length / 2)
 	offset := 16 - half
@@ -187,33 +112,20 @@ func (s *Subscriber) AsmString(num int) string {
 	}
 
 	attr_len := (s.Tier-1)<<uint(6) | len(s.Username)
-	//attr = s.AttributeValue()
-	//attr = attr << uint(2) | s.AttributeValue()
-	//tier_attr = tier_attr << uint(2) | s.Tier - 1
-
-	//return fmt.Sprintf(asmTemplate, num, offset, trailing, tier_attr, s.Username)
-	return fmt.Sprintf(asmTemplate, num, attr_len, s.Username)
+	return fmt.Sprintf(asmTemplate, attr_len, s.Username)
 }
 
-func (s Subscriber) AttributeValue() uint {
-	return uint(s.Tier - 1)
-}
-
-func (s *Subscriber) String() string {
+func (s Subscriber) String() string {
 	return fmt.Sprintf("%s: Tier %d", s.Username, s.Tier)
 }
 
 func main() {
-	var inputFile string
-	var inputFileRequired string
+	var inputDirectory string
 	var outputName string
-	var dummyNames bool
 	var exclude string
 
-	flag.StringVar(&inputFile, "i", "", "Input csv file.  Dummy names used if nonexistent.")
-	flag.StringVar(&inputFileRequired, "I", "", "Required input csv file.  Error if nonexistent.")
+	flag.StringVar(&inputDirectory, "i", "", "Directory with input CSV files.")
 	flag.StringVar(&outputName, "o", "credits_data.i", "Output assembly file.")
-	flag.BoolVar(&dummyNames, "dummy", false, "Use dummy names instead of an input csv file.")
 	flag.BoolVar(&verbose, "verbose", false, "Verbose output.")
 	flag.StringVar(&exclude, "x", "", "A comma separated list of names to exclude.")
 	flag.Parse()
@@ -222,34 +134,47 @@ func main() {
 		excludeNames = strings.Split(exclude, ",")
 	}
 
-	if len(inputFileRequired) > 0 {
-		if len(inputFile) > 0 && inputFileRequired != inputFile {
-			fmt.Println("ERROR: Cannot provide both an optional and required input file!")
-			os.Exit(1)
-		} else if dummyNames {
-			fmt.Println("ERROR: Cannot provide both a required input file and dummy names option!")
-			os.Exit(1)
-		} else {
-			inputFile = inputFileRequired
-		}
+	if len(inputDirectory) == 0 {
+		fmt.Println("ERROR: Missing input directory")
+		os.Exit(1)
 	}
 
-	subList := []DataChunk{}
-	if !exists(inputFile) && !dummyNames {
-		if len(inputFileRequired) > 0 && inputFile == inputFileRequired {
-			fmt.Printf("ERROR: The required input file %q does not exist!\n", inputFileRequired)
-			os.Exit(1)
-		}
-
-		if len(inputFile) > 0 {
-			fmt.Printf("WARNING: %q does not exist! Using dummy names for credits!\n", inputFile)
-		} else {
-			fmt.Println("WARNING: No input file given, using dummy names for credits!")
-		}
-		dummyNames = true
+	info, err := os.Stat(inputDirectory)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	if !dummyNames {
+	if !info.IsDir() {
+		fmt.Println("Input must be a directory")
+		os.Exit(1)
+	}
+
+	files, err := filepath.Glob(filepath.Join(inputDirectory, "*.csv"))
+	if err != nil {
+		fmt.Printf("Error Glob()'ing input directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	sort.Strings(files)
+	if len(files) == 0 {
+		fmt.Println("No CSV files found in directory %q", inputDirectory)
+		os.Exit(1)
+	}
+
+	// reverse the files
+	reversed := []string{}
+	for i := len(files) - 1; i >= 0; i-- {
+		reversed = append(reversed, files[i])
+	}
+
+	sl := SubList{}
+
+	for _, inputFile := range reversed {
+		if verbose {
+			fmt.Printf("Reading file %q\n", inputFile)
+		}
+
 		file, err := os.Open(inputFile)
 		if err != nil {
 			fmt.Println("ERROR: Unable to open subscriber-list.csv: ", err)
@@ -264,6 +189,10 @@ func main() {
 			os.Exit(1)
 		}
 
+		if verbose {
+			fmt.Printf("Found %d records\n", len(records) - 1)
+		}
+
 		for _, row := range records[1:] {
 			exclude := false
 			for _, ex := range excludeNames {
@@ -271,256 +200,52 @@ func main() {
 					exclude = true
 				}
 			}
+
 			if !exclude {
 				sub, err := NewSub(row)
 				if err != nil {
 					fmt.Println("WARNING: Error parsing subscriber: ", err)
 				} else {
-					subList = append(subList, sub)
+					//fmt.Printf("Parsed sub: %s\n", sub.Username)
+					sl = sl.Add(*sub)
+					//subList = append(subList, sub)
 				}
 			}
 		}
-	} else {
-		if verbose {
-			fmt.Println("Using dummy names")
-		}
-		subList = []DataChunk{
-			&Subscriber{"01 Connie Klein", 1},
-			&Subscriber{"02 Stephanie Blake", 1},
-			&Subscriber{"03 Rosie Burgess", 1},
-			&Subscriber{"04 Ida Harmon", 1},
-			&Subscriber{"05 Emmett Murray", 1},
-			&Subscriber{"06 Paul Lowe", 1},
-			&Subscriber{"07 Christina Clayton", 1},
-			&Subscriber{"08 Lucille Scott", 1},
-			&Subscriber{"09 Jennifer Carpenter", 1},
-			&Subscriber{"10 Doyle Ryan", 1},
-			&Subscriber{"11 Ricky Robbins", 1},
-			&Subscriber{"12 Tyler Hammond", 1},
-			&Subscriber{"13 Rene Palmer", 1},
-			&Subscriber{"14 Damon Hopkins", 1},
-			&Subscriber{"15 Sandra Willis", 2},
-			&Subscriber{"16 Pete Russell", 1},
-			&Subscriber{"17 Dean Waters", 1},
-			&Subscriber{"18 Anne Cook", 1},
-			&Subscriber{"19 Seth Coleman", 1},
-			&Subscriber{"20 Ellis Walton", 1},
-			&Subscriber{"21 Doris Cooper", 3},
-			&Subscriber{"22 Vicky Parker", 1},
-			&Subscriber{"23 Ernestine Larson", 1},
-			&Subscriber{"24 Edna Jefferson", 1},
-			&Subscriber{"25 Judy Garner", 1},
-			&Subscriber{"26 Leon Barker", 3},
-			&Subscriber{"27 Claire Rogers", 2},
-			&Subscriber{"28 Priscilla Caldwell", 3},
-			&Subscriber{"29 Lillian Carpenter", 1},
-			&Subscriber{"30 Justin Graves", 1},
-			&Subscriber{"31 Katrina Walton", 1},
-			&Subscriber{"32 Cody Ross", 1},
-			&Subscriber{"33 Nettie Curry", 1},
-			&Subscriber{"34 Benny Lewis", 1},
-			&Subscriber{"35 Lindsey Sullivan", 1},
-			&Subscriber{"36 Lionel Banks", 1},
-			&Subscriber{"37 Katie Casey", 1},
-			&Subscriber{"38 Erika Cook", 1},
-			&Subscriber{"39 Wanda Klein", 1},
-			&Subscriber{"40 Dewey Rice", 1},
-			&Subscriber{"41 Jermaine Harrison", 1},
-			&Subscriber{"42 Mandy Jensen", 1},
-			&Subscriber{"43 Abraham West", 1},
-			&Subscriber{"44 Perry Williamson", 1},
-			&Subscriber{"45 Lindsay Francis", 1},
+	}
+
+	if verbose {
+		fmt.Println("sub list:")
+		for i, s := range sl {
+			fmt.Printf("  [%d] %s\n", i, s.Username)
 		}
 	}
 
-	headerChunks := []DataChunk{
-		// a blank row (two tile rows)
-		&GenericChunk{
-			Comment:   "Blank row before special thanks",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_ATTR, 0, []byte{0x0}),
-			},
-		},
-		// top half of header
-		&GenericChunk{
-			Comment:   "Top half of header",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				// Padding
-				NewGenericData(CR_OP_RLE, 7, []byte(" ")),
-				// Twitch logo row one
-				NewGenericData(CR_OP_INC_BYTE, 3, []byte{0x10}),
-				// "Twitch.tv/"
-				NewGenericData(CR_OP_INC_BYTE, 7, []byte{0x02}),
-				// padding
-				NewGenericData(CR_OP_RLE, 22, []byte(" ")),
-				// Twitch logo row two
-				NewGenericData(CR_OP_INC_BYTE, 3, []byte{0x13}),
-				// top of "Zorchenhimer"
-				NewGenericData(CR_OP_INC_BYTE, 15, []byte{0x80}),
-				// padding
-				NewGenericData(CR_OP_RLE, 7, []byte(" ")),
-				// attribute
-				NewGenericData(CR_OP_ATTR, 0, []byte{0x0}),
-			},
-		},
-		// bottom half of header
-		&GenericChunk{
-			Comment:   "Bottom half of header",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				// padding
-				NewGenericData(CR_OP_RLE, 7, []byte(" ")),
-				// Twitch logo row three
-				NewGenericData(CR_OP_INC_BYTE, 3, []byte{0x16}),
-				// bottom of "Zorchenhimer"
-				NewGenericData(CR_OP_INC_BYTE, 15, []byte{0x90}),
-				// padding
-				NewGenericData(CR_OP_RLE, 7, []byte(" ")),
-				// blank row
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				// attribute
-				NewGenericData(CR_OP_ATTR, 0, []byte{0x0}),
-			},
-		},
-
-		&GenericChunk{
-			Comment:   "Blank row before Miha's credit",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_ATTR, 0, []byte{0x0}),
-			},
-		},
-
-		// Special thanks
-		&GenericChunk{
-			Comment:   "Special thanks for MihaBrumecArt",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				// First Row
-				NewGenericData(CR_OP_RLE, 8, []byte(" ")),
-				NewGenericData(CR_OP_INC_BYTE, 16, []byte{0xA0}),
-				NewGenericData(CR_OP_RLE, 16, []byte(" ")),
-
-				// Second row
-				NewGenericData(CR_OP_INC_BYTE, 16, []byte{0xB0}),
-				NewGenericData(CR_OP_RLE, 8, []byte(" ")),
-				// attribute
-				NewGenericData(CR_OP_ATTR, 0, []byte{0x0F}),
-			},
-		},
-		&GenericChunk{
-			Comment:   "Special thanks for MihaBrumecArt",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				// First Row
-				NewGenericData(CR_OP_RLE, 8, []byte(" ")),
-				NewGenericData(CR_OP_INC_BYTE, 16, []byte{0xC0}),
-				NewGenericData(CR_OP_RLE, 16, []byte(" ")),
-
-				// Second row
-				NewGenericData(CR_OP_INC_BYTE, 16, []byte{0xD0}),
-				NewGenericData(CR_OP_RLE, 8, []byte(" ")),
-				//NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				// attribute
-				NewGenericData(CR_OP_ATTR, 0, []byte{0xF}),
-			},
-		},
-
-		&GenericChunk{
-			Comment:   "Blank row before music credit",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_ATTR, 0, []byte{0x0}),
-			},
-		},
-
-		// Special thanks for music
-		&GenericChunk{
-			Comment:   "Special thanks for music",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				// First Row
-				NewGenericData(CR_OP_RLE, 13, []byte(" ")),
-				NewGenericData(CR_OP_INC_BYTE, 7, []byte{0x09}),
-				NewGenericData(CR_OP_RLE, 21, []byte(" ")),
-
-				// Second row
-				NewGenericData(CR_OP_INC_BYTE, 14, []byte{0xE1}),
-				NewGenericData(CR_OP_RLE, 9, []byte(" ")),
-				// attribute
-				NewGenericData(CR_OP_ATTR, 0, []byte{0xF0}),
-			},
-		},
-
-		&GenericChunk{
-			Comment:   "Special thanks for music, pt2",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				NewGenericData(CR_OP_RLE, 9, []byte(" ")),
-				NewGenericData(CR_OP_INC_BYTE, 14, []byte{0xF1}),
-				NewGenericData(CR_OP_RLE, 9, []byte(" ")),
-
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_ATTR, 0, []byte{0xF0}),
-			},
-		},
-
-		&GenericChunk{
-			Comment:   "Blank row before names",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_ATTR, 0, []byte{0x0}),
-			},
-		},
+SL_SORT:
+	for _, s := range sl {
+		for _, g := range SubGroups {
+			if s.Tenure >= g.Tenure {
+				if verbose { fmt.Printf("Adding %q (%d) to %s\n", s.Username, s.Tenure, g.Name) }
+				g.Subs = append(g.Subs, s)
+				continue SL_SORT
+			}
+		}
 	}
 
-	footerChunks := []DataChunk{
-		&GenericChunk{
-			Comment:   "Bottom padding for Attribute",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				// attribute
-				NewGenericData(CR_OP_ATTR, 0, []byte{0x0}),
-			},
-		},
-		&Subscriber{"Thank you!!", 1},
-		&GenericChunk{
-			Comment:   "Bottom padding for Attribute",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				// attribute
-				NewGenericData(CR_OP_ATTR, 0, []byte{0x0}),
-			},
-		},
-		&GenericChunk{
-			Comment:   "Bottom padding for Attribute",
-			Attribute: uint(0),
-			OpCodes: []*GenericData{
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				NewGenericData(CR_OP_CLEAR_ROW, 0, nil),
-				// attribute
-				NewGenericData(CR_OP_ATTR, 0, []byte{0x0}),
-				NewGenericData(CR_OP_EOD, 0, []byte{0x0}),
-			},
-		},
+	for _, g := range SubGroups {
+		ss := SortSubs(g.Subs)
+		sort.Sort(ss)
+		g.Subs = ss
 	}
 
-	allChunks := append(headerChunks, subList...)
-	allChunks = append(allChunks, footerChunks...)
+	if verbose {
+		for _, g := range SubGroups {
+			fmt.Println(g.Name)
+			for _, s := range g.Subs {
+				fmt.Printf("  T:%d %q\n", s.Tenure, s.Username)
+			}
+		}
+	}
 
 	outFile, err := os.Create(outputName)
 	if err != nil {
@@ -529,49 +254,31 @@ func main() {
 	}
 	defer outFile.Close()
 
-	fmt.Fprintln(outFile, "; asmsyntax=ca65\n\n")
-	fmt.Fprintln(outFile, ".importzp CR_OP_CLEAR_ROW, CR_OP_ATTR, CR_OP_RLE, CR_OP_INC_BYTE, CR_OP_NAME, CR_OP_EOD")
-	fmt.Fprintln(outFile, ".export credits_data_chunks\n")
-	fmt.Fprintln(outFile, ".segment \"PAGE13\"\n")
+	fmt.Fprintln(outFile, "; asmsyntax=ca65\n")
+	fmt.Fprintln(outFile, ".segment \"PAGE13\"")
 
-	fmt.Fprintln(outFile, "credits_data_chunks:")
-	//for i, _ := range allChunks {
-	//    fmt.Fprintf(outFile, "    .word cr_data_chunk_%02d\n", i)
-	//}
-	//fmt.Fprintln(outFile, "credits_data_chunks_end:\n")
-
-	count := 0
-	//attr := uint(0)
-	for i, s := range allChunks {
-		// calculate the attribute byte
-		//attr = s.AttributeValue()
-		//attr = attr << uint(2) | s.AttributeValue()
-
-		if verbose {
-			fmt.Printf("  %02d %s\n", i, s.String())
-		}
-		fmt.Fprintln(outFile, s.AsmString(i))
-		//if i % 2 == 0 {
-		//    fmt.Fprintf(outFile, "    .byte CR_OP_EOD\n\n")
-		//    if verbose { fmt.Println("no attribute byte") }
-		//} else {
-		// Swap the lower and upper bits of the attribute byte
-		//attrA := attr & 0xF0
-		//attrB := attr & 0x0F
-
-		//attrA = attrA >> uint(4)
-		//attrB = attrB << uint(4)
-
-		//attr = attrA | attrB
-
-		// Print the attribute OP code
-		//fmt.Fprintf(outFile, "    .byte CR_OP_ATTR, $%02X\n\n", attr)
-		//if verbose { fmt.Printf("Attribute byte: %02X\n", attr) }
-		//}
-		count += 1
+	fmt.Fprintln(outFile, "\n.export cr_data_groups\ncr_data_groups:")
+	for _, g := range SubGroups {
+		fmt.Fprintf(outFile, "    .word %s\n", g.Label)
 	}
 
-	fmt.Printf("Chunks in credits: %d\n", count)
+	fmt.Fprintf(outFile, "\n.export CR_GROUP_COUNT\nCR_GROUP_COUNT = %d\n", len(SubGroups))
+
+	count := 0
+	byteLen := 0
+	for _, g := range SubGroups {
+		fmt.Fprintf(outFile, "\n; %s\n", g.Name)
+		fmt.Fprintf(outFile, "%s:\n", g.Label)
+		for _, s := range g.Subs {
+			fmt.Fprintln(outFile, s.AsmString())
+			count++
+			byteLen += len(s.Username) + 1
+		}
+		byteLen++
+		fmt.Fprintln(outFile, CR_EOD)
+	}
+
+	fmt.Printf("  Names in credits: %d\n  Byte length: %d\n", count, byteLen)
 }
 
 // exists returns whether the given file or directory exists or not.

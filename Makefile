@@ -83,8 +83,8 @@ bin/$(NAME).nes: bin/main.o $(DATA_OBJ)
 subscriber-list.csv: sample-credit-names.csv
 	cp -u $< $@
 
-credits_data.i: subscriber-list.csv $(GENCRED)
-	$(GENCRED) -x zorchenhimer -o $@ -i $<
+credits_data.i: ../subs/*.csv $(GENCRED)
+	$(GENCRED) -x zorchenhimer -o $@ -i ../subs/
 
 map_data.i: $(CONVMAP) maps/main-boards.tmx maps/child-boards.tmx
 	cd maps && ../$(CONVMAP) main-boards.tmx child-boards.tmx ../$@
