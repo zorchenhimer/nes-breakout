@@ -32,7 +32,7 @@ CHR = credits.chr game.chr title.chr
 
 # List of all the sources files
 SOURCES := main.asm nes2header.inc \
-		  game.asm map_decode.asm \
+		  game.asm game_ram.asm map_decode.asm \
 		  credits.asm credits_ram.asm \
 		  title.asm
 
@@ -76,6 +76,8 @@ bin/main.o: bin/ $(SOURCES) $(CHR)
 
 bin/%.o: %.i
 	$(CA) $(CAFLAGS) -o $@ $^
+
+#bin/game.o: game.asm game_ram.asm
 
 bin/$(NAME).nes: bin/main.o $(DATA_OBJ)
 	$(LD) $(LDFLAGS) -o $@ $^

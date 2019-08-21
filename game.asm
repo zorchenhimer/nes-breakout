@@ -1,5 +1,7 @@
 ; asmsyntax=ca65
 
+.include "game_ram.asm"
+
 BALL_UP = $80
 BALL_DOWN = $00
 BALL_LEFT = $00
@@ -105,6 +107,8 @@ Init_Game:
     jsr LoadChrData
 
     jsr ClearSprites
+
+    jsr Clear_NonGlobalRam
 
     ; Tile
     lda #SPRITE_ID_BALL

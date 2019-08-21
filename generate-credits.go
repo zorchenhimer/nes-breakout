@@ -258,11 +258,13 @@ SL_SORT:
 	fmt.Fprintln(outFile, ".segment \"PAGE13\"")
 
 	fmt.Fprintln(outFile, "\n.export cr_data_groups\ncr_data_groups:")
+	fmt.Fprintln(outFile, "    .word cr_data_attrib")
 	for _, g := range SubGroups {
 		fmt.Fprintf(outFile, "    .word %s\n", g.Label)
 	}
 
-	fmt.Fprintf(outFile, "\n.export CR_GROUP_COUNT\nCR_GROUP_COUNT = %d\n", len(SubGroups))
+	// TODO: load and generate attribution data
+	fmt.Fprintf(outFile, "\n.export CR_GROUP_COUNT\nCR_GROUP_COUNT = %d\n", len(SubGroups) + 1)
 
 	count := 0
 	byteLen := 0
@@ -277,6 +279,15 @@ SL_SORT:
 		byteLen++
 		fmt.Fprintln(outFile, CR_EOD)
 	}
+
+	fmt.Fprintln(outFile, `
+; Attributions
+cr_data_attrib:
+    ; length of label, label, length of name, name
+    ; Length's bit 7 denote type of data.  0 for label, 1 for name.
+    .byte $0F, "Some sprite work", $86, "Mr Bob"
+    .byte $05, "Music", $8C, "Some guy, idk"
+    .byte $00 ; NULL is end of list`)
 
 	fmt.Printf("  Names in credits: %d\n  Byte length: %d\n", count, byteLen)
 }

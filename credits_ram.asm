@@ -1,5 +1,8 @@
 ; asmsyntax=ca65
 
+.pushseg
+.segment "RAMCREDIT"
+
 cr_frameOdd:    .res 1
 cr_chunkCurrent: .res 1  ; current name
 cr_chunkLength:  .res 1  ; length of the current chunk
@@ -26,7 +29,14 @@ cr_nameLength:          .res 1
 cr_tier2Color:  .res 1
 cr_tier3Color:  .res 1
 
+cr_nextGroup:   .res 1
+cr_currentGroup: .res 1
+
 cr_TileBuffer:  .res 64
+.align 256
+cr_attribBuffer: .res 64*4
+
+;cr_attribBuffer = $0600
 
 CR_SCROLL_SPEED = 3     ; frames to wait for the next scroll update
 CR_SCROLL_WAIT  = 120   ; frames to wait to start scrolling
@@ -49,3 +59,5 @@ CR_OP_NAME      = 6
 CR_OP_EOD       = 7 ; End of Data
 
 .exportzp CR_OP_CLEAR_ROW, CR_OP_ATTR, CR_OP_RLE, CR_OP_INC_BYTE, CR_OP_NAME, CR_OP_EOD
+
+.popseg

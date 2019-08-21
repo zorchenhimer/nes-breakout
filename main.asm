@@ -94,9 +94,7 @@ BrickPpuTmpAddress: .res 2
 BrickRow:           .res 1
 BrickCol:           .res 1
 
-.segment "BSS"
-; Overworld map
-CurrentMap: .res (BOARD_WIDTH * BOARD_HEIGHT)
+.segment "RAMGLOBAL"
 
 ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
 ChrWriteTileCount:  .res 1
@@ -106,37 +104,6 @@ controller1_Old:    .res 1
 controller2:        .res 1
 controller2_Old:    .res 1
 
-
-; Bit 7 is set when these have a valid value
-BrickRowIndex_Horiz:    .res 1
-BrickColIndex_Horiz:    .res 1
-BrickRowIndex_Vert:    .res 1
-BrickColIndex_Vert:    .res 1
-
-CollideRow_A:  .res 1
-CollideCol_A:  .res 1
-CollideRow_B:  .res 1
-CollideCol_B:  .res 1
-
-CollisionRow_Ret:   .res 1
-CollisionCol_Ret:   .res 1
-
-; TODO: Remove these
-BrickCollide1_Row:  .res 1
-BrickCollide1_Col:  .res 1
-BrickCollide2_Row:  .res 1
-BrickCollide2_Col:  .res 1
-
-PointA_X:   .res 1
-PointA_Y:   .res 1
-PointB_X:   .res 1
-PointB_Y:   .res 1
-
-; PPU Addresses to destroy bricks on the PPU
-HorizDestroy:   .res 2
-VertDestroy:    .res 2
-
-.include "credits_ram.asm"
 
 .segment "NMIRAM"
 NMI_Instr:      .res 1
@@ -199,8 +166,6 @@ Sprites: .res 256
 
 .segment "PAGE13"
     .byte 13
-;.include "credits_data.i"
-;.incbin "bin/credits_data.o"
 
 .segment "PAGE14"
     .byte 14
@@ -856,6 +821,41 @@ IncPointer0:
     bne :+
     inc AddressPointer0+1
 :   rts
+
+; Clears ram from $0400 to $07FC
+Clear_NonGlobalRam:
+    lda #$00
+    sta AddressPointer0
+    lda #$04
+    sta AddressPointer0+1
+    jsr clr_ram
+
+    inc AddressPointer0+1   ; $0500
+    jsr clr_ram
+    inc AddressPointer0+1   ; $0600
+    jsr clr_ram
+
+    inc AddressPointer0+1
+    ldy #$FC
+:
+    .repeat 3
+    sta (AddressPointer0), y
+    dey
+    .endrepeat
+    bne :-
+
+    sta (AddressPointer0), y
+
+    rts
+
+; clears one page
+clr_ram:
+    ldy #0
+    lda #0
+:   sta (AddressPointer0), y
+    iny
+    bne :-
+    rts
 
 .include "credits.asm"
 .include "map_decode.asm"

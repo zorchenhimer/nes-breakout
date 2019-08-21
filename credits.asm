@@ -1,6 +1,9 @@
 ; asmsyntax=ca65
 
-.import credits_data_chunks
+.import cr_data_groups
+.importzp CR_GROUP_COUNT
+
+.include "credits_ram.asm"
 
 CLEAR_TILE_ID   = 0
 CR_T2_SPEED     = 8     ; color cycle speed (in frames) for the tier two names
@@ -38,33 +41,28 @@ Init_Credits:
     jsr ClearSprites
     jsr WriteSprites
 
+    jsr Clear_NonGlobalRam
+
+    ; clear out zero page stuff
     lda #0
-    sta cr_currentAttrOffset
-    sta cr_AttrSecondWrite
-    sta cr_AttrTmp
-    sta cr_AttributeReady
-    sta cr_UpdateReady
-    ;sta cr_chunkCurrent
-    sta cr_currentPPULine
-    sta cr_scroll
-    sta cr_tileBufferOffset
     sta AddressPointer2+1
     sta TmpZ
 
-    lda #<credits_data_chunks
-    sta AddressPointer1
-    lda #>credits_data_chunks
-    sta AddressPointer1+1
-
     lda #$23
     sta AddressPointer2
+
+    lda #1
+    sta cr_currentGroup
+    jsr credits_LoadGroup
 
 ; Fill the screen with names
     lda #30
     sta TmpX
 @loop:
-    jsr Credits_LoadChunk
-    jsr Credits_WriteBuffer
+    ;jsr Credits_LoadChunk
+
+    jsr credits_LoadData
+    jsr credits_WriteBuffer
     dec TmpX
     bne @loop
 
@@ -98,6 +96,37 @@ Init_Credits:
     sta cr_scroll_table
     jmp Credits_Frame
     ;rts
+
+; Loads up a name, and changes the
+; group if necessary.
+credits_LoadData:
+    jsr credits_LoadName
+    lda cr_nextGroup
+    beq :++
+
+    inc cr_currentGroup
+    lda cr_currentGroup
+    cmp #CR_GROUP_COUNT
+    bcc :+
+    lda #1
+    sta cr_currentGroup
+:
+    jsr credits_LoadGroup
+    jsr credits_LoadName
+:
+    rts
+
+; Group index in A
+credits_LoadGroup:
+    asl a
+    tax
+    lda cr_data_groups, x
+    sta AddressPointer1
+    lda cr_data_groups+1, x
+    sta AddressPointer1+1
+    lda #0
+    sta cr_nextGroup
+    rts
 
 Credits_WriteAttr:
     lda #0
@@ -141,7 +170,7 @@ Credits_WriteAttr:
     rts
 
 ; Write the cr_TileBuffer to the PPU
-Credits_WriteBuffer:
+credits_WriteBuffer:
     lda #0
     sta cr_UpdateReady
     lda cr_currentPPULine
@@ -190,9 +219,8 @@ Credits_WriteBuffer:
 @noAttr:
     rts
 
-; Two byte increment
+; Two byte increment.  Increment by value in A.
 cr_Decode_Opcode_IncAddr:
-    ;lda AddressPointer1
     clc
     adc AddressPointer1
     sta AddressPointer1
@@ -202,28 +230,28 @@ cr_Decode_Opcode_IncAddr:
     sta AddressPointer1+1
     rts
 
-cr_OPCodes:
-    .word cr_op_EndOfChunk
-    .word cr_op_ClearRow
-    .word cr_op_IncrementByte
-    .word cr_op_RunLength
-    .word cr_op_ByteList
-    .word cr_op_Attr
-    .word cr_op_Name
-    .word cr_op_EndOfData
+;cr_OPCodes:
+;    .word cr_op_EndOfChunk
+;    .word cr_op_ClearRow
+;    .word cr_op_IncrementByte
+;    .word cr_op_RunLength
+;    .word cr_op_ByteList
+;    .word cr_op_Attr
+;    .word cr_op_Name
+;    .word cr_op_EndOfData
 
 ; Call this with a JSR
-Credits_LoadChunk:
-    lda #CR_UPDATE_TILE
-    sta cr_UpdateReady
-
-    lda #0
-    sta cr_tileBufferOffset
-
-    ;lda cr_chunkCurrent
-
-    asl a
-    tax
+;Credits_LoadChunk:
+;    lda #CR_UPDATE_TILE
+;    sta cr_UpdateReady
+;
+;    lda #0
+;    sta cr_tileBufferOffset
+;
+;    ;lda cr_chunkCurrent
+;
+;    asl a
+;    tax
 
     ;lda credits_data_chunks, x
     ;sta cr_chunkAddress
@@ -234,20 +262,20 @@ Credits_LoadChunk:
     ;jmp cr_Decode_Opcode
 
 ; Before this is called, figure out the credits_data_chunk_## address
-cr_Decode_Opcode:
-    ldy #0
-    lda (AddressPointer1), y
-    asl a
-    tax
-
-    ; load address of op code subroutine
-    lda cr_OPCodes, x
-    sta AddressPointer0
-    lda cr_OPCodes+1, x
-    sta AddressPointer0+1
-
-    ; jump to it
-    jmp (AddressPointer0)
+;cr_Decode_Opcode:
+;    ldy #0
+;    lda (AddressPointer1), y
+;    asl a
+;    tax
+;
+;    ; load address of op code subroutine
+;    lda cr_OPCodes, x
+;    sta AddressPointer0
+;    lda cr_OPCodes+1, x
+;    sta AddressPointer0+1
+;
+;    ; jump to it
+;    jmp (AddressPointer0)
 
 cr_ClearRow:
     ldx cr_tileBufferOffset
@@ -268,9 +296,9 @@ cr_ClearRow:
     jmp cr_Decode_Opcode_IncAddr
 
 ; Add 32 bytes of Spaces to the tile buffer
-cr_op_ClearRow:
-    jsr cr_ClearRow
-    jmp cr_Decode_Opcode
+;cr_op_ClearRow:
+;    jsr cr_ClearRow
+;    jmp cr_Decode_Opcode
 
 ; Start at the given byte and increment N times
 cr_op_IncrementByte:
@@ -308,7 +336,8 @@ cr_op_IncrementByte:
 
     lda #1
     jsr cr_Decode_Opcode_IncAddr
-    jmp cr_Decode_Opcode
+    ;jmp cr_Decode_Opcode
+    rts
 
 ; Repeat a byte N times
 cr_op_RunLength:
@@ -343,12 +372,13 @@ cr_op_RunLength:
 
     lda #1
     jsr cr_Decode_Opcode_IncAddr
-    jmp cr_Decode_Opcode
+    ;jmp cr_Decode_Opcode
+    rts
 
 ; Dump a list of bytes to the buffer
-cr_op_ByteList:
-    jsr cr_ByteList
-    jmp cr_Decode_Opcode
+;cr_op_ByteList:
+;    jsr cr_ByteList
+;    jmp cr_Decode_Opcode
 
 cr_ByteList:
     lda #1
@@ -480,20 +510,64 @@ cr_op_EndOfChunk:
     lda #1
     jmp cr_Decode_Opcode_IncAddr
 
-cr_op_EndOfData:
-    lda #<credits_data_chunks
-    sta AddressPointer1
-    lda #>credits_data_chunks
-    sta AddressPointer1+1
-    jmp Credits_LoadChunk
+;cr_op_EndOfData:
+;    lda #<credits_data_chunks
+;    sta AddressPointer1
+;    lda #>credits_data_chunks
+;    sta AddressPointer1+1
+;    jmp Credits_LoadChunk
 
-cr_op_Name:
+credits_LoadAttrib:
+    ldx #0  ; offset in the buffer
+
+    ; type and length of data
+    ldy #0
+@attribLoop:
+    lda (AddressPointer1), y
+    beq @done
+    bmi @name   ; TODO: do different things for label and name
+
+    sta cr_nameLength   ; length of label, not name, but w/e
+
+    iny
+:   lda (AddressPointer1), y
+    sta cr_attribBuffer, x
+    iny
+    dec cr_nameLength
+    bne :-
+
+    jmp @attribLoop
+
+@name:
+    and #$7F
+    sta cr_nameLength   ; it's a name this time.
+
+    iny
+:   lda (AddressPointer1), y
+    sta cr_attribBuffer, x
+    iny
+    dec cr_nameLength
+    bne :-
+    jmp @attribLoop
+
+@done:
+    rts
+
+credits_LoadName:
     ; Clear the row, prefix spaces, suffix spaces, attribute, name data
-    jsr cr_ClearRow
+    ;jsr cr_ClearRow
+
+    lda #CR_UPDATE_TILE
+    sta cr_UpdateReady
 
     ; Metadata byte.  bits 7-6 are attribute, rest are length.
     ldy #0
     lda (AddressPointer1), y
+    bne :+
+    lda #1
+    sta cr_nextGroup
+    rts
+:
     and #$3F
     sta cr_nameLength
 
@@ -642,7 +716,7 @@ Credits_Frame:
     bne @noChunk
     lda #16
     sta cr_nextChunkWait
-    jsr Credits_LoadChunk
+    jsr credits_LoadData
 
 @noChunk:
     lda cr_scroll
@@ -700,7 +774,7 @@ Credits_NMI:
 
     bit cr_UpdateReady
     bpl @noUpdate
-    jsr Credits_WriteBuffer
+    jsr credits_WriteBuffer
 
 @noUpdate:
     dec Sleeping
