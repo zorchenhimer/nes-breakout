@@ -196,21 +196,6 @@ credits_WriteBuffer:
     dey
     bne @loop
 
-    ; increment and rollover the count
-    ;inc cr_chunkCurrent
-    ;lda cr_chunkCurrent
-    ;cmp #Credits_NameCount
-    ;bcc @noRollover
-
-    ;lda #0
-    ;sta cr_chunkCurrent
-
-;@noRollover:
-
-    ;dec cr_nextAttrWait
-    ;bne @noAttr
-    ;lda #3
-    ;sta cr_nextAttrWait
     bit cr_AttributeReady
     bvc @noAttr
 
@@ -229,76 +214,6 @@ cr_Decode_Opcode_IncAddr:
     adc #0
     sta AddressPointer1+1
     rts
-
-;cr_OPCodes:
-;    .word cr_op_EndOfChunk
-;    .word cr_op_ClearRow
-;    .word cr_op_IncrementByte
-;    .word cr_op_RunLength
-;    .word cr_op_ByteList
-;    .word cr_op_Attr
-;    .word cr_op_Name
-;    .word cr_op_EndOfData
-
-; Call this with a JSR
-;Credits_LoadChunk:
-;    lda #CR_UPDATE_TILE
-;    sta cr_UpdateReady
-;
-;    lda #0
-;    sta cr_tileBufferOffset
-;
-;    ;lda cr_chunkCurrent
-;
-;    asl a
-;    tax
-
-    ;lda credits_data_chunks, x
-    ;sta cr_chunkAddress
-
-    ;lda credits_data_chunks+1, x
-    ;sta cr_chunkAddress+1
-
-    ;jmp cr_Decode_Opcode
-
-; Before this is called, figure out the credits_data_chunk_## address
-;cr_Decode_Opcode:
-;    ldy #0
-;    lda (AddressPointer1), y
-;    asl a
-;    tax
-;
-;    ; load address of op code subroutine
-;    lda cr_OPCodes, x
-;    sta AddressPointer0
-;    lda cr_OPCodes+1, x
-;    sta AddressPointer0+1
-;
-;    ; jump to it
-;    jmp (AddressPointer0)
-
-cr_ClearRow:
-    ldx cr_tileBufferOffset
-    ldy #32
-    lda #CLEAR_TILE_ID
-@loop:
-    sta cr_TileBuffer, x
-    inx
-    dey
-    bne @loop
-
-    lda cr_tileBufferOffset
-    clc
-    adc #32
-    sta cr_tileBufferOffset
-
-    lda #1
-    jmp cr_Decode_Opcode_IncAddr
-
-; Add 32 bytes of Spaces to the tile buffer
-;cr_op_ClearRow:
-;    jsr cr_ClearRow
-;    jmp cr_Decode_Opcode
 
 ; Start at the given byte and increment N times
 cr_op_IncrementByte:
@@ -374,11 +289,6 @@ cr_op_RunLength:
     jsr cr_Decode_Opcode_IncAddr
     ;jmp cr_Decode_Opcode
     rts
-
-; Dump a list of bytes to the buffer
-;cr_op_ByteList:
-;    jsr cr_ByteList
-;    jmp cr_Decode_Opcode
 
 cr_ByteList:
     lda #1
@@ -509,13 +419,6 @@ cr_op_Attr:
 cr_op_EndOfChunk:
     lda #1
     jmp cr_Decode_Opcode_IncAddr
-
-;cr_op_EndOfData:
-;    lda #<credits_data_chunks
-;    sta AddressPointer1
-;    lda #>credits_data_chunks
-;    sta AddressPointer1+1
-;    jmp Credits_LoadChunk
 
 credits_LoadAttrib:
     ldx #0  ; offset in the buffer
@@ -654,13 +557,9 @@ cr_TierColors:
     inc cr_tier2Color
     ldx cr_tier2Color
     cpx #6
-    bne :+
+    bne @t3check
     ldx #0
     stx cr_tier2Color
-
-:
-    ;lda Credits_Tier2, x
-    ;sta PaletteRAM+26
 
 @t3check:
     dec cr_t2Count
@@ -682,26 +581,10 @@ cr_TierColors:
     lda #$21
     sta cr_tier3Color
 :
-    ;lda cr_tier3Color
-    ;sta PaletteRAM+22
-
     rts
 
 Credits_Frame:
     jsr cr_TierColors
-
-; This is for the actual rom. CRDEBUG is defined in the
-; credits dev makefile.
-;.ifndef CRDEBUG
-;    lda #BUTTON_START
-;    jsr ButtonPressedP1
-;    beq @nobutton
-;
-;    lda #STATES::GS_TITLE
-;    sta current_gamestate
-;    inc gamestate_changed
-;@nobutton:
-;.endif
 
     lda cr_scrollWait
     bne @notYet
@@ -747,7 +630,6 @@ Credits_Frame:
     jmp @nextFrame
 
 Credits_NMI:
-    ; TODO: update color cycle
     ;jsr WritePalettes
     bit $2002
 
@@ -790,7 +672,6 @@ Credits_NMI:
     ; Name table
     lda cr_scroll_table
     sta $2000
-    ;jmp NMI_Finished
     rti
 
 ; start of row addresses - 30 total rows
