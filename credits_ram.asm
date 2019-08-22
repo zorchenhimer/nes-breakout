@@ -33,8 +33,8 @@ cr_nextGroup:   .res 1
 cr_currentGroup: .res 1
 
 cr_TileBuffer:  .res 64
-.align 256
-cr_attribBuffer: .res 64*4
+.align 128
+cr_attribBuffer: .res 32*4
 
 ;cr_attribBuffer = $0600
 
