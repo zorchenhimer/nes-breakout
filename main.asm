@@ -173,6 +173,8 @@ Sprites: .res 256
 CreditsChrData:
     .incbin "credits.chr"
 GameChrData:
+    ; FIXME: generate the tile count for this stuff
+    ; (and the lookup table below)
     .incbin "game.chr", 0, (16 * 14)
 TitleData:
     ; 128 tiles. includes a character set
