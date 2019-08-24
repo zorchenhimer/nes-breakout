@@ -242,7 +242,7 @@ SL_SORT:
 		for _, g := range SubGroups {
 			fmt.Println(g.Name)
 			for _, s := range g.Subs {
-				fmt.Printf("  T:%d %q\n", s.Tenure, s.Username)
+				fmt.Printf("  Tenure:%d Tier:%d %q\n", s.Tenure, s.Tier, s.Username)
 			}
 		}
 	}

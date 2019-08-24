@@ -8,6 +8,10 @@
 CLEAR_TILE_ID   = 0
 CR_T2_SPEED     = 8     ; color cycle speed (in frames) for the tier two names
 
+CR_INIT_NAME_COUNT = 11
+CR_START_GROUP = 1
+CR_FIRST_SCREEN_SIZE = 8
+
 Init_Credits:
     ; "Disable" NMI
     NMI_Disable
@@ -45,26 +49,21 @@ Init_Credits:
 
     ; clear out zero page stuff
     lda #0
-    sta AddressPointer2+1
     sta TmpZ
+    ;sta AddressPointer2+1
 
     lda #$23
     sta AddressPointer2
 
-    lda #1
-    sta cr_currentGroup
-    jsr credits_LoadGroup
-
 ; Fill the screen with names
-    lda #30
-    sta TmpX
-@loop:
-    ;jsr Credits_LoadChunk
+;    lda #30
+;    sta TmpX
 
-    jsr credits_LoadData
-    jsr credits_WriteBuffer
-    dec TmpX
-    bne @loop
+;@loop:
+;    jsr credits_LoadData
+;    jsr credits_WriteBuffer
+;    dec TmpX
+;    bne @loop
 
     lda #CR_SCROLL_WAIT
     sta cr_scrollWait
@@ -94,14 +93,17 @@ Init_Credits:
 
     lda #CR_TOP
     sta cr_scroll_table
-    jmp Credits_Frame
+
+    lda #CR_START_GROUP
+    sta cr_currentGroup
+    jmp credits_LoadGroup
+    ;jmp Credits_Frame
     ;rts
 
 ; Loads up a name, and changes the
 ; group if necessary.
 credits_LoadData:
     jsr credits_LoadName
-    lda cr_nextGroup
     beq :++
 
     inc cr_currentGroup
@@ -126,6 +128,255 @@ credits_LoadGroup:
     sta AddressPointer1+1
     lda #0
     sta cr_nextGroup
+
+    lda credits_GroupInits, x
+    sta AddressPointer0
+    lda credits_GroupInits+1, x
+    sta AddressPointer0+1
+
+    NMI_Set NMI_Bare
+    jsr WaitForNMI
+
+    ; Disable drawing BG and sprites
+    lda #$00
+    sta $2001
+
+    lda #$00
+    jsr FillNametable0
+    lda #$00
+    jsr FillNametable2
+
+    jsr ClearAttrTable0
+    jsr ClearAttrTable2
+
+    jsr credits_DrawTwitchHeader
+
+    jmp (AddressPointer0)
+
+credits_GroupInits:
+    .word credits_group_attrib
+    .word credits_group_1year
+    .word credits_group_9months
+    .word credits_group_6months
+    .word credits_group_3months
+    .word credits_group_1month
+
+credits_GroupLabels:
+    .word :+
+    .word :++
+    .word :+++
+    .word :++++
+    .word :+++++
+    .word :++++++
+
+:   .byte "what", $00
+:   .byte "One Year", $00
+:   .byte "Nine Months", $00
+:   .byte "Six Months", $00
+:   .byte "Three Months", $00
+:   .byte "One Month", $00
+
+; Label ID in A
+; PPU address should already be set before
+; calling this.
+credits_DrawGroupLabel:
+    asl a
+    tax
+    lda credits_GroupLabels, x
+    sta AddressPointer0
+    lda credits_GroupLabels+1, x
+    sta AddressPointer0+1
+
+    ldy #0
+:   lda (AddressPointer0), y
+    beq :+
+    sta $2007
+    iny
+    jmp :-
+:
+    rts
+
+credits_group_attrib:
+    rts
+
+credits_group_1year:
+
+    lda #$21
+    sta $2006
+    lda #$0C
+    sta $2006
+
+    lda #1
+    jsr credits_DrawGroupLabel
+
+credits_group_drawNames:
+    lda #6
+    sta cr_currentPPULine
+
+    lda #CR_INIT_NAME_COUNT
+    sta TmpX
+
+    lda #3
+    sta cr_currentAttrOffset
+
+@nameLoop:
+    jsr credits_LoadName
+    bne @loopEnd
+
+    jsr credits_WriteBuffer
+    dec TmpX
+    bne @nameLoop
+
+@loopEnd:
+
+    jsr credits_clearTileBuffer
+
+    lda #CR_TOP
+    sta cr_scroll_table
+
+    lda #CR_SCROLL_WAIT
+    sta cr_scrollWait
+
+    lda #%00011110
+    sta $2001
+
+    lda #0
+    sta cr_scroll
+
+    ;; reset scroll
+    ;bit $2002
+    ;lda #$00
+    ;sta $2005
+    ;sta $2005
+
+
+    jmp Credits_Frame
+
+credits_clearTileBuffer:
+    ; clear tile buffer
+    ldy #64
+    ldx #0
+    lda #0
+:   sta cr_TileBuffer, x
+    inx
+    dey
+    bne :-
+    rts
+
+credits_group_9months:
+    lda #$21
+    sta $2006
+    lda #$0B
+    sta $2006
+
+    lda #2
+    jsr credits_DrawGroupLabel
+
+    jmp credits_group_drawNames
+
+credits_group_6months:
+    lda #$21
+    sta $2006
+    lda #$0C
+    sta $2006
+
+    lda #3
+    jsr credits_DrawGroupLabel
+    jmp credits_group_drawNames
+
+credits_group_3months:
+    lda #$21
+    sta $2006
+    lda #$0A
+    sta $2006
+
+    lda #4
+    jsr credits_DrawGroupLabel
+    jmp credits_group_drawNames
+
+credits_group_1month:
+    lda #$21
+    sta $2006
+    lda #$0C
+    sta $2006
+
+    lda #5
+    jsr credits_DrawGroupLabel
+    jmp credits_group_drawNames
+
+credits_DrawTwitchHeader:
+    ; three rows down, seven columns in
+    lda #$20
+    sta $2006
+    lda #$47
+    sta $2006
+
+    ; increment byte loop
+    ldy #$10
+    ldx #3
+:
+    sty $2007
+    iny
+    dex
+    bne :-
+
+    ; increment byte loop
+    ldy #$02
+    ldx #7
+:
+    sty $2007
+    iny
+    dex
+    bne :-
+
+    ; second row
+    lda #$20
+    sta $2006
+    lda #$67
+    sta $2006
+
+    ; increment byte loop
+    ldy #$13
+    ldx #3
+:
+    sty $2007
+    iny
+    dex
+    bne :-
+
+    ; increment byte loop
+    ldy #$80
+    ldx #15
+:
+    sty $2007
+    iny
+    dex
+    bne :-
+
+    lda #$20
+    sta $2006
+    lda #$87
+    sta $2006
+
+    ; increment byte loop
+    ldy #$16
+    ldx #3
+:
+    sty $2007
+    iny
+    dex
+    bne :-
+
+    ; increment byte loop
+    ldy #$90
+    ldx #15
+:
+    sty $2007
+    iny
+    dex
+    bne :-
+
+
     rts
 
 Credits_WriteAttr:
@@ -535,7 +786,9 @@ credits_LoadName:
     bne :-
 
     lda cr_nameLength
-    jmp cr_Decode_Opcode_IncAddr
+    jsr cr_Decode_Opcode_IncAddr
+    lda #0
+    rts
 
     ; padding to fix the dissassembly in the debugger
     .byte $EA, $EA
@@ -583,7 +836,13 @@ cr_TierColors:
 :
     rts
 
+Credits_FrameBare:
+    jsr WaitForNMI
+    jmp Credits_FrameBare
+
 Credits_Frame:
+    NMI_Set Credits_NMI
+
     jsr cr_TierColors
 
     lda cr_scrollWait
@@ -597,9 +856,32 @@ Credits_Frame:
     ; Do we need to draw the next name?
     dec cr_nextChunkWait
     bne @noChunk
+
+    lda cr_nextGroup
+    bne @waitForEnd
+
     lda #16
     sta cr_nextChunkWait
-    jsr credits_LoadData
+    jsr credits_LoadName
+    beq @noChunk
+    ; the group has ended.
+    jsr credits_clearTileBuffer
+
+    lda #16 * 6
+    sta cr_nextChunkWait
+    jmp @noChunk
+
+@waitForEnd:
+    ; when cr_nextChunkWait hits zero, load
+    ; the next group.
+    inc cr_currentGroup
+    lda cr_currentGroup
+    cmp #CR_GROUP_COUNT
+    bcc :+
+    lda #1
+    sta cr_currentGroup
+:
+    jmp credits_LoadGroup
 
 @noChunk:
     lda cr_scroll
