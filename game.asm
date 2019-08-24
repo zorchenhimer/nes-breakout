@@ -44,7 +44,9 @@ BALL_SPRITE_OFFSET_Y = 3
 EDGE_COLLIDE_OFFSET = 3
 POINT_COLLIDE_OFFSET = 2
 
-START_MAP = 2
+START_MAP = 6
+
+GRAVITY_VALUE = $04
 
 ; For collision
 PADDLE_VERT_OFFSET = 3
@@ -418,9 +420,61 @@ UpdatePaddleCoords:
 
     rts
 
+ApplyGravity:
+    bit BallDirection
+    bpl @down
+    ;up
+
+    lda BallSpeedY
+    sec
+    sbc #GRAVITY_VALUE
+    sta BallSpeedY
+
+    lda BallSpeedY+1
+    sbc #0
+    sta BallSpeedY+1
+    bpl :+
+
+    ; wrap around
+    lda #0
+    sec
+    sbc BallSpeedY
+    sta BallSpeedY
+    lda #0
+    sbc BallSpeedY+1
+    sta BallSpeedY+1
+
+    lda BallDirection
+    and #$40
+    sta BallDirection
+:
+    rts
+
+@down:
+    lda BallSpeedY
+    clc
+    adc #GRAVITY_VALUE
+    sta BallSpeedY
+
+    lda BallSpeedY+1
+    adc #0
+    sta BallSpeedY+1
+
+    cmp #3
+    bcc @nope
+    lda #$02
+    sta BallSpeedY+1
+    lda #0
+    sta BallSpeedY
+@nope:
+    rts
+
 ; Read BallX and BallY coords and translate
 ; them to sprite coords
 UpdateBallCoords:
+
+    jsr ApplyGravity ;lol
+
     ; Update coords in memory using the speeds
     bit BallDirection
     bvs @right
