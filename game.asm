@@ -13,6 +13,9 @@ SPRITE_ID_BALL = $0A
 SPRITE_ID_PADDLE_MID = $09
 SPRITE_ID_PADDLE_SIDE = $08
 
+BOOST_VALUE = $F0
+MAX_BOOST_POOL = 2
+
 Initial_Ball_Speed_WHOLE = 1
 Initial_Ball_Speed_FRACT = 0
 
@@ -134,6 +137,19 @@ Init_Game:
     sta Paddle_Sprite_Tile+4
     sta Paddle_Sprite_Tile+8
 
+    lda #MAX_BOOST_POOL
+    sta BoostPool
+
+    lda #16
+    sta Sprites+(4*5)+0
+    sta Sprites+(4*5)+3
+
+    lda #$0D
+    sta Sprites+(4*5)+1
+
+    lda #0
+    sta Sprites+(4*5)+2
+
     jsr WriteSprites
 
     ; Draw top two rows
@@ -249,6 +265,12 @@ Frame_Game:
     jsr ResetBall
 :
 
+    lda #BUTTON_A
+    jsr ButtonPressedP1
+    beq :+
+    jsr BoostTheBall
+:
+
     jsr UpdateBallCoords
     jsr UpdatePaddleCoords
 
@@ -258,6 +280,8 @@ Frame_Game:
 
     jsr UpdateBallSprite
     jsr UpdatePaddleSprite
+
+    jsr UpdateBoostSprite
 
     jsr WaitForNMI
     jmp Frame_Game
@@ -307,6 +331,67 @@ NMI_Game:
 
     dec Sleeping
     rti
+
+BoostTheBall:
+    lda BoostPool
+    bne :+
+    rts
+
+:   dec BoostPool
+    bit BallDirection
+    bpl @down
+
+    ; going up
+    lda BallSpeedY
+    clc
+    adc #BOOST_VALUE
+    sta BallSpeedY
+
+    lda BallSpeedY+1
+    adc #0
+    sta BallSpeedY+1
+    rts
+
+@down:
+    lda BallSpeedY
+    sec
+    sbc #BOOST_VALUE
+    sta BallSpeedY
+    lda BallSpeedY+1
+    sbc #0
+    sta BallSpeedY+1
+    bmi :+
+    rts
+
+:
+    ; handle underflow
+    lda #0
+    sec
+    sbc BallSpeedY
+    sta BallSpeedY
+
+    lda BallSpeedY+1
+    sbc #0
+    sta BallSpeedY+1
+
+    lda BallDirection
+    and #$40
+    sta BallDirection
+    rts
+
+UpdateBoostSprite:
+    lda BoostPool
+    beq @empty
+
+    clc
+    adc #$0A
+    sta Sprites+(4*5)+1
+    rts
+
+@empty:
+    lda #0
+    sta Sprites+(4*5)+1
+    rts
 
 ResetBall:
     lda #$00

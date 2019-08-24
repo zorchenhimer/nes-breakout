@@ -173,7 +173,7 @@ Sprites: .res 256
 CreditsChrData:
     .incbin "credits.chr"
 GameChrData:
-    .incbin "game.chr", 0, 176
+    .incbin "game.chr", 0, (16 * 14)
 TitleData:
     ; 128 tiles. includes a character set
     .incbin "title.chr", 0, 2048
@@ -710,7 +710,7 @@ Index_ChrData:
     .byte $FE   ; Destination pattern table & PRG bank
 
     .word GameChrData   ; Source address
-    .byte 11    ; Tile count
+    .byte 14    ; Tile count
     .byte $FE   ; Destination pattern table & PRG bank
 
     .word TitleData
