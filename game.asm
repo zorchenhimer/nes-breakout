@@ -7,6 +7,8 @@ BALL_DOWN = $00
 BALL_LEFT = $00
 BALL_RIGHT = $40
 
+BOUNCE_STEP = $18
+
 SPRITE_ID_BALL = $0A
 SPRITE_ID_PADDLE_MID = $09
 SPRITE_ID_PADDLE_SIDE = $08
@@ -661,10 +663,10 @@ CheckPaddleCollide:
     ;rts ; Ball is to the left of paddle
     jmp CheckPaddleHorizCollide
 :
-    jsr GetBallPaddleDistance
+    jsr UpdateBallAngle
     jmp BounceVert
 
-GetBallPaddleDistance:
+UpdateBallAngle:
     ; get the horizontal distance between the center points of the
     ; ball and paddle as a positive number.
     lda #0
@@ -674,95 +676,75 @@ GetBallPaddleDistance:
     sec
     sbc PaddleX+1
     bpl :+
+
+    ; make value positive (0 - val)
     sec
     sta TmpX
     lda #0
     sbc TmpX
     inc IdxA
 :
+    bne @offCenter
+    ; dead center
+
+    lda #0
+    sta BallSpeedX
+    sta BallSpeedX+1
+    sta BallSpeedY
+
+    lda #2
+    sta BallSpeedY+1
+    rts
+
+@offCenter:
+    asl a   ; 4x for index into table of word pairs
+    asl a
     tax
-    lda Deltas_Fract, x
-    sta TmpZ
-    ;lda Deltas_Whole, x
-    ;sta AddressPointer3+1
+
+    lda Bounce_Speed, x
+    pha
+    lda Bounce_Speed+1, x
+    pha
+
+    lda Bounce_Speed+2, x
+    pha
+    lda Bounce_Speed+3, x
+    pha
 
     ; IdxA - if zero, ball on right; if one, ball on left
     lda IdxA
     bne @left
     ; ball on right
 
-    bit BallDirection
-    bvc @right_movingLeft
-    jmp PaddleBounceWith
-
-@right_movingLeft:
-    jmp PaddleBounceAgainst
-
-@left:
-    bit BallDirection
-    bvs @left_movingRight
-    jmp PaddleBounceWith
-
-@left_movingRight:
-    jmp PaddleBounceAgainst
-
-PaddleBounceWith:
-    ; right, moving right
-    ; add X, sub Y
-    lda BallSpeedX
-    clc
-    adc TmpZ
-    sta BallSpeedX
-    lda BallSpeedX+1
-    adc #0
-    sta BallSpeedX+1
-
-    lda BallSpeedY
-    sec
-    sbc TmpZ
-    sta BallSpeedY
-    lda BallSpeedY+1
-    sbc #0
+    pla
     sta BallSpeedY+1
+    pla
+    sta BallSpeedY
 
-    bpl :+
-    brk     ; PANIC
-:
+    pla
+    sta BallSpeedX+1
+    pla
+    sta BallSpeedX
+
+    lda BallDirection
+    ora #$40
+    sta BallDirection
     rts
 
-PaddleBounceAgainst:
-    lda BallSpeedX
-    sec
-    sbc TmpZ
-    sta BallSpeedX
-    lda BallSpeedX+1
-    sbc #0
-    sta BallSpeedX+1
-    bpl :+
-    ; If speed goes negative, subtract it form zero and
-    ; swap direction.
-    lda #0
-    sec
-    sbc BallSpeedX
-    sta BallSpeedX
-    lda #0
-    sbc BallSpeedX+1
-    sta BallSpeedX+1
-
-    ; Change direction to right
-    lda #$40
-    ora BallDirection
-    sta BallDirection
-:
-
-    lda BallSpeedY
-    clc
-    adc TmpZ
-    sta BallSpeedY
-    lda BallSpeedY+1
-    adc #0
+@left:
+    pla
     sta BallSpeedY+1
+    pla
+    sta BallSpeedY
 
+    pla
+    sta BallSpeedX+1
+    pla
+    sta BallSpeedX
+
+    lda BallDirection
+    and #$80
+    sta BallDirection
     rts
 
 CheckPaddleHorizCollide:
@@ -1477,41 +1459,8 @@ Row_Coord_Right:
     .byte (BOARD_OFFSET_X + (8 * i)) + 7 + EDGE_COLLIDE_OFFSET
 .endrepeat
 
-; Amount of change on the X and Y.  Index is the distance from center.
-;Deltas_Whole:
-;    .byte $00   ; dead zone
-;    .byte $00   ; dead zone
-;
-;    .byte $00
-;    .byte $00
-;
-;    .byte $01
-;    .byte $01
-;
-;    .byte $01
-;    .byte $02
-;
-;    .byte $02
-;    .byte $02
-;
-;    .byte $02
-;    .byte $02
-
-Deltas_Fract:
-    .byte $00   ; dead zone
-    .byte $00   ; dead zone
-
-    .byte 20
-    .byte 40
-
-    .byte 60
-    .byte 80
-
-    .byte 100
-    .byte 120
-
-    .byte 140
-    .byte 160
-
-    .byte 180
-    .byte 200
+Bounce_Speed:
+.repeat 12, i
+    .word BOUNCE_STEP * i
+    .word ($0200 - (BOUNCE_STEP * i))
+.endrepeat
