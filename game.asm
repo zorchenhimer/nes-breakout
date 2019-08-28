@@ -1001,9 +1001,6 @@ CheckBrickCollide:
     sta BrickRowIndex_Vert
     lda CollisionCol_Ret
     sta BrickColIndex_Vert
-
-    ; Act on collide
-    jsr DoVerticalBrickCollide
     jmp @checkHoriz
 
 @noVertCollide:
@@ -1081,13 +1078,25 @@ CheckBrickCollide:
     sta BrickRowIndex_Horiz
     lda CollisionCol_Ret
     sta BrickColIndex_Horiz
-    jmp DoHorizontalBrickCollide
+    jmp @doCollisions
     ;jmp @actOnVert
 
 @noHorizCollide:
     lda #0
     sta BrickRowIndex_Horiz
     sta BrickColIndex_Horiz
+
+@doCollisions:
+
+    bit BrickRowIndex_Vert
+    bpl :+
+    jsr DoVerticalBrickCollide
+:
+
+    bit BrickRowIndex_Horiz
+    bpl :+
+    jsr DoHorizontalBrickCollide
+:
     rts
 
 ; Take the brick X and Y (in TmpX and TmpY, respectively)
