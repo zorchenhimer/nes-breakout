@@ -802,6 +802,13 @@ CheckPaddleCollide:
     ;rts ; Ball is to the left of paddle
     jmp CheckPaddleHorizCollide
 :
+    inc BoostPool
+    lda BoostPool
+    cmp #MAX_BOOST_POOL
+    bcc :+
+    lda #MAX_BOOST_POOL
+    sta BoostPool
+:
     jsr UpdateBallAngle
     jmp BounceVert
 
