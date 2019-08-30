@@ -859,5 +859,37 @@ clr_ram:
     bne :-
     rts
 
+; Jumps to an init in the init table
+JumpToInit:
+    ; multiply A by 5
+    tay
+    ldx data_Mult5, y
+
+    ; grab the address pointer
+    lda data_Inits+3, x
+    sta AddressPointer0
+    lda data_Inits+4, x
+    sta AddressPointer0+1
+
+    ; grab the bank
+    lda data_Inits+2, x
+
+    ; do a long jump
+    jmp LongJump
+
+data_Inits:
+    ; Tile start ID, length, bank, init pointer
+    .byte $00, 0, 2
+        .word Init_Title
+    .byte $00, 0, 0
+        .word Init_Game
+    .byte $00, 0, 13
+        .word Init_Credits
+
+data_Mult5:
+.repeat 10, i
+    .byte (i * 5)
+.endrepeat
+
 .include "credits.asm"
 .include "map_decode.asm"

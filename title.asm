@@ -1,14 +1,16 @@
 ; asmsyntax=ca65
 
 TITLE_SpriteTop = 79    ; topmost Y coordinate of cursor
-TITLE_MenuLength = 2
+TITLE_MenuLength = 3
 
 Pal_Title:
     .byte $0F, $00, $10, $20
 
 Data_Title_Menu1:
-    .byte "Game", $00
+    .byte "Title", $00
 Data_Title_Menu2:
+    .byte "Game", $00
+Data_Title_Menu3:
     .byte "Credits", $00
 
 Init_Title:
@@ -40,7 +42,7 @@ Init_Title:
     lda #$00    ; attr
     sta Sprites+2
 
-    jsr WriteSprites
+    ;jsr WriteSprites
 
     lda #2
     jsr LoadChrData
@@ -72,6 +74,19 @@ Init_Title:
     sta AddressPointer0+1
     jsr title_DrawText
 
+    lda #$21
+    sta $2006
+    lda #$CE
+    sta $2006
+
+    lda #<Data_Title_Menu3
+    sta AddressPointer0+0
+    lda #>Data_Title_Menu3
+    sta AddressPointer0+1
+    jsr title_DrawText
+
+    jsr WaitForNMI
+
     lda #0
     sta $2005
     sta $2005
@@ -97,14 +112,12 @@ Frame_Title:
     lda #BUTTON_START
     jsr ButtonPressedP1
     beq :+
-    lda IdxA
     jsr title_SelectMenuOption
     jmp @button_done
 
 :   lda #BUTTON_A
     jsr ButtonPressedP1
     beq :+
-    lda IdxA
     jsr title_SelectMenuOption
     jmp @button_done
 
@@ -187,31 +200,8 @@ title_DrawText:
     rts
 
 title_SelectMenuOption:
-    ; multiply A by 5
-    tay
-    ldx data_Mult5, y
+    NMI_Disable
+    jsr WaitForNMI
 
-    ; grab the address pointer
-    lda data_Title+3, x
-    sta AddressPointer0
-    lda data_Title+4, x
-    sta AddressPointer0+1
-
-    ; grab the bank
-    lda data_Title+2, x
-
-    ; do a long jump
-    jmp LongJump
-    rts
-
-data_Title:
-    ; Tile start ID, length, bank, init pointer
-    .byte $00, 0, 0
-        .word Init_Game
-    .byte $00, 0, 13
-        .word Init_Credits
-
-data_Mult5:
-.repeat 10, i
-    .byte (i * 5)
-.endrepeat
+    lda IdxA
+    jmp JumpToInit
