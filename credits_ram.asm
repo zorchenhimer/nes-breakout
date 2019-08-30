@@ -36,28 +36,4 @@ cr_TileBuffer:  .res 64
 .align 128
 cr_attribBuffer: .res 32*4
 
-;cr_attribBuffer = $0600
-
-CR_SCROLL_SPEED = 3     ; frames to wait for the next scroll update
-CR_SCROLL_WAIT  = 120   ; frames to wait to start scrolling
-
-CR_TOP      = %10011000
-CR_BOTTOM   = %10011010
-
-CR_UPDATE_TILE  = %10000000
-CR_UPDATE_ATTR  = %01000000
-
-CR_PADDING      = $20
-
-CR_OP_EOC       = 0 ; End of Chunk
-CR_OP_CLEAR_ROW = 1
-CR_OP_INC_BYTE  = 2
-CR_OP_RLE       = 3
-CR_OP_BYTE_LIST = 4
-CR_OP_ATTR      = 5
-CR_OP_NAME      = 6
-CR_OP_EOD       = 7 ; End of Data
-
-.exportzp CR_OP_CLEAR_ROW, CR_OP_ATTR, CR_OP_RLE, CR_OP_INC_BYTE, CR_OP_NAME, CR_OP_EOD
-
 .popseg

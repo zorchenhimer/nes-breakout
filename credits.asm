@@ -10,7 +10,19 @@ CR_T2_SPEED     = 8     ; color cycle speed (in frames) for the tier two names
 
 CR_INIT_NAME_COUNT = 11
 CR_START_GROUP = 1
-CR_FIRST_SCREEN_SIZE = 8
+CR_FIRST_SCREEN_SIZE = 8 ; number of names on the first screen
+                         ; that will not need a scroll.
+
+CR_SCROLL_SPEED = 3     ; frames to wait for the next scroll update
+CR_SCROLL_WAIT  = 120   ; frames to wait to start scrolling
+
+CR_TOP      = %10011000
+CR_BOTTOM   = %10011010
+
+CR_UPDATE_TILE  = %10000000
+CR_UPDATE_ATTR  = %01000000
+
+CR_PADDING      = $20
 
 Init_Credits:
     ; "Disable" NMI
@@ -34,36 +46,21 @@ Init_Credits:
     ;jsr LoadPalettes
     ;jsr WritePalettes
 
-    lda #$00
-    jsr FillNametable0
-    lda #$00
-    jsr FillNametable2
+    ;lda #$00
+    ;jsr FillNametable0
+    ;lda #$00
+    ;jsr FillNametable2
 
-    jsr ClearAttrTable0
-    jsr ClearAttrTable2
+    ;jsr ClearAttrTable0
+    ;jsr ClearAttrTable2
 
     jsr ClearSprites
     jsr WriteSprites
 
     jsr Clear_NonGlobalRam
 
-    ; clear out zero page stuff
-    lda #0
-    sta TmpZ
-    ;sta AddressPointer2+1
-
     lda #$23
     sta AddressPointer2
-
-; Fill the screen with names
-;    lda #30
-;    sta TmpX
-
-;@loop:
-;    jsr credits_LoadData
-;    jsr credits_WriteBuffer
-;    dec TmpX
-;    bne @loop
 
     lda #CR_SCROLL_WAIT
     sta cr_scrollWait
@@ -78,18 +75,14 @@ Init_Credits:
     lda #CR_T2_SPEED
     sta cr_t2Count
 
-    NMI_Set Credits_NMI
-
     ;lda #$00
     ;sta $2000
-    lda #%00011110
-    sta $2001
 
     ; reset scroll
-    bit $2002
-    lda #$00
-    sta $2005
-    sta $2005
+    ;bit $2002
+    ;lda #$00
+    ;sta $2005
+    ;sta $2005
 
     lda #CR_TOP
     sta cr_scroll_table
@@ -119,9 +112,18 @@ credits_LoadData:
     rts
 
 ; Group index in A
+; Switches to the next group, clears the screen, draws
+; the header, and draws the initial screen for the group.
 credits_LoadGroup:
+    pha
+    NMI_Disable
+
+    jsr WaitForNMI
+    pla
     asl a
     tax
+
+    ; Load pointer to group data
     lda cr_data_groups, x
     sta AddressPointer1
     lda cr_data_groups+1, x
@@ -129,11 +131,13 @@ credits_LoadGroup:
     lda #0
     sta cr_nextGroup
 
+    ; Load pointer to the group's init code
     lda credits_GroupInits, x
     sta AddressPointer0
     lda credits_GroupInits+1, x
     sta AddressPointer0+1
 
+    ; Wait for the next NMI to avoid artifacts
     NMI_Set NMI_Bare
     jsr WaitForNMI
 
@@ -141,6 +145,7 @@ credits_LoadGroup:
     lda #$00
     sta $2001
 
+    ; Clear the screen
     lda #$00
     jsr FillNametable0
     lda #$00
@@ -149,8 +154,10 @@ credits_LoadGroup:
     jsr ClearAttrTable0
     jsr ClearAttrTable2
 
+    ; Draw the header (this might move later)
     jsr credits_DrawTwitchHeader
 
+    ; Jump to the group's init code
     jmp (AddressPointer0)
 
 credits_GroupInits:
@@ -175,6 +182,66 @@ credits_GroupLabels:
 :   .byte "Six Months", $00
 :   .byte "Three Months", $00
 :   .byte "One Month", $00
+
+
+; Draws the group's names to the screen, up to the
+; max names per screen.
+credits_group_drawNames:
+    lda #6
+    sta cr_currentPPULine
+
+    lda #CR_INIT_NAME_COUNT
+    sta TmpX
+
+    lda #3
+    sta cr_currentAttrOffset
+
+    ; Number of names initially
+    ; written to the screen.
+    lda #0
+    sta TmpZ
+
+@nameLoop:
+    jsr credits_LoadName
+    bne @loopEnd
+
+    jsr credits_WriteBuffer
+    inc TmpZ
+    dec TmpX
+    bne @nameLoop
+
+@loopEnd:
+
+    lda #CR_SCROLL_WAIT
+    sta cr_scrollWait
+
+    lda TmpZ
+    cmp #CR_FIRST_SCREEN_SIZE
+    ; if TmpZ > CR_FIRST_SCREEN_SIZE, scroll the screen
+    ; else, draw new screen instead of scrolling.
+    bcs :+
+
+    ; Pause for longer if all the names fit on a single screen.
+    lda #(CR_SCROLL_WAIT * 2)
+    sta cr_scrollWait
+:
+
+    lda #1
+    sta cr_nextChunkWait
+
+    jsr credits_clearTileBuffer
+
+    ; Reset the scroll stuff
+    lda #CR_TOP
+    sta cr_scroll_table
+
+    ;lda #%00011110
+    ;sta $2001
+
+    lda #0
+    sta cr_scroll
+
+    jmp Credits_Frame
 
 ; Label ID in A
 ; PPU address should already be set before
@@ -208,52 +275,10 @@ credits_group_1year:
 
     lda #1
     jsr credits_DrawGroupLabel
+    jmp credits_group_drawNames
 
-credits_group_drawNames:
-    lda #6
-    sta cr_currentPPULine
-
-    lda #CR_INIT_NAME_COUNT
-    sta TmpX
-
-    lda #3
-    sta cr_currentAttrOffset
-
-@nameLoop:
-    jsr credits_LoadName
-    bne @loopEnd
-
-    jsr credits_WriteBuffer
-    dec TmpX
-    bne @nameLoop
-
-@loopEnd:
-
-    jsr credits_clearTileBuffer
-
-    lda #CR_TOP
-    sta cr_scroll_table
-
-    lda #CR_SCROLL_WAIT
-    sta cr_scrollWait
-
-    lda #%00011110
-    sta $2001
-
-    lda #0
-    sta cr_scroll
-
-    ;; reset scroll
-    ;bit $2002
-    ;lda #$00
-    ;sta $2005
-    ;sta $2005
-
-
-    jmp Credits_Frame
-
+; Clear tile buffer
 credits_clearTileBuffer:
-    ; clear tile buffer
     ldy #64
     ldx #0
     lda #0
@@ -707,10 +732,8 @@ credits_LoadAttrib:
 @done:
     rts
 
+; Load the current name into RAM
 credits_LoadName:
-    ; Clear the row, prefix spaces, suffix spaces, attribute, name data
-    ;jsr cr_ClearRow
-
     lda #CR_UPDATE_TILE
     sta cr_UpdateReady
 
@@ -817,14 +840,14 @@ cr_TierColors:
 @t3check:
     dec cr_t2Count
 
-    lda TmpZ
+    lda cr_frameOdd
     bne :+
     lda #1
-    sta TmpZ
+    sta cr_frameOdd
     rts
 
 :   lda #0
-    sta TmpZ
+    sta cr_frameOdd
 
 ; Tier three color
     inc cr_tier3Color
@@ -842,6 +865,15 @@ Credits_FrameBare:
 
 Credits_Frame:
     NMI_Set Credits_NMI
+
+    jsr ReadControllers
+
+    lda #BUTTON_START
+    jsr ButtonPressedP1
+    beq :+
+    lda #0
+    jmp JumpToInit
+:
 
     jsr cr_TierColors
 
@@ -912,6 +944,9 @@ Credits_Frame:
     jmp @nextFrame
 
 Credits_NMI:
+    lda #%00011110
+    sta $2001
+
     ;jsr WritePalettes
     bit $2002
 
