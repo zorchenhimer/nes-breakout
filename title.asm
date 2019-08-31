@@ -97,13 +97,6 @@ Init_Title:
     lda #TITLE_MenuLength
     sta IdxB
 
-    ; Select first nametable
-    lda #%10011000
-    sta $2000
-
-    lda #%00011110
-    sta $2001
-
     NMI_Set NMI_Title
 
 Frame_Title:
@@ -181,6 +174,13 @@ t_sel_down:
 
 
 NMI_Title:
+    ; Select first nametable
+    lda #%10011000
+    sta $2000
+
+    lda #%00011110
+    sta $2001
+
     jsr WriteSprites
 
     dec Sleeping
