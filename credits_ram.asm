@@ -31,6 +31,9 @@ cr_tier3Color:  .res 1
 
 cr_nextGroup:   .res 1
 cr_currentGroup: .res 1
+cr_nextGroupPaused: .res 1
+cr_singleScreen: .res 1
+cr_scrollToPause: .res 1
 
 cr_TileBuffer:  .res 64
 .align 128

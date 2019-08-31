@@ -23,6 +23,10 @@ CR_UPDATE_TILE  = %10000000
 CR_UPDATE_ATTR  = %01000000
 
 CR_PADDING      = $20
+CR_CHUNK_TIMER  = 16 ; frames between chunk loading (for cr_nextChunkWait)
+CR_NEXT_GROUP_PAUSE = 60 ; time to pause between groups (n * CR_SCROLL_SPEED) frames
+
+CR_SCROLL_TO_PAUSE = 48 ; lines to scroll before pausing.
 
 Init_Credits:
     ; "Disable" NMI
@@ -111,6 +115,15 @@ credits_LoadData:
 :
     rts
 
+credits_LoadNextGroup:
+    inc cr_currentGroup
+    lda cr_currentGroup
+    cmp #CR_GROUP_COUNT
+    bcc :+
+    lda #1
+    sta cr_currentGroup
+:   ; Fall-through to credits_LoadGroup
+
 ; Group index in A
 ; Switches to the next group, clears the screen, draws
 ; the header, and draws the initial screen for the group.
@@ -157,6 +170,9 @@ credits_LoadGroup:
     ; Reset the scroll stuff
     lda #CR_TOP
     sta cr_scroll_table
+
+    lda #CR_SCROLL_TO_PAUSE
+    sta cr_scrollToPause
 
     lda #0
     sta cr_scroll
@@ -217,6 +233,9 @@ credits_group_drawNames:
     lda #0
     sta TmpZ
 
+    lda #CR_NEXT_GROUP_PAUSE
+    sta cr_nextGroupPaused
+
 @nameLoop:
     jsr credits_LoadName
     bne @loopEnd
@@ -237,11 +256,17 @@ credits_group_drawNames:
     ; else, draw new screen instead of scrolling.
     bcs :+
 
-    ; Pause for longer if all the names fit on a single screen.
-    lda #(CR_SCROLL_WAIT * 2)
+    ; Pause for the same amount of time as the multi-screen groups
+    ; by not pausing before a non-existent scroll
+    lda #CR_SCROLL_SPEED
     sta cr_scrollWait
+    lda #$80
+    sta cr_singleScreen
+    jmp :++
 :
-
+    lda #$00
+    sta cr_singleScreen
+:
     jsr credits_clearTileBuffer
     jmp Credits_Frame
 
@@ -879,71 +904,74 @@ Credits_Frame:
 
     jsr cr_TierColors
 
+    bit cr_singleScreen
+    bpl @multiScreen
+    ; single screen, pause for a few frames before loading the next group
     lda cr_scrollWait
-    bne @notYet
-
+    beq :+
+    dec cr_scrollWait
+    jmp @nextFrame
+:
     lda #CR_SCROLL_SPEED
     sta cr_scrollWait
 
-    inc cr_scroll
+    dec cr_nextGroupPaused  ; should be set when loading a group.
+    bne @nextFrame
+
+    ; timer hit zero, load next group
+    jmp credits_LoadNextGroup
+
+@multiScreen:
+    lda cr_scrollWait
+    beq :+
+    ; don't scroll yet
+    dec cr_scrollWait
+    jmp @nextFrame
+:
+
+    ; scroll a line, reload scroll wait for next time
+    lda #CR_SCROLL_SPEED
+    sta cr_scrollWait
+
+    lda cr_nextGroup
+    beq @nextName
+    ; cr_nextGroup isn't zero, we've hit the end.
+
+    ; scroll to the point where we should pause.
+    lda cr_scrollToPause
+    beq :+
+    dec cr_scrollToPause
+    jsr credits_IncScroll
+    jmp @nextFrame
+:   ; finished scrolling to the end
+    ; wait to go to next group.
+    dec cr_nextGroupPaused
+    bne @nextFrame
+
+    ; counter hit zero, load next group
+    jmp credits_LoadNextGroup
+
+@nextName:
+    ; not paused, continue scrolling
+    jsr credits_IncScroll
 
     ; Do we need to draw the next name?
     dec cr_nextChunkWait
-    bne @noChunk
+    bne @nextFrame
 
-    lda cr_nextGroup
-    bne @waitForEnd
-
-    lda #16
+    ; it's time to draw a new chunk
+    lda #CR_CHUNK_TIMER
     sta cr_nextChunkWait
+
     jsr credits_LoadName
-    beq @noChunk
-    ; the group has ended.
+    beq :+
+    ; clear the buffer if we've hit the end
     jsr credits_clearTileBuffer
-
-    lda #16 * 6
-    sta cr_nextChunkWait
-    jmp @noChunk
-
-@waitForEnd:
-    ; when cr_nextChunkWait hits zero, load
-    ; the next group.
-    inc cr_currentGroup
-    lda cr_currentGroup
-    cmp #CR_GROUP_COUNT
-    bcc :+
-    lda #1
-    sta cr_currentGroup
 :
-    jmp credits_LoadGroup
-
-@noChunk:
-    lda cr_scroll
-    cmp #$F0
-    bcs @rollOver
-    jmp @nextFrame
-
-@notYet:
-    dec cr_scrollWait
 
 @nextFrame:
     jsr WaitForNMI
     jmp Credits_Frame
-
-@rollOver:
-    lda #0
-    sta cr_scroll
-    lda cr_scroll_table
-    cmp #CR_TOP
-    beq @gotoBottom
-    lda #CR_TOP
-    sta cr_scroll_table
-    jmp @nextFrame
-
-@gotoBottom:
-    lda #CR_BOTTOM
-    sta cr_scroll_table
-    jmp @nextFrame
 
 Credits_NMI:
     lda #%00011110
@@ -992,6 +1020,30 @@ Credits_NMI:
     lda cr_scroll_table
     sta $2000
     rti
+
+; Increment cr_scroll and check for rollover
+credits_IncScroll:
+    inc cr_scroll
+
+    lda cr_scroll
+    cmp #$F0
+    bcs :+
+    rts ; no rollover
+:
+    ; Handle scroll roll over
+    lda #0
+    sta cr_scroll
+    lda cr_scroll_table
+    cmp #CR_TOP
+    beq @gotoBottom
+    lda #CR_TOP
+    sta cr_scroll_table
+    rts
+
+@gotoBottom:
+    lda #CR_BOTTOM
+    sta cr_scroll_table
+    rts
 
 ; start of row addresses - 30 total rows
 PPU_RowStartLookup_High:
