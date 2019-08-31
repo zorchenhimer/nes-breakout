@@ -154,8 +154,24 @@ credits_LoadGroup:
     jsr ClearAttrTable0
     jsr ClearAttrTable2
 
+    ; Reset the scroll stuff
+    lda #CR_TOP
+    sta cr_scroll_table
+
+    lda #0
+    sta cr_scroll
+    sta cr_AttributeReady
+    sta cr_AttributeByte
+    sta cr_AttrSecondWrite
+
+    lda #1
+    sta cr_nextChunkWait
+
     ; Draw the header (this might move later)
     jsr credits_DrawTwitchHeader
+
+    lda #$23
+    sta AddressPointer2
 
     ; Jump to the group's init code
     jmp (AddressPointer0)
@@ -226,21 +242,7 @@ credits_group_drawNames:
     sta cr_scrollWait
 :
 
-    lda #1
-    sta cr_nextChunkWait
-
     jsr credits_clearTileBuffer
-
-    ; Reset the scroll stuff
-    lda #CR_TOP
-    sta cr_scroll_table
-
-    ;lda #%00011110
-    ;sta $2001
-
-    lda #0
-    sta cr_scroll
-
     jmp Credits_Frame
 
 ; Label ID in A
