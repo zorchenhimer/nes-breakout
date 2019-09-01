@@ -82,19 +82,33 @@ func NewSub(row []string) (*Subscriber, error) {
 	}, nil
 }
 
-type SubList []Subscriber
+type SubList []*Subscriber
 
-func (sl SubList) Add(sub Subscriber) SubList {
+func (sl SubList) Add(sub *Subscriber) SubList {
 	for _, s := range sl {
 		if s.Username == sub.Username {
 			if sub.Tenure > s.Tenure {
-				if verbose { fmt.Printf("Found newer tenure for %q\n", sub.Username) }
+				if verbose {
+					fmt.Printf("Found newer tenure for %q: %d -> %d\n", sub.Username, s.Tenure, sub.Tenure)
+				}
+
 				s.Tenure = sub.Tenure
 			}
+
+			if sub.SubDate.Before(s.SubDate) {
+				if verbose {
+					fmt.Printf("Found older sub date for %q: %s -> %s\n",
+						sub.Username,
+						s.SubDate.Format(time.RFC822),
+						sub.SubDate.Format(time.RFC822))
+				}
+
+				s.SubDate = sub.SubDate
+			}
+
 			return sl
 		}
 	}
-
 	return append(sl, sub)
 }
 
@@ -156,21 +170,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	sort.Strings(files)
 	if len(files) == 0 {
 		fmt.Println("No CSV files found in directory %q", inputDirectory)
 		os.Exit(1)
 	}
 
-	// reverse the files
-	reversed := []string{}
-	for i := len(files) - 1; i >= 0; i-- {
-		reversed = append(reversed, files[i])
-	}
-
 	sl := SubList{}
-
-	for _, inputFile := range reversed {
+	for _, inputFile := range files {
 		if verbose {
 			fmt.Printf("Reading file %q\n", inputFile)
 		}
@@ -193,40 +199,29 @@ func main() {
 			fmt.Printf("Found %d records\n", len(records) - 1)
 		}
 
+READ_RECORDS:
 		for _, row := range records[1:] {
-			exclude := false
 			for _, ex := range excludeNames {
 				if ex == strings.ToLower(row[0]) {
-					exclude = true
+					continue READ_RECORDS
 				}
 			}
 
-			if !exclude {
-				sub, err := NewSub(row)
-				if err != nil {
-					fmt.Println("WARNING: Error parsing subscriber: ", err)
-				} else {
-					//fmt.Printf("Parsed sub: %s\n", sub.Username)
-					sl = sl.Add(*sub)
-					//subList = append(subList, sub)
-				}
+			sub, err := NewSub(row)
+			if err != nil {
+				fmt.Println("WARNING: Error parsing subscriber: ", err)
+			} else {
+				sl = sl.Add(sub)
 			}
 		}
 	}
 
-	if verbose {
-		fmt.Println("sub list:")
-		for i, s := range sl {
-			fmt.Printf("  [%d] %s\n", i, s.Username)
-		}
-	}
-
+	// Add subs to their tenure groups
 SL_SORT:
 	for _, s := range sl {
 		for _, g := range SubGroups {
 			if s.Tenure >= g.Tenure {
-				if verbose { fmt.Printf("Adding %q (%d) to %s\n", s.Username, s.Tenure, g.Name) }
-				g.Subs = append(g.Subs, s)
+				g.Subs = append(g.Subs, *s)
 				continue SL_SORT
 			}
 		}
@@ -289,7 +284,7 @@ cr_data_attrib:
     .byte $05, "Music", $8C, "Some guy, idk"
     .byte $00 ; NULL is end of list`)
 
-	fmt.Printf("  Names in credits: %d\n  Byte length: %d\n", count, byteLen)
+	fmt.Printf("%d names in %d bytes\n", count, byteLen)
 }
 
 // exists returns whether the given file or directory exists or not.
