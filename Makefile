@@ -16,13 +16,13 @@ LDFLAGS = -C $(NESCFG) --dbgfile bin/$(NAME).dbg -m bin/$(NAME).map
 # Mapper configuration for linker
 NESCFG = nes_snrom.cfg
 
-# Tool that generates CHR data from Bitmap images
-#BMP2CHR = bin/bmp2chr$(EXT)
-
 # Tool that generates credits from an input CSV file
 GENCRED = bin/generate-credits$(EXT)
+
+# Map data conversion tool
 CONVMAP = bin/convert-map$(EXT)
 
+# Tool that generates CHR data from Bitmap images
 CHRUTIL = go-nes/bin/chrutil$(EXT)
 
 # Name of the main source file, minus the extension
@@ -48,7 +48,7 @@ maps: tools map_data.i
 tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
 
 clean:
-	-rm bin/*.o bin/*.nes bin/*.map bin/*.dbg *.i *.chr
+	rm -f bin/*.o bin/*.nes bin/*.map bin/*.dbg *.i *.chr
 
 cleanall:
 	rm -f -r bin/
@@ -56,14 +56,10 @@ cleanall:
 	$(MAKE) -C go-nes/ clean
 
 clrNames:
-	-rm credits_data.i
-
-bin/:
-	-mkdir bin
+	rm -f credits_data.i
 
 %.chr: %.bmp
 	$(CHRUTIL) $< -o $@
-#	$(BMP2CHR) -i $< -o $@
 
 $(GENCRED): generate-credits.go
 	go build -o $(GENCRED) generate-credits.go
@@ -74,13 +70,11 @@ $(BMP2CHR): bmp2chr.go
 $(CONVMAP): convert-map/*.go
 	cd convert-map && go build -o ../$(CONVMAP)
 
-bin/main.o: bin/ $(SOURCES) $(CHR)
+bin/main.o: $(SOURCES) $(CHR)
 	$(CA) $(CAFLAGS) -o $@ main.asm
 
 bin/%.o: %.i
 	$(CA) $(CAFLAGS) -o $@ $^
-
-#bin/game.o: game.asm game_ram.asm
 
 bin/$(NAME).nes: bin/main.o $(DATA_OBJ)
 	$(LD) $(LDFLAGS) -o $@ $^
