@@ -1,5 +1,5 @@
 
-export PATH := $(PATH):../tools/cc65/bin:../../../Program Files/Tiled:/c/Program Files/Aseprite/:../../golang/src/github.com/zorchenhimer/go-nes/bin
+export PATH := $(PATH):/c/Program Files/Aseprite/
 
 EXT=
 ifeq ($(OS),Windows_NT)
@@ -7,8 +7,8 @@ EXT=.exe
 endif
 
 # Assembler and linker paths
-CA = ca65
-LD = ld65
+CA = cc65/bin/ca65$(EXT)
+LD = cc65/bin/ld65$(EXT)
 
 CAFLAGS = -g -t nes
 LDFLAGS = -C $(NESCFG) --dbgfile bin/$(NAME).dbg -m bin/$(NAME).map
@@ -21,8 +21,9 @@ NESCFG = nes_snrom.cfg
 
 # Tool that generates credits from an input CSV file
 GENCRED = bin/generate-credits$(EXT)
-
 CONVMAP = bin/convert-map$(EXT)
+
+CHRUTIL = go-nes/bin/chrutil$(EXT)
 
 # Name of the main source file, minus the extension
 NAME = breakout
@@ -38,19 +39,21 @@ SOURCES := main.asm nes2header.inc \
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
-# misc
-RM = rm
-
-.PHONY: clean default cleanSym symbols pal set_pal map maps utils
+.PHONY: clean default maps tools names
 
 default: all
-all: utils bin/$(NAME).nes
-names: clrNames credits_data.i bin/$(NAME).nes
-maps: map_data.i utils
-utils: $(CONVMAP) $(GENCRED)
+all: tools bin/$(NAME).nes
+names: tools clrNames credits_data.i bin/$(NAME).nes
+maps: tools map_data.i
+tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
 
 clean:
-	-rm bin/*.* *.i *.chr
+	-rm bin/*.o bin/*.nes bin/*.map bin/*.dbg *.i *.chr
+
+cleanall:
+	rm -f -r bin/
+	$(MAKE) -C cc65/ clean
+	$(MAKE) -C go-nes/ clean
 
 clrNames:
 	-rm credits_data.i
@@ -59,7 +62,7 @@ bin/:
 	-mkdir bin
 
 %.chr: %.bmp
-	chrutil $< -o $@
+	$(CHRUTIL) $< -o $@
 #	$(BMP2CHR) -i $< -o $@
 
 $(GENCRED): generate-credits.go
@@ -96,3 +99,12 @@ game.bmp: tiles.aseprite
 
 title.bmp: title-tiles.aseprite
 	aseprite -b $< --save-as $@
+
+$(CA):
+	$(MAKE) -C cc65/ ca65
+
+$(LD):
+	$(MAKE) -C cc65/ ld65
+
+$(CHRUTIL):
+	$(MAKE) -C go-nes/ bin/chrutil$(EXT)
