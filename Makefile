@@ -46,7 +46,7 @@ RM = rm
 default: all
 all: utils bin/$(NAME).nes
 names: clrNames credits_data.i bin/$(NAME).nes
-maps: map_data.i utils
+maps: map_data.i map_child_data.i utils
 utils: $(CONVMAP) $(GENCRED)
 
 clean:
@@ -77,6 +77,9 @@ bin/main.o: bin/ $(SOURCES) $(CHR)
 bin/%.o: %.i
 	$(CA) $(CAFLAGS) -o $@ $^
 
+bin/map_data.o: map_data.asm main_map_data.i child_map_data.i
+	$(CA) $(CAFLAGS) -o $@ map_data.asm
+
 #bin/game.o: game.asm game_ram.asm
 
 bin/$(NAME).nes: bin/main.o $(DATA_OBJ)
@@ -86,10 +89,13 @@ subscriber-list.csv: sample-credit-names.csv
 	cp -u $< $@
 
 credits_data.i: ../subs/*.csv $(GENCRED)
-	$(GENCRED) -x zorchenhimer -o $@ -i ../subs/ -verbose
+	$(GENCRED) -x zorchenhimer -o $@ -i ../subs/
 
-map_data.i: $(CONVMAP) maps/main-boards.tmx maps/child-boards.tmx
-	cd maps && ../$(CONVMAP) main-boards.tmx child-boards.tmx ../$@
+main_map_data.i: $(CONVMAP) maps/main-boards.tmx
+	cd maps && ../$(CONVMAP) main-boards.tmx main ../main_map_data.i
+
+child_map_data.i:$(CONVMAP) maps/child-boards_12x6.tmx
+	cd maps && ../$(CONVMAP) child-boards_12x6.tmx child ../child_map_data.i
 
 game.bmp: tiles.aseprite
 	aseprite -b $< --save-as $@

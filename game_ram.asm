@@ -19,7 +19,6 @@ CollideCol_B:  .res 1
 CollisionRow_Ret:   .res 1
 CollisionCol_Ret:   .res 1
 
-; TODO: Remove these
 BrickCollide1_Row:  .res 1
 BrickCollide1_Col:  .res 1
 BrickCollide2_Row:  .res 1
@@ -35,5 +34,9 @@ HorizDestroy:   .res 2
 VertDestroy:    .res 2
 
 BoostPool: .res 1
+ChildId:    .res 1 ; next child ID to load
+
+NextChildOffset:    .res 1
+PrevChildOffset:    .res 1
 
 .popseg

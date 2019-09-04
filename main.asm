@@ -1,6 +1,6 @@
 ; asmsyntax=ca65
 
-.importzp BOARD_DATA_WIDTH, BOARD_DATA_HEIGHT
+.importzp main_BOARD_DATA_WIDTH, main_BOARD_DATA_HEIGHT
 
 .ifdef ROW26
     BOARD_WIDTH = 26
@@ -53,6 +53,7 @@ AddressPointer3:    .res 2
 
 Sleeping: .res 1
 
+TmpW:   .res 1
 TmpX:   .res 1
 TmpY:   .res 1
 TmpZ:   .res 1
@@ -129,8 +130,8 @@ Sprites: .res 256
     .byte 1
 ;.include "map_data.i"
 
-.assert BOARD_WIDTH = BOARD_DATA_WIDTH, error, "Board data width does not match code!"
-.assert BOARD_HEIGHT = BOARD_DATA_HEIGHT, error, "Board data height does not match code!"
+.assert BOARD_WIDTH = main_BOARD_DATA_WIDTH, error, "Board data width does not match code!"
+.assert BOARD_HEIGHT = main_BOARD_DATA_HEIGHT, error, "Board data height does not match code!"
 
 .out .sprintf("Board Width: %d", BOARD_WIDTH)
 .out .sprintf("Board Height: %d", BOARD_HEIGHT)
@@ -857,6 +858,29 @@ clr_ram:
 :   sta (AddressPointer0), y
     iny
     bne :-
+    rts
+
+Clear_ExtendedRam:
+    ldx #2
+    ldy #$00
+    ldx #$20
+
+    lda #$60
+    sta AddressPointer0+1
+    lda #$00
+    sta AddressPointer0
+
+@loop:
+    .repeat 32
+    sta (AddressPointer0), y
+    iny
+    .endrepeat
+    bne @loop
+
+    inc AddressPointer0+1
+    dex
+    bne @loop
+
     rts
 
 ; Jumps to an init in the init table

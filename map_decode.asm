@@ -1,10 +1,34 @@
 ; asmsyntax=ca65
 
-.import Index_Maps
+.import main_Index_Maps
+.import child_Index_Maps
 
-; Expects a map Id in A and loads the map with that Id
-; into RAM starting at the CurrentMap label
-LoadMap:
+; == Byte data format ==
+; First byte:
+; 01le tttt
+; |||| ++++-- Tile type (0 doesn't have a second byte)
+; |||+------- Has this tile been entered/interacted with?
+; ||+-------- Has this byte been loaded (child spawn only)?
+; ++--------- Always 01
+;
+; Second byte:
+; 1ddd dddd
+; |+++-++++-- Tile value.
+; |             For child: if loaded, its index in RAM.
+; |                        if not loaded, its map ID to load.
+; |             For health: remaining hits to destroy tile
+; |             For powerup/down: ID of drop
+; +---------- Always 1
+
+; Tile types:
+; %0        No brick
+; %10       Standard brick (health)
+; %110      Child spawn
+; %1110     Powerup
+; %11110    PowerDown
+
+; Child map ID in A
+LoadChildMap:
     asl a
     tax
 
@@ -12,17 +36,85 @@ LoadMap:
     lda $8000
     sta LastBank
 
-    ; TODO: lookup table for banks?
     ; Swap to data bank
     lda #1
     jsr MMC1_Select_Page
 
     ; Load up a pointer to the map's metadata
-    lda Index_Maps+0, x
+    lda child_Index_Maps+0, x
     sta AddressPointer0+0
-    lda Index_Maps+1, x
+    lda child_Index_Maps+1, x
     sta AddressPointer0+1
 
+    jsr map_LoadMetaData
+
+    lda NextChildOffset
+
+    cmp #102
+    bcs @done   ; too many maps loaded.  abort to not break things.
+
+    sta PrevChildOffset
+    inc NextChildOffset
+
+    asl a
+    tax
+
+    lda Child_Map_Addresses, x
+    sta AddressPointer0
+    lda Child_Map_Addresses+1, x
+    sta AddressPointer0+1
+
+    lda #80
+    sta TmpW    ; tile count
+@loadLoop:
+    jsr map_ReadTile
+    jsr map_WriteData
+    dec TmpW
+    bne @loadLoop
+
+@done:
+    ; Swap back to last bank
+    lda LastBank
+    jmp MMC1_Select_Page
+
+map_WriteData:
+    ldy #0
+    lda TmpY
+    beq @noBrick
+
+    ; Write the first byte
+    ora #$40
+    sta (AddressPointer0), y
+    jsr IncPointer0
+
+    ; Write the value byte
+    and #$0F
+    cmp #1
+    beq @healthBrick
+
+    ldy IdxB    ; load index
+    inc IdxB    ; increment for next read
+    lda (AddressPointer2), y    ; load value
+    jmp @writeValue
+
+@healthBrick:
+    lda TmpZ    ; health start value is global to map
+
+@writeValue:
+    dec TmpW
+    ora #$80
+    ldy #0
+    sta (AddressPointer0), y    ; write value
+    jsr IncPointer0
+    rts
+
+@noBrick:
+    lda #0
+    sta (AddressPointer0), y
+    jsr IncPointer0
+    rts
+
+map_LoadMetaData:
     ldy #0
     ; Load pointer to tile data
     lda (AddressPointer0), y
@@ -50,36 +142,36 @@ LoadMap:
     sta IdxA    ; Data offset
     lda #1      ; init to 1 to load first byte
     sta TmpX    ; Bit counter
+    rts
+
+; Expects a map Id in A and loads the map with that Id
+; into RAM starting at the CurrentMap label
+LoadMap:
+    asl a
+    tax
+
+    ; Save bank we're coming from
+    lda $8000
+    sta LastBank
+
+    ; TODO: lookup table for banks?
+    ; Swap to data bank
+    lda #1
+    jsr MMC1_Select_Page
+
+    ; Load up a pointer to the map's metadata
+    lda main_Index_Maps+0, x
+    sta AddressPointer0+0
+    lda main_Index_Maps+1, x
+    sta AddressPointer0+1
+
+    jsr map_LoadMetaData
 
     ; Load map dest address in pointer0
     lda #<CurrentMap
     sta AddressPointer0+0
     lda #>CurrentMap
     sta AddressPointer0+1
-
-; == Byte data format ==
-; First byte:
-; 01le tttt
-; |||| ++++-- Tile type (0 doesn't have a second byte)
-; |||+------- Has this tile been entered/interacted with?
-; ||+-------- Has this byte been loaded (child spawn only)?
-; ++--------- Always 01
-;
-; Second byte:
-; 1ddd dddd
-; |+++-++++-- Tile value.
-; |             For child: if loaded, its index in RAM.
-; |                        if not loaded, its map ID to load.
-; |             For health: remaining hits to destroy tile
-; |             For powerup/down: ID of drop
-; +---------- Always 1
-
-; Tile types:
-; %0        No brick
-; %10       Standard brick (health)
-; %110      Child spawn
-; %1110     Powerup
-; %11110    PowerDown
 
 ; Main loop to load map
 @loadLoop:
@@ -95,39 +187,7 @@ LoadMap:
 :
 
     jsr map_ReadTile
-    ldy #0
-    lda TmpY
-    beq @noBrick
-
-    ; Write the first byte
-    ora #$40
-    sta (AddressPointer0), y
-    jsr IncPointer0
-
-    ; Write the value byte
-    and #$0F
-    cmp #1
-    beq @healthBrick
-
-    ldy IdxB    ; load index
-    inc IdxB    ; increment for next read
-    lda (AddressPointer2), y    ; load value
-    jmp @writeValue
-
-@healthBrick:
-    lda TmpZ    ; health start value is global to map
-
-@writeValue:
-    ora #$80
-    ldy #0
-    sta (AddressPointer0), y    ; write value
-    jsr IncPointer0
-    jmp @loadLoop
-
-@noBrick:
-    lda #0
-    sta (AddressPointer0), y
-    jsr IncPointer0
+    jsr map_WriteData
     jmp @loadLoop
 
 @done:
@@ -171,5 +231,13 @@ map_ReadTile:
 @done:
     rts
 
+; Last address for the main map
 Last_Map_Tile_Address:
     .word (BOARD_WIDTH * BOARD_HEIGHT) + CurrentMap - 1
+
+Child_Map_Addresses:
+    ; RAM will not fit any more than 102 decoded child maps
+    ; at 12x6 tiles (72 bytes, rounded up to 80).
+    .repeat 102, i
+    .word ($6000 + (80 * i))
+    .endrepeat

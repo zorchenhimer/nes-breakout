@@ -14,7 +14,7 @@ import (
 )
 
 func usage() {
-	fmt.Println("Usage: convert-map.exe main-boards.tmx child-boards.tmx output.asm")
+	fmt.Println("Usage: convert-map.exe main-boards.tmx label_prefix output.asm")
 }
 
 func main() {
@@ -30,11 +30,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	childData, err := LoadMap(os.Args[2])
-	if err != nil {
-		fmt.Printf("Unable to load child map %q: %v\n", os.Args[2], err)
-		os.Exit(1)
-	}
+	prefix := os.Args[2]
 
 	mainTilesets := NewTileset()
 	for _, ts := range mapData.Tilesets {
@@ -49,8 +45,6 @@ func main() {
 
 	//fmt.Println(mapData)
 	//fmt.Println(childData)
-
-	_ = childData
 
 	//fmt.Println("Main tileset:")
 	//fmt.Println(mainTilesets)
@@ -84,10 +78,10 @@ func main() {
 
 	fmt.Fprintln(outfile, "; asmsyntax=ca65\n")
 	fmt.Fprintln(outfile, ".segment \"PAGE01\"")
-	fmt.Fprintln(outfile, ".export Index_Maps, BOARD_DATA_WIDTH, BOARD_DATA_HEIGHT")
-	fmt.Fprintf(outfile, "NUMBER_OF_MAPS = %d\n\nIndex_Maps:\n", len(mainMaps))
+	fmt.Fprintf(outfile, ".export %s_Index_Maps, %s_BOARD_DATA_WIDTH, %s_BOARD_DATA_HEIGHT\n", prefix, prefix, prefix)
+	fmt.Fprintf(outfile, ".export %s_NUMBER_OF_MAPS\n%s_NUMBER_OF_MAPS = %d\n\n%s_Index_Maps:\n", prefix, prefix, len(mainMaps), prefix)
 	for i := 0; i < len(mainMaps); i++ {
-		fmt.Fprintf(outfile, "    .word Meta_Map%02d\n", i)
+		fmt.Fprintf(outfile, "    .word %s_Meta_Map%02d\n", prefix, i)
 	}
 	fmt.Fprintln(outfile, "")
 
@@ -136,12 +130,14 @@ func main() {
 			tileValues = append(tileValues, "$00")
 		}
 
-		fmt.Fprintf(outfile, "Meta_Map%02d:\n    .word Data_Map%02d_Tiles\n    .word Data_Map%02d_TileValues\n    .byte %d\n\n",
-			m.Id, m.Id, m.Id, m.Health)
+		fmt.Fprintf(outfile, "%s_Meta_Map%02d:\n    .word %s_Data_Map%02d_Tiles\n    .word %s_Data_Map%02d_TileValues\n    .byte %d\n\n",
+			prefix, m.Id,
+			prefix, m.Id,
+			prefix, m.Id, m.Health)
 
-		fmt.Fprintf(outfile, "Data_Map%02d_TileValues:\n", m.Id)
+		fmt.Fprintf(outfile, "%s_Data_Map%02d_TileValues:\n", prefix, m.Id)
 		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(tileValues, ", "))
-		fmt.Fprintf(outfile, "Data_Map%02d_Tiles:\n", m.Id)
+		fmt.Fprintf(outfile, "%s_Data_Map%02d_Tiles:\n", prefix, m.Id)
 		fmt.Fprintf(outfile, "    .byte %s\n\n", strings.Join(data, ", "))
 
 		if len(tileValues) > 256 {
@@ -175,5 +171,5 @@ func main() {
 		}
 	}
 
-	fmt.Fprintf(outfile, "BOARD_DATA_WIDTH = %d\nBOARD_DATA_HEIGHT = %d\n", width, height)
+	fmt.Fprintf(outfile, "%s_BOARD_DATA_WIDTH = %d\n%s_BOARD_DATA_HEIGHT = %d\n", prefix, width, prefix, height)
 }

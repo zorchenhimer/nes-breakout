@@ -2,6 +2,8 @@
 
 .include "game_ram.asm"
 
+.importzp child_NUMBER_OF_MAPS
+
 BALL_UP = $80
 BALL_DOWN = $00
 BALL_LEFT = $00
@@ -116,6 +118,7 @@ Init_Game:
     jsr ClearSprites
 
     jsr Clear_NonGlobalRam
+    jsr Clear_ExtendedRam
 
     ; Tile
     lda #SPRITE_ID_BALL
@@ -225,6 +228,7 @@ Init_Game:
     lda #0
     sta PaddleX
     sta PaddleY
+    sta ChildId
 
     lda #Initial_Paddle_X
     sta PaddleX+1
@@ -269,6 +273,12 @@ Frame_Game:
     jsr ButtonPressedP1
     beq :+
     jsr BoostTheBall
+:
+
+    lda #BUTTON_START
+    jsr ButtonPressedP1
+    beq :+
+    jsr game_LoadChild
 :
 
     jsr UpdateBallCoords
@@ -331,6 +341,21 @@ NMI_Game:
 
     dec Sleeping
     rti
+
+game_LoadChild:
+    lda ChildId
+    pha
+
+    inc ChildId
+    lda ChildId
+    cmp #child_NUMBER_OF_MAPS
+    bcc :+
+    lda #0
+    sta ChildId
+:
+    pla
+    jmp LoadChildMap
+    ;rts
 
 BoostTheBall:
     lda BoostPool
