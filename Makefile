@@ -39,13 +39,18 @@ SOURCES := main.asm nes2header.inc \
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
-.PHONY: clean default maps tools names
+.PHONY: clean default maps tools names travis sample_credits
 
 default: all
 all: tools bin/$(NAME).nes
 names: tools clrNames credits_data.i bin/$(NAME).nes
 maps: tools map_data.i map_child_data.i
 tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
+travis: tools sample_credits bin/$(NAME).nes
+
+../subs/*.csv:
+	mkdir ../subs/
+	cp sample-credit-names.csv ../subs/sample-credit-names.csv
 
 clean:
 	rm -f bin/*.o bin/*.nes bin/*.map bin/*.dbg *.i *.chr
