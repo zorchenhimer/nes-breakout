@@ -33,10 +33,9 @@ PointB_Y:   .res 1
 HorizDestroy:   .res 2
 VertDestroy:    .res 2
 
-BoostPool: .res 1
+BoostPool:  .res 1
 ChildId:    .res 1 ; next child ID to load
 
 NextChildOffset:    .res 1
-PrevChildOffset:    .res 1
 
 .popseg

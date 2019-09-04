@@ -230,6 +230,21 @@ Init_Game:
     sta PaddleY
     sta ChildId
 
+    lda #BOARD_OFFSET_Y
+    sta game_BoardOffsetY
+    lda #BOARD_OFFSET_X
+    sta game_BoardOffsetX
+
+    lda #BOARD_WIDTH
+    sta game_BoardWidth
+    lda #BOARD_HEIGHT
+    sta game_BoardHeight
+
+    lda #PADDLE_WALL_LEFT
+    sta game_PaddleWallLeft
+    lda #PADDLE_WALL_RIGHT
+    sta game_PaddleWallRight
+
     lda #Initial_Paddle_X
     sta PaddleX+1
     lda #Initial_Paddle_Y
@@ -239,7 +254,6 @@ Init_Game:
     sta PaddleSpeed
     lda #Initial_Paddle_Speed_WHOLE
     sta PaddleSpeed+1
-
 
     jsr UpdatePaddleSprite
 
@@ -477,7 +491,7 @@ UpdatePaddleCoords:
 @skipAB:
     ; Left bounds
     lda PaddleX+1
-    cmp #PADDLE_WALL_LEFT
+    cmp game_PaddleWallLeft
     bcc :+
 
     lda #BUTTON_LEFT
@@ -495,15 +509,17 @@ UpdatePaddleCoords:
 :
     ; snap to wall
     lda PaddleX+1
-    cmp #PADDLE_WALL_LEFT
+    cmp game_PaddleWallLeft
     bcs :+
-    lda #PADDLE_WALL_LEFT-1
+    lda game_PaddleWallLeft
+    sec
+    sbc #1
     sta PaddleX+1
 :
 
     ; Right bounds
     lda PaddleX+1
-    cmp #PADDLE_WALL_RIGHT
+    cmp game_PaddleWallRight
     bcs :+
 
     lda #BUTTON_RIGHT
@@ -522,12 +538,11 @@ UpdatePaddleCoords:
 
     ; snap to wall
     lda PaddleX+1
-    cmp #PADDLE_WALL_RIGHT
+    cmp game_PaddleWallRight
     bcc :+
-    lda #PADDLE_WALL_RIGHT
+    lda game_PaddleWallRight
     sta PaddleX+1
 :
-
     rts
 
 ApplyGravity:
@@ -690,7 +705,7 @@ PointToTile:
     lda TmpY
     sec
     ; Subtract offset
-    sbc #BOARD_OFFSET_Y
+    sbc game_BoardOffsetY
     ; divide by 8
     lsr a
     lsr a
@@ -701,7 +716,7 @@ PointToTile:
     lda TmpX
     sec
     ; Subtract offset
-    sbc #BOARD_OFFSET_X
+    sbc game_BoardOffsetX
     ; divide by 8
     lsr a
     lsr a
@@ -1015,7 +1030,7 @@ CheckBrickCollide:
 :
     ; going up, check for bottom brick
     inx
-    cpx #BOARD_HEIGHT
+    cpx game_BoardHeight
     beq @vertDoCollide
 :
 
@@ -1023,7 +1038,6 @@ CheckBrickCollide:
     sta AddressPointer0
     lda Row_Addresses_High, x
     sta AddressPointer0+1
-
     lda (AddressPointer0), y
     bne @noVertCollide ; there is a brick, do not collide
 
@@ -1092,7 +1106,7 @@ CheckBrickCollide:
 :
     ; going left, check for right brick
     iny
-    cpy #BOARD_WIDTH
+    cpy game_BoardWidth
     beq @horizDoCollide
 :
 
@@ -1310,13 +1324,15 @@ BounceHoriz:
 CheckPointCollide:
     lda TmpY
     ; Y >= BOARD_OFFSET_Y, continue
-    cmp #BOARD_OFFSET_Y
+    cmp game_BoardOffsetY
     bcs :+
     ; Above board
     lda #0
     rts
 :
     ; Y < BOARD_HEIGHT + BOARD_OFFSET_Y, continue
+    ; child boards: x6 = A << 2 + A << 1
+    ; FIXME: const math -> runtime math
     cmp #((BOARD_HEIGHT * 8) + BOARD_OFFSET_Y)
     ;beq :+
     bcc :+
@@ -1327,13 +1343,14 @@ CheckPointCollide:
 
     lda TmpX
     ; X >= BOARD_OFFSET_X, continue
-    cmp #BOARD_OFFSET_X
+    cmp game_BoardOffsetX
     bcs :+
     ; Left of board
     lda #0
     rts
 :
     ; X <= BOARD_WIDTH + BOARD_OFFSET_X, continue
+    ; FIXME: const math -> runtime math
     cmp #((BOARD_WIDTH * 8) + BOARD_OFFSET_X)
     ;beq :+
     bcc :+
@@ -1351,8 +1368,6 @@ CheckPointCollide:
     sta AddressPointer0+1
 
     lda (AddressPointer0), y
-    ;bne :+
-    ; No tile
     rts
 
 ; TODO
@@ -1418,7 +1433,7 @@ DrawCurrentMap:
     ; Are we done?
     inc TmpX
     lda TmpX
-    cmp #BOARD_HEIGHT
+    cmp game_BoardHeight
     bne @loop
     rts
 
@@ -1453,7 +1468,7 @@ game_DrawRow:
 
     iny
     iny
-    cpy #BOARD_WIDTH
+    cpy game_BoardWidth
     bne @loop
     rts
 
@@ -1462,7 +1477,7 @@ game_DrawRow:
     sta $2007
 
     iny
-    cpy #BOARD_WIDTH
+    cpy game_BoardWidth
     bne @loop
     rts
 

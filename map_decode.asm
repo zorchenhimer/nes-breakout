@@ -49,11 +49,9 @@ LoadChildMap:
     jsr map_LoadMetaData
 
     lda NextChildOffset
-
     cmp #102
     bcs @done   ; too many maps loaded.  abort to not break things.
 
-    sta PrevChildOffset
     inc NextChildOffset
 
     asl a

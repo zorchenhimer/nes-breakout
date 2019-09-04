@@ -15,6 +15,11 @@
     BOARD_OFFSET_X = 32
 .endif
 
+CHILD_OFFSET_Y = 64 ; Is this a good spot for the child board?
+CHILD_OFFSET_X = 10
+CHILD_BOARD_HEIGHT = 6
+CHILD_BOARD_WIDTH = 12
+
 .macro NMI_Disable
     lda #NMI_RTI
     sta NMI_Instr
@@ -94,6 +99,14 @@ BrickPpuAddress:    .res 2
 BrickPpuTmpAddress: .res 2
 BrickRow:           .res 1
 BrickCol:           .res 1
+
+game_BoardOffsetY:  .res 1
+game_BoardOffsetX:  .res 1
+game_BoardWidth:    .res 1
+game_BoardHeight:   .res 1
+
+game_PaddleWallLeft:    .res 1
+game_PaddleWallRight:   .res 1
 
 .segment "RAMGLOBAL"
 
