@@ -39,14 +39,15 @@ SOURCES := main.asm nes2header.inc \
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
-.PHONY: clean default maps tools names travis sample_credits
+.PHONY: clean default maps tools names travis sample_credits chr
 
 default: all
-all: tools bin/$(NAME).nes
-names: tools clrNames credits_data.i bin/$(NAME).nes
-maps: tools map_data.i map_child_data.i
+all: tools chr bin/$(NAME).nes
+names: tools chr clrNames credits_data.i bin/$(NAME).nes
+maps: tools chr map_data.i map_child_data.i
 tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
-travis: tools sample_credits bin/$(NAME).nes
+travis: tools sample_credits chr bin/$(NAME).nes
+chr: game.chr credits.chr title.chr
 
 ../subs/*.csv:
 	mkdir ../subs/
@@ -84,8 +85,6 @@ bin/%.o: %.i
 bin/map_data.o: map_data.asm main_map_data.i child_map_data.i
 	$(CA) $(CAFLAGS) -o $@ map_data.asm
 
-#bin/game.o: game.asm game_ram.asm
-
 bin/$(NAME).nes: bin/main.o $(DATA_OBJ)
 	$(LD) $(LDFLAGS) -o $@ $^
 
@@ -101,10 +100,7 @@ main_map_data.i: $(CONVMAP) maps/main-boards.tmx
 child_map_data.i:$(CONVMAP) maps/child-boards_12x6.tmx
 	cd maps && ../$(CONVMAP) child-boards_12x6.tmx child ../child_map_data.i
 
-game.bmp: tiles.aseprite
-	aseprite -b $< --save-as $@
-
-title.bmp: title-tiles.aseprite
+%.bmp: images/%.aseprite
 	aseprite -b $< --save-as $@
 
 $(CA):
