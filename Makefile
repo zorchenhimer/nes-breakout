@@ -39,7 +39,8 @@ SOURCES := main.asm nes2header.inc \
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
-.PHONY: clean default maps tools names travis sample_credits chr
+.PHONY: clean default maps tools names travis sample_credits chr cleanimg
+.PRECIOUS: %.bmp
 
 default: all
 all: tools chr bin/$(NAME).nes
@@ -50,7 +51,7 @@ travis: tools sample_credits chr bin/$(NAME).nes
 chr: game.chr credits.chr title.chr
 
 ../subs/*.csv:
-	mkdir ../subs/
+	mkdir -p ../subs/
 	cp sample-credit-names.csv ../subs/sample-credit-names.csv
 
 clean:
@@ -60,6 +61,9 @@ cleanall:
 	rm -f -r bin/
 	$(MAKE) -C cc65/ clean
 	$(MAKE) -C go-nes/ clean
+
+cleanimg:
+	rm -f *.chr *.bmp
 
 clrNames:
 	rm -f credits_data.i
