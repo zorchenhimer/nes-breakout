@@ -52,6 +52,7 @@ LoadChildMap:
     cmp #102
     bcs @done   ; too many maps loaded.  abort to not break things.
 
+    sta ChildId ; update the ID.  This will be written to the brick in memory.
     inc NextChildOffset
 
     asl a

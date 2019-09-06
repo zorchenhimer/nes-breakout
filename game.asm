@@ -49,7 +49,7 @@ BALL_SPRITE_OFFSET_Y = 3
 EDGE_COLLIDE_OFFSET = 3
 POINT_COLLIDE_OFFSET = 1
 
-START_MAP = 6
+START_MAP = 7
 
 GRAVITY_VALUE = $04
 
@@ -109,7 +109,7 @@ Init_Game:
 .endrepeat
 
     lda #0
-    jsr FillNametable2
+    jsr FillNametable0
     jsr ClearAttrTable0
 
     lda #1
@@ -289,12 +289,6 @@ Frame_Game:
     jsr BoostTheBall
 :
 
-    lda #BUTTON_START
-    jsr ButtonPressedP1
-    beq :+
-    jsr game_LoadChild
-:
-
     jsr UpdateBallCoords
     jsr UpdatePaddleCoords
 
@@ -369,7 +363,6 @@ game_LoadChild:
 :
     pla
     jmp LoadChildMap
-    ;rts
 
 BoostTheBall:
     lda BoostPool
@@ -1145,25 +1138,80 @@ CheckBrickCollide:
 :
     rts
 
+game_GetAddressForChildBrick:
+    lda CurrentBoard
+    and #$7F
+    asl a
+    tax
+
+    ; Get the start address of the map
+    lda Child_Map_Addresses, x
+    sta BrickAddress
+    lda Child_Map_Addresses+1, x
+    sta BrickAddress+1
+
+    ; Get the number of bytes to add to the
+    ; address for the current row.
+    ldx BrickRow
+    lda data_Mult12, x
+
+    clc
+    adc BrickAddress
+    adc BrickCol
+    sta BrickAddress
+
+    bcc :+
+    inc BrickAddress+1
+:
+
+    lda BrickRow
+    asl a
+    tax
+
+    lda Index_PpuChildBrickRows+1, x
+    sta BrickPpuAddress+1
+    lda Index_PpuChildBrickRows, x
+
+    clc
+    adc BrickCol
+    sta BrickPpuAddress
+
+    bcc :+
+    inc BrickPpuAddress+1
+:
+    rts
+
 ; Take the brick X and Y (in TmpX and TmpY, respectively)
 ; and return the start address for that brick in AddressPointer0
-GetPpuAddressForBrick:
-    ;rts
+GetAddressesForBrick:
+    bit CurrentBoard
+    bmi game_GetAddressForChildBrick
+
     ; Find the first byte of brick
     ldx BrickRow
     lda Row_Addresses_Low, x
-    sta BrickPpuTmpAddress
+    sta BrickAddress
     lda Row_Addresses_High, x
-    sta BrickPpuTmpAddress+1
+    sta BrickAddress+1
 
     ; Correct for brick's second byte
     ; (needs to be pointing to the first byte)
     ldy BrickCol
-    lda (BrickPpuTmpAddress), y
+    lda (BrickAddress), y
     bpl :+
     dec BrickCol
 :
 
+    ; Add column onto brick address
+    lda BrickCol
+    clc
+    adc BrickAddress
+    sta BrickAddress
+    lda BrickAddress+1
+    adc #0
+    sta BrickAddress+1
+
+    ; Figure out the PPU address for a brick
     lda BrickRow
     asl a
     tax
@@ -1197,25 +1245,13 @@ DoVerticalBrickCollide:
     lda BrickColIndex_Vert
     sta BrickCol
 
-    jsr GetPpuAddressForBrick
-    ; Buffer nametable removal
-    lda BrickPpuAddress
-    sta VertDestroy
-    lda BrickPpuAddress+1
-    sta VertDestroy+1
-
-    ; Remove brick from RAM
-    ldx BrickRow
-    lda Row_Addresses_Low, x
-    sta AddressPointer3
-    lda Row_Addresses_High, x
-    sta AddressPointer3+1
-
-    ldy BrickCol
-    lda #0
-    sta (AddressPointer3), y
-    iny
-    sta (AddressPointer3), y
+    jsr DoBrickAction
+    beq :+
+    pla
+    rts ; DoBrickAction returns 1 if
+        ; everything else should be skipped.
+        ; "everything" is to be determined.
+:
 
     pla
     tax
@@ -1255,25 +1291,12 @@ DoHorizontalBrickCollide:
     lda BrickColIndex_Horiz
     sta BrickCol
 
-    jsr GetPpuAddressForBrick
-    ; Buffer nametable removal
-    lda BrickPpuAddress
-    sta HorizDestroy
-    lda BrickPpuAddress+1
-    sta HorizDestroy+1
-
-    ; Remove brick from RAM
-    ldx BrickRow
-    lda Row_Addresses_Low, x
-    sta AddressPointer3
-    lda Row_Addresses_High, x
-    sta AddressPointer3+1
-
-    ldy BrickCol
-    lda #0
-    sta (AddressPointer3), y
-    iny
-    sta (AddressPointer3), y
+    jsr DoBrickAction
+    beq :+
+    rts ; DoBrickAction returns 1 if
+        ; everything else should be skipped.
+        ; "everything" is to be determined.
+:
 
     ldx BrickColIndex_Horiz
 
@@ -1427,6 +1450,16 @@ DrawCurrentMap:
     lda Row_Addresses_High, y
     sta AddressPointer0+1
 
+    ; Lookup ppu address for row
+    lda TmpX
+    asl a
+    tax
+    bit $2002
+    lda Index_PpuBrickRows+1, x
+    sta $2006
+    lda Index_PpuBrickRows+0, x
+    sta $2006
+
     ; Draw it
     jsr game_DrawRow
 
@@ -1438,17 +1471,8 @@ DrawCurrentMap:
     rts
 
 
+; Expects the PPU address to already be set.
 game_DrawRow:
-    ; Lookup ppu address for row
-    lda TmpX
-    asl a
-    tax
-    bit $2002
-    lda Index_PpuBrickRows+1, x
-    sta $2006
-    lda Index_PpuBrickRows+0, x
-    sta $2006
-
     ldy #0
 @loop:
     lda (AddressPointer0), y
@@ -1612,17 +1636,193 @@ CheckTwoPointCollision:
     sty CollisionCol_Ret
     rts
 
+; This will handle any and all brick actions for
+; a given collision.  The ball is not modified here.
+DoBrickAction:
+    jsr GetAddressesForBrick
+
+    ldy #0
+    lda (BrickAddress), y
+    and #$0F
+
+    ; subtract one to get real index
+    ; into table (value of $00 is "no brick")
+    sec
+    sbc #1
+
+    asl a
+    tax
+
+    lda BrickActions, x
+    sta AddressPointer0
+    lda BrickActions+1, x
+    sta AddressPointer0+1
+
+    jmp (AddressPointer0)
+
+game_ActionHealth:
+    ldy #1
+    lda (BrickAddress), y
+    and #$7F ; mask off byte identifier
+    bne :+
+    ; value is zero, remove brick
+    jmp game_RemoveBrick
+:
+    ; value is not zero, dec and do not remove.
+    sec
+    sbc #1
+    ora #$80    ; set the top bit. this is the second byte identifier.
+    sta (BrickAddress), y
+
+    lda #0
+    rts
+
+game_ActionSpawn:
+    ldy #1
+    lda (BrickAddress), y
+    and #$7F
+    sta ChildId    ; Child board index.  Either in RAM or ROM.
+
+    ldy #0
+    lda (BrickAddress), y
+    and #$30
+    bne @drawChildMap
+
+    ; Set child board as loaded
+    lda (BrickAddress), y
+    ora #$30
+    sta (BrickAddress), y
+
+    ; load map
+    jsr game_LoadChild
+
+    ; Update ChildID in the brick
+    ldy #1
+    lda (BrickAddress), y
+    ora ChildId
+    sta (BrickAddress), y
+
+    lda ChildId
+    ora #$80
+    sta CurrentBoard
+
+@drawChildMap:
+    ; Map is loaded, draw it
+
+    NMI_Disable
+    jsr WaitForNMI
+
+    ; Turn off BG and sprites
+    lda #$00
+    sta $2001
+
+    lda #0
+    jsr FillNametable0
+    jsr ClearAttrTable0
+
+    ldx ChildId
+
+    ; Get the start address of the child map
+    ; in RAM.
+    lda Child_Map_Addresses, x
+    sta AddressPointer0
+    lda Child_Map_Addresses+1, x
+    sta AddressPointer0+1
+
+    lda #CHILD_BOARD_HEIGHT
+    sta game_BoardHeight
+    lda #CHILD_BOARD_WIDTH
+    sta game_BoardWidth
+
+    lda #CHILD_OFFSET_Y
+    sta game_BoardOffsetY
+    lda #CHILD_OFFSET_X
+    sta game_BoardOffsetX
+
+    lda #0
+    sta TmpX
+
+@rowLoop:
+    ; Get and write the PPU address
+    lda TmpX
+    asl a
+    tax
+    bit $2002
+    lda Index_PpuChildBrickRows+1, x
+    sta $2006
+    lda Index_PpuChildBrickRows+0, x
+    sta $2006
+
+    jsr game_DrawRow
+
+    ; Increment address to next row
+    lda AddressPointer0
+    clc
+    adc game_BoardWidth
+    sta AddressPointer0
+
+    lda #0
+    adc AddressPointer0+1
+    sta AddressPointer0+1
+
+    inc TmpX
+    lda TmpX
+    cmp game_BoardHeight
+    bne @rowLoop
+
+    jsr ResetBall
+
+    NMI_Set NMI_Game
+
+    lda #%00011110
+    sta $2001
+
+    lda #1
+    rts
+
+game_ActionItemDrop:
+    ; TODO: item drops
+    jmp game_RemoveBrick
+
+game_RemoveBrick:
+    ; Remove from screen
+    lda BrickPpuAddress
+    sta VertDestroy
+    lda BrickPpuAddress+1
+    sta VertDestroy+1
+
+    ; Remove from RAM
+    lda #0
+    ldy #0
+    sta (BrickAddress), y
+    iny
+    sta (BrickAddress), y
+
+    lda #0
+    rts
+
 NoTileID = $00
 Index_TileDefs:
     .byte $02, $03  ; Health
     .byte $04, $05  ; Spawn
-    .byte $06, $07  ; Powerup/down
+    .byte $06, $07  ; Item drops
+
+BrickActions:
+    .word game_ActionHealth
+    .word game_ActionSpawn
+    .word game_ActionItemDrop
 
 Index_PpuBrickRows:
 .repeat BOARD_HEIGHT, i
     .word $2000 + (((BOARD_OFFSET_Y/8) * 32) + (BOARD_OFFSET_X/8)) + i * 32
 .endrepeat
 
+Index_PpuChildBrickRows:
+.repeat CHILD_BOARD_HEIGHT, i
+    .word $2000 + (((CHILD_OFFSET_Y/8) * 32) + (CHILD_OFFSET_X/8)) + i * 32
+.endrepeat
+
+; Row Addresses for main map
 Row_Addresses_Low:
 .repeat BOARD_HEIGHT, i
     .byte .lobyte(CurrentMap+(i*BOARD_WIDTH))
@@ -1633,7 +1833,7 @@ Row_Addresses_High:
     .byte .hibyte(CurrentMap+(i*BOARD_WIDTH))
 .endrepeat
 
-; Lookup tables for tile pixel bounds
+; Lookup tables for tile pixel bounds (main map)
 Row_Coord_Top:
 .repeat BOARD_HEIGHT, i
     .byte (BOARD_OFFSET_Y + (8 * i)) - EDGE_COLLIDE_OFFSET

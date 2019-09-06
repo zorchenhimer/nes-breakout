@@ -16,7 +16,7 @@
 .endif
 
 CHILD_OFFSET_Y = 64 ; Is this a good spot for the child board?
-CHILD_OFFSET_X = 10
+CHILD_OFFSET_X = 80
 CHILD_BOARD_HEIGHT = 6
 CHILD_BOARD_WIDTH = 12
 
@@ -96,7 +96,7 @@ BallSpeedY: .res 2
 IgnoreInput: .res 1
 
 BrickPpuAddress:    .res 2
-BrickPpuTmpAddress: .res 2
+BrickAddress:       .res 2
 BrickRow:           .res 1
 BrickCol:           .res 1
 
@@ -107,6 +107,11 @@ game_BoardHeight:   .res 1
 
 game_PaddleWallLeft:    .res 1
 game_PaddleWallRight:   .res 1
+
+; Bit 7 - If 1, we're in a child board.
+;         If 0, we're in the main board
+; Bits 6-0: board ID in RAM
+CurrentBoard: .res 1
 
 .segment "RAMGLOBAL"
 
@@ -926,6 +931,11 @@ data_Inits:
 data_Mult5:
 .repeat 10, i
     .byte (i * 5)
+.endrepeat
+
+data_Mult12:
+.repeat 10, i
+    .byte (i * 12)
 .endrepeat
 
 .include "credits.asm"
