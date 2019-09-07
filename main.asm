@@ -113,6 +113,11 @@ game_PaddleWallRight:   .res 1
 ; Bits 6-0: board ID in RAM
 CurrentBoard: .res 1
 
+Address_RowCoordTop:    .res 2
+Address_RowCoordBot:    .res 2
+Address_RowCoordLeft:   .res 2
+Address_RowCoordRight:  .res 2
+
 .segment "RAMGLOBAL"
 
 ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.

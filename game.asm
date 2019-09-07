@@ -49,7 +49,7 @@ BALL_SPRITE_OFFSET_Y = 3
 EDGE_COLLIDE_OFFSET = 3
 POINT_COLLIDE_OFFSET = 1
 
-START_MAP = 7
+START_MAP = 4
 
 GRAVITY_VALUE = $04
 
@@ -229,6 +229,26 @@ Init_Game:
     sta PaddleX
     sta PaddleY
     sta ChildId
+
+    lda #<Row_Coord_Top
+    sta Address_RowCoordTop
+    lda #>Row_Coord_Top
+    sta Address_RowCoordTop+1
+
+    lda #<Row_Coord_Bot
+    sta Address_RowCoordBot
+    lda #>Row_Coord_Bot
+    sta Address_RowCoordBot+1
+
+    lda #<Row_Coord_Left
+    sta Address_RowCoordLeft
+    lda #>Row_Coord_Left
+    sta Address_RowCoordLeft+1
+
+    lda #<Row_Coord_Right
+    sta Address_RowCoordRight
+    lda #>Row_Coord_Right
+    sta Address_RowCoordRight+1
 
     lda #BOARD_OFFSET_Y
     sta game_BoardOffsetY
@@ -718,6 +738,7 @@ PointToTile:
     tay
     rts
 
+; TODO: remove constants from this
 CheckWallCollide:
     bit BallDirection
     bpl @goingDown
@@ -926,6 +947,7 @@ UpdateBallAngle:
     sta BallDirection
     rts
 
+; TODO: remove constants from this too? (variable width paddle)
 CheckPaddleHorizCollide:
     lda BallX+1
     cmp PaddleX+1
@@ -1164,6 +1186,23 @@ game_GetAddressForChildBrick:
     inc BrickAddress+1
 :
 
+    ; Corret address to point to first
+    ; byte of brick
+    ldy #0
+    lda (BrickAddress), y
+    bpl :+
+    ; looking at  second tile
+    lda BrickAddress
+    ; If low byte is $00, both bytes need
+    ; to be dec'd
+    beq @decBoth
+    dec BrickAddress
+    jmp :+
+@decBoth:
+    dec BrickAddress
+    dec BrickAddress+1
+:
+
     lda BrickRow
     asl a
     tax
@@ -1196,6 +1235,7 @@ GetAddressesForBrick:
 
     ; Correct for brick's second byte
     ; (needs to be pointing to the first byte)
+    ; FIXME: will break if BrickAddress is $0500
     ldy BrickCol
     lda (BrickAddress), y
     bpl :+
@@ -1238,7 +1278,6 @@ DoVerticalBrickCollide:
     ; add that distance to the opposite direction of the ball
     lda BrickRowIndex_Vert
     and #$7F
-    tax
     pha
 
     sta BrickRow
@@ -1250,11 +1289,10 @@ DoVerticalBrickCollide:
     pla
     rts ; DoBrickAction returns 1 if
         ; everything else should be skipped.
-        ; "everything" is to be determined.
-:
+:       ; "everything" is to be determined.
 
     pla
-    tax
+    tay
 
     bit BallDirection
     bmi @goingUp
@@ -1263,10 +1301,10 @@ DoVerticalBrickCollide:
     ; distance into brick = BallY - Wall
     lda BallY+1
     sec
-    sbc Row_Coord_Top, x    ; top brick coord in A
+    sbc (Address_RowCoordTop), y    ; top brick coord in A
     sta TmpX ; Difference
 
-    lda Row_Coord_Top, x    ; top brick coord in A
+    lda (Address_RowCoordTop), y    ; top brick coord in A
     sec
     sbc TmpX
     sta BallY+1
@@ -1274,12 +1312,12 @@ DoVerticalBrickCollide:
 
 @goingUp:
     ; distance into brick = Wall - BallY
-    lda Row_Coord_Bot, x
+    lda (Address_RowCoordBot), y
     sec
     sbc BallY+1
 
     clc
-    adc Row_Coord_Bot, x
+    adc (Address_RowCoordBot), y
     sta BallY+1
 
     jmp BounceVert
@@ -1298,7 +1336,7 @@ DoHorizontalBrickCollide:
         ; "everything" is to be determined.
 :
 
-    ldx BrickColIndex_Horiz
+    ldy BrickColIndex_Horiz
 
     bit BallDirection
     bvc @goingLeft
@@ -1307,10 +1345,10 @@ DoHorizontalBrickCollide:
     ; distance into wall = (BallX + edge offset) - LeftWall
     lda BallX+1
     sec
-    sbc Row_Coord_Left, x
+    sbc (Address_RowCoordLeft), y
     sta TmpX    ; distance
 
-    lda Row_Coord_Left, x
+    lda (Address_RowCoordLeft), y
     sec
     sbc TmpX
     sta BallX+1
@@ -1318,11 +1356,11 @@ DoHorizontalBrickCollide:
 
 @goingLeft:
     ; distance into wall = RightWall - BallX - EdgeOffset
-    lda Row_Coord_Right, x
+    lda (Address_RowCoordRight), y
     sbc BallX+1 ; subtract collision point
 
     clc
-    adc Row_Coord_Right, x
+    adc (Address_RowCoordRight), y
     sta BallX+1
 
     jmp BounceHoriz
@@ -1353,11 +1391,18 @@ CheckPointCollide:
     lda #0
     rts
 :
-    ; Y < BOARD_HEIGHT + BOARD_OFFSET_Y, continue
-    ; child boards: x6 = A << 2 + A << 1
-    ; FIXME: const math -> runtime math
-    cmp #((BOARD_HEIGHT * 8) + BOARD_OFFSET_Y)
-    ;beq :+
+    ; Y < (BOARD_HEIGHT * 8px) + BOARD_OFFSET_Y, continue
+    lda game_BoardHeight
+    asl a
+    asl a
+    asl a
+    clc
+    adc game_BoardOffsetY
+    sta TmpZ
+
+    lda TmpY
+    ;cmp #((BOARD_HEIGHT * 8) + BOARD_OFFSET_Y)
+    cmp TmpZ
     bcc :+
     ; Below board
     lda #0
@@ -1372,10 +1417,18 @@ CheckPointCollide:
     lda #0
     rts
 :
-    ; X <= BOARD_WIDTH + BOARD_OFFSET_X, continue
-    ; FIXME: const math -> runtime math
-    cmp #((BOARD_WIDTH * 8) + BOARD_OFFSET_X)
-    ;beq :+
+    ; X <= (BOARD_WIDTH * 8px) + BOARD_OFFSET_X, continue
+    lda game_BoardWidth
+    asl a
+    asl a
+    asl a
+    clc
+    adc game_BoardOffsetX
+    sta TmpZ
+
+    lda TmpX
+    cmp TmpZ
+    ;cmp #((BOARD_WIDTH * 8) + BOARD_OFFSET_X)
     bcc :+
     ; Right of board
     lda #0
@@ -1385,53 +1438,42 @@ CheckPointCollide:
     ; Ball is in board area.  Check for brick collision
     jsr PointToTile
 
+    bit CurrentBoard
+    bmi :+
+    ; Main board
     lda Row_Addresses_Low, x
     sta AddressPointer0
     lda Row_Addresses_High, x
     sta AddressPointer0+1
-
     lda (AddressPointer0), y
     rts
-
-; TODO
-ExecuteCollision:
-    bpl @DecodeFirstByte
-    ; TODO: verify that this can never happen on first column
-    dey
-    lda (AddressPointer0), y
-
-@DecodeFirstByte:
-    ; Mask the brick type
-    and #$0F
+:
+    ; Child board
+    txa
+    pha
+    lda CurrentBoard
     asl a
     tax
 
-    ; JMP to collision code for the given brick type
-    lda Index_TileTypes+1, x
-    pha
-    lda Index_TileTypes, x
-    pha
-    rts
+    ; Pointer to start of board
+    lda Child_Map_Addresses, x
+    sta AddressPointer0
+    lda Child_Map_Addresses+1, x
+    sta AddressPointer0+1
 
-Index_TileTypes:
-    .word Collide_Health-1
-    .word Collide_Spawn-1
-    .word Collide_Powerup-1
-    .word Collide_Powerdown-1
-    ; Add some more? idk
+    ; Increment pointer to start of row
+    pla
+    tax
+    lda data_Mult12, x
+    clc
+    adc AddressPointer0
+    sta AddressPointer0
 
-; Decriment health.  Break when it rolls under.
-Collide_Health:
-    rts
+    bcc :+
+    inc AddressPointer0+1
+:
 
-; Go to the child board
-Collide_Spawn:
-    rts
-
-; Delete the brick, and spawn a sprite
-Collide_Powerup:
-    rts
-Collide_Powerdown:
+    lda (AddressPointer0), y
     rts
 
 ; Read the current map in RAM and draw it to the screen
@@ -1640,6 +1682,11 @@ CheckTwoPointCollision:
 ; a given collision.  The ball is not modified here.
 DoBrickAction:
     jsr GetAddressesForBrick
+    lda BrickAddress
+    bne :+
+    lda #1
+    rts
+:
 
     ldy #0
     lda (BrickAddress), y
@@ -1738,6 +1785,26 @@ game_ActionSpawn:
     sta game_BoardOffsetY
     lda #CHILD_OFFSET_X
     sta game_BoardOffsetX
+
+    lda #<Child_Row_Coord_Top
+    sta Address_RowCoordTop
+    lda #>Child_Row_Coord_Top
+    sta Address_RowCoordTop+1
+
+    lda #<Child_Row_Coord_Bot
+    sta Address_RowCoordBot
+    lda #>Child_Row_Coord_Bot
+    sta Address_RowCoordBot+1
+
+    lda #<Child_Row_Coord_Left
+    sta Address_RowCoordLeft
+    lda #>Child_Row_Coord_Left
+    sta Address_RowCoordLeft+1
+
+    lda #<Child_Row_Coord_Right
+    sta Address_RowCoordRight
+    lda #>Child_Row_Coord_Right
+    sta Address_RowCoordRight+1
 
     lda #0
     sta TmpX
@@ -1852,6 +1919,27 @@ Row_Coord_Left:
 Row_Coord_Right:
 .repeat BOARD_WIDTH, i
     .byte (BOARD_OFFSET_X + (8 * i)) + 7 + EDGE_COLLIDE_OFFSET
+.endrepeat
+
+; Lookup tables for tile pixel bounds (child maps)
+Child_Row_Coord_Top:
+.repeat CHILD_BOARD_HEIGHT, i
+    .byte (CHILD_OFFSET_Y + (8 * i)) - EDGE_COLLIDE_OFFSET
+.endrepeat
+
+Child_Row_Coord_Bot:
+.repeat CHILD_BOARD_HEIGHT, i
+    .byte (CHILD_OFFSET_Y + (8 * i)) + 7 + EDGE_COLLIDE_OFFSET
+.endrepeat
+
+Child_Row_Coord_Left:
+.repeat CHILD_BOARD_WIDTH, i
+    .byte (CHILD_OFFSET_X + (8 * i)) - EDGE_COLLIDE_OFFSET
+.endrepeat
+
+Child_Row_Coord_Right:
+.repeat CHILD_BOARD_WIDTH, i
+    .byte (CHILD_OFFSET_X + (8 * i)) + 7 + EDGE_COLLIDE_OFFSET
 .endrepeat
 
 Bounce_Speed:
