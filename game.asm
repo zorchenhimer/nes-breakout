@@ -49,7 +49,7 @@ BALL_SPRITE_OFFSET_Y = 3
 EDGE_COLLIDE_OFFSET = 3
 POINT_COLLIDE_OFFSET = 1
 
-START_MAP = 4
+;START_MAP = 4
 
 GRAVITY_VALUE = $04
 
@@ -277,7 +277,7 @@ Init_Game:
 
     jsr UpdatePaddleSprite
 
-    lda #START_MAP
+    lda CurrentBoard
     jsr LoadMap
     jsr DrawCurrentMap
 
@@ -1256,17 +1256,17 @@ GetAddressesForBrick:
     asl a
     tax
 
-    lda Index_PpuBrickRows+1, x
-    sta BrickPpuAddress
     lda Index_PpuBrickRows, x
+    sta BrickPpuAddress
+    lda Index_PpuBrickRows+1, x
 
     clc
     adc BrickCol
-    sta BrickPpuAddress+1
+    sta BrickPpuAddress
 
     ; handle overflow
     bcc :+
-    inc BrickPpuAddress
+    inc BrickPpuAddress+1
 :
 
     rts

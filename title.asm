@@ -1,5 +1,7 @@
 ; asmsyntax=ca65
 
+.importzp main_NUMBER_OF_MAPS
+
 TITLE_SpriteTop = 79    ; topmost Y coordinate of cursor
 TITLE_MenuLength = 3
 
@@ -42,9 +44,25 @@ Init_Title:
     lda #$00    ; attr
     sta Sprites+2
 
+    lda #20
+    sta Sprites+4
+    sta Sprites+7
+
+    lda #$00
+    sta Sprites+6 ; attr
+
+    lda #$80
+    sta Sprites+5 ; tile
+
+    lda #0
+    sta CurrentBoard
+
     ;jsr WriteSprites
 
     lda #2
+    jsr LoadChrData
+
+    lda #3
     jsr LoadChrData
 
     jsr ClearAttrTable0
@@ -131,7 +149,30 @@ Frame_Title:
     beq :+
     jsr t_sel_down
 
+:   lda #BUTTON_LEFT
+    jsr ButtonPressedP1
+    beq :+
+    dec CurrentBoard
+    bpl :+
+    lda #main_NUMBER_OF_MAPS
+    sec
+    sbc #1
+    sta CurrentBoard
+
+:   lda #BUTTON_RIGHT
+    jsr ButtonPressedP1
+    beq :+
+    inc CurrentBoard
+    lda CurrentBoard
+    cmp #main_NUMBER_OF_MAPS
+    bcc :+
+    lda #0
+    sta CurrentBoard
 :
+    lda CurrentBoard
+    ora #$80
+    sta Sprites+5
+
 @button_done:
     ; calculate Y for cursor
     lda IdxA

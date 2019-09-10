@@ -204,6 +204,9 @@ TitleData:
     ; 128 tiles. includes a character set
     .incbin "title.chr", 0, 2048
 
+HexTileData:
+    .incbin "hex.chr", 0, (16 * 16)
+
 .segment "PAGE_FIXED"
     .byte 15
 IRQ:
@@ -731,6 +734,10 @@ LoadChrData:
 
 ; TODO: find a way to auto-generate this table
 Index_ChrData:
+    ; Address of data start
+    ; Tile count
+    ; Dest table in bit 7, bank in bits 6-0
+
     .word CreditsChrData    ; Source address
     .byte $00   ; Tile count
     .byte $FE   ; Destination pattern table & PRG bank
@@ -740,8 +747,12 @@ Index_ChrData:
     .byte $FE   ; Destination pattern table & PRG bank
 
     .word TitleData
-    .byte 128   ; Tile Count
+    .byte 144   ; Tile Count
     .byte $FE   ; Destination pattern table & PRG bank
+
+    .word HexTileData
+    .byte 16
+    .byte $7E
 
 ; Button Constants
 BUTTON_A        = 1 << 7

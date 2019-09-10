@@ -48,7 +48,7 @@ names: tools chr clrNames credits_data.i bin/$(NAME).nes
 maps: tools chr map_data.i map_child_data.i
 tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
 travis: tools sample_credits chr bin/$(NAME).nes
-chr: game.chr credits.chr title.chr
+chr: game.chr credits.chr title.chr hex.chr
 
 ../subs/*.csv:
 	mkdir -p ../subs/
