@@ -45,6 +45,11 @@ WALL_LEFT = $0A
 WALL_TOP = $11
 WALL_BOTTOM = $DD
 
+CHILD_WALL_RIGHT = WALL_RIGHT - (8 * 5)
+CHILD_WALL_LEFT = WALL_LEFT + (8 * 5)
+CHILD_WALL_TOP = WALL_TOP + (8 * 2)
+CHILD_WALL_BOTTOM = WALL_BOTTOM - (8 * 4)
+
 BALL_SPRITE_OFFSET_X = 2
 BALL_SPRITE_OFFSET_Y = 3
 
@@ -66,6 +71,9 @@ PADDLE_SPRITE_OFFSET_Y = 3
 
 PADDLE_WALL_LEFT = WALL_LEFT + 10 ;$14
 PADDLE_WALL_RIGHT = WALL_RIGHT - 9 ;$EC
+
+CHILD_PADDLE_WALL_LEFT = CHILD_WALL_LEFT + 10 ;$14
+CHILD_PADDLE_WALL_RIGHT = CHILD_WALL_RIGHT - 9 ;$EC
 
 ; These are RAM addresses
 Paddle_Sprite_Start = $0208
@@ -222,6 +230,15 @@ Init_Game:
     sta PaddleSpeed
     lda #Initial_Paddle_Speed_WHOLE
     sta PaddleSpeed+1
+
+    lda #WALL_TOP
+    sta game_WallTop
+    lda #WALL_BOTTOM
+    sta game_WallBot
+    lda #WALL_LEFT
+    sta game_WallLeft
+    lda #WALL_RIGHT
+    sta game_WallRight
 
     jsr UpdatePaddleSprite
 
@@ -791,24 +808,24 @@ CheckWallCollide:
     bpl @goingDown
     ; Going up
     lda BallY+1
-    cmp #WALL_TOP
+    cmp game_WallTop
     beq @bounceVertTop
     bcc @bounceVertTop
     jmp @checkHoriz
 
 @goingDown:
     lda BallY+1
-    cmp #WALL_BOTTOM
+    cmp game_WallBot
     bcs @bounceVertBottom
     jmp @checkHoriz
 
 @bounceVertTop:
-    lda #WALL_TOP
+    lda game_WallTop
     sec
     sbc BallY+1
 
     clc
-    adc #WALL_TOP
+    adc game_WallTop
     sta BallY+1
     jmp @bounceVert
 
@@ -824,38 +841,38 @@ CheckWallCollide:
     bvs @goingRight
     ; Going left
     lda BallX+1
-    cmp #WALL_LEFT
+    cmp game_WallLeft
     beq @bounceHorizLeft
     bcc @bounceHorizLeft
     rts ; return early
 
 @goingRight:
     lda BallX+1
-    cmp #WALL_RIGHT
+    cmp game_WallRight
     bcs @bounceHorizRight
     rts ; return early
 
 @bounceHorizLeft:
     ; traveling right
     ; Get diff = (wall - ball)
-    lda #WALL_LEFT
+    lda game_WallLeft
     sec
     sbc BallX+1
     ; diff in A
 
     ; Add difference to wall coord
     clc
-    adc #WALL_LEFT
+    adc game_WallLeft
     sta BallX+1
     jmp @bounceHoriz
 
 @bounceHorizRight:
     lda BallX+1
     sec
-    sbc #WALL_RIGHT
+    sbc game_WallRight
     sta TmpX    ; wall - ball difference
 
-    lda #WALL_RIGHT
+    lda game_WallRight
     sbc TmpX
     sta BallX+1
 
@@ -1864,6 +1881,20 @@ game_ActionSpawn:
     sta PaddleX+1
     lda #Child_Paddle_Y
     sta PaddleY+1
+
+    lda #CHILD_WALL_TOP
+    sta game_WallTop
+    lda #CHILD_WALL_BOTTOM
+    sta game_WallBot
+    lda #CHILD_WALL_LEFT
+    sta game_WallLeft
+    lda #CHILD_WALL_RIGHT
+    sta game_WallRight
+
+    lda #CHILD_PADDLE_WALL_LEFT
+    sta game_PaddleWallLeft
+    lda #CHILD_PADDLE_WALL_RIGHT
+    sta game_PaddleWallRight
 
     lda #0
     sta TmpX

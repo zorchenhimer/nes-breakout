@@ -108,6 +108,11 @@ game_BoardHeight:   .res 1
 game_PaddleWallLeft:    .res 1
 game_PaddleWallRight:   .res 1
 
+game_WallTop:   .res 1
+game_WallBot:   .res 1
+game_WallLeft:  .res 1
+game_WallRight: .res 1
+
 ; Bit 7 - If 1, we're in a child board.
 ;         If 0, we're in the main board
 ; Bits 6-0: board ID in RAM
