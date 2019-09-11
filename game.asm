@@ -335,29 +335,18 @@ NMI_Game:
     sta $2007
 
     ; Destroy any bricks that need destroying
-    lda HorizDestroy
+    lda BrickDestroy+1  ;check high byte for value
     beq :+
     bit $2002
     sta $2006
-    lda HorizDestroy+1
+    lda BrickDestroy
     sta $2006
 
     lda #0
     sta $2007
     sta $2007
-    sta HorizDestroy
-:
-    lda VertDestroy
-    beq :+
-    bit $2002
-    sta $2006
-    lda VertDestroy+1
-    sta $2006
-
-    lda #0
-    sta $2007
-    sta $2007
-    sta VertDestroy
+    sta BrickDestroy
+    sta BrickDestroy+1
 :
 
     lda #0
@@ -1196,6 +1185,7 @@ game_GetAddressForChildBrick:
     ; If low byte is $00, both bytes need
     ; to be dec'd
     beq @decBoth
+    dec BrickCol
     dec BrickAddress
     jmp :+
 @decBoth:
@@ -1207,8 +1197,11 @@ game_GetAddressForChildBrick:
     asl a
     tax
 
+    ; high byte
     lda Index_PpuChildBrickRows+1, x
     sta BrickPpuAddress+1
+
+    ; low byte
     lda Index_PpuChildBrickRows, x
 
     clc
@@ -1247,6 +1240,7 @@ GetAddressesForBrick:
     clc
     adc BrickAddress
     sta BrickAddress
+
     lda BrickAddress+1
     adc #0
     sta BrickAddress+1
@@ -1256,18 +1250,19 @@ GetAddressesForBrick:
     asl a
     tax
 
-    lda Index_PpuBrickRows, x
-    sta BrickPpuAddress
+    ; High byte
     lda Index_PpuBrickRows+1, x
+    sta BrickPpuAddress+1
 
+    ; low byte
+    lda Index_PpuBrickRows, x
     clc
     adc BrickCol
     sta BrickPpuAddress
 
-    ; handle overflow
-    bcc :+
-    inc BrickPpuAddress+1
-:
+    lda BrickPpuAddress+1
+    adc #0
+    sta BrickPpuAddress+1
 
     rts
 
@@ -1682,7 +1677,8 @@ CheckTwoPointCollision:
 ; a given collision.  The ball is not modified here.
 DoBrickAction:
     jsr GetAddressesForBrick
-    lda BrickAddress
+    ldy #0
+    lda (BrickAddress), y
     bne :+
     lda #1
     rts
@@ -1854,9 +1850,9 @@ game_ActionItemDrop:
 game_RemoveBrick:
     ; Remove from screen
     lda BrickPpuAddress
-    sta VertDestroy
+    sta BrickDestroy
     lda BrickPpuAddress+1
-    sta VertDestroy+1
+    sta BrickDestroy+1
 
     ; Remove from RAM
     lda #0
