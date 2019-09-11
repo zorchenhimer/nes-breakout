@@ -38,6 +38,8 @@ Paddle_Speed_Fast_FRACT = 128
 Initial_Paddle_X = 128
 Initial_Paddle_Y = 208
 
+Child_Paddle_Y = 184
+
 WALL_RIGHT = $F5
 WALL_LEFT = $0A
 WALL_TOP = $11
@@ -1857,6 +1859,11 @@ game_ActionSpawn:
     sta Address_RowCoordRight
     lda #>Child_Row_Coord_Right
     sta Address_RowCoordRight+1
+
+    lda #Initial_Paddle_X
+    sta PaddleX+1
+    lda #Child_Paddle_Y
+    sta PaddleY+1
 
     lda #0
     sta TmpX
