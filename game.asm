@@ -62,8 +62,8 @@ PADDLE_CENTER_WIDTH = 11
 PADDLE_SPRITE_OFFSET_X = 3
 PADDLE_SPRITE_OFFSET_Y = 3
 
-PADDLE_WALL_LEFT = $14
-PADDLE_WALL_RIGHT = $EC
+PADDLE_WALL_LEFT = WALL_LEFT + 10 ;$14
+PADDLE_WALL_RIGHT = WALL_RIGHT - 9 ;$EC
 
 ; These are RAM addresses
 Paddle_Sprite_Start = $0208
@@ -154,61 +154,7 @@ Init_Game:
     sta Sprites+(4*5)+2
 
     jsr WriteSprites
-
-    ; Draw top two rows
-    lda #$20
-    sta $2006
-    lda #$00
-    sta $2006
-
-    lda #$01
-    ldx #64
-:
-    sta $2007
-    dex
-    bne :-
-
-    ; draw bottom two rows
-    lda #$23
-    sta $2006
-    lda #$80
-    sta $2006
-
-    lda #$01
-    ldx #64
-:
-    sta $2007
-    dex
-    bne :-
-
-    ; Draw Left
-    lda #%10011100
-    sta $2000
-
-    lda #$20
-    sta $2006
-    lda #$00
-    sta $2006
-
-    lda #$01
-    ldx #30
-:
-    sta $2007
-    dex
-    bne :-
-
-    ; Draw Right
-    lda #$20
-    sta $2006
-    lda #$1F
-    sta $2006
-
-    lda #$01
-    ldx #30
-:
-    sta $2007
-    dex
-    bne :-
+    jsr game_DrawWalls
 
     ; Sprite zero
     ; TODO: Try to change the background color
@@ -358,6 +304,116 @@ NMI_Game:
 
     dec Sleeping
     rti
+
+game_DrawWalls:
+    bit CurrentBoard
+    bmi @childBoard
+
+    ; Right wall
+    lda #$20
+    sta AddressPointer0+1
+    lda #$3F
+    sta AddressPointer0+0
+
+    ; bottom wall
+    lda #$23
+    sta AddressPointer1+1
+    lda #$80
+    sta AddressPointer1+0
+
+    lda #2
+    sta TmpX    ; top row count
+    lda #1
+    sta TmpY    ; column count for left/right
+
+    jmp @loops
+
+@childBoard:
+    ; Right wall
+    lda #$20
+    sta AddressPointer0+1
+    lda #$1A
+    sta AddressPointer0+0
+
+    ; bottom wall
+    lda #$23
+    sta AddressPointer1+1
+    lda #$00
+    sta AddressPointer1+0
+
+    lda #4
+    sta TmpX    ; top row count
+    lda #6
+    sta TmpY    ; column count for left/right
+
+@loops:
+    ; Draw top two rows
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+
+    lda #$01
+    ldx TmpX
+:
+    .repeat 32
+    sta $2007
+    .endrepeat
+    dex
+    bne :-
+
+    ; draw bottom two rows
+    lda AddressPointer1+1
+    sta $2006
+    lda AddressPointer1+0
+    sta $2006
+
+    lda #$0F
+    ldx TmpX
+:
+    .repeat 32
+    sta $2007
+    .endrepeat
+    dex
+    bne :-
+
+    ; Draw Left (left after top to use address)
+    lda #%10011100
+    sta $2000
+
+    ldy #$00
+    sty TmpZ
+    lda #$01
+    ldx TmpY
+:
+    ldy #$20
+    sty $2006
+    ldy TmpZ
+    sty $2006
+    inc TmpZ
+
+    .repeat 30
+    sta $2007
+    .endrepeat
+    dex
+    bne :-
+
+    ; Draw Right
+    lda #$01
+    ldx TmpY
+:
+    ldy #$20
+    sty $2006
+    ldy AddressPointer0
+    sty $2006
+    inc AddressPointer0
+    .repeat 30
+    sta $2007
+    .endrepeat
+    dex
+    bne :-
+
+    rts
 
 game_LoadChild:
     lda ChildId
@@ -1832,6 +1888,8 @@ game_ActionSpawn:
     lda TmpX
     cmp game_BoardHeight
     bne @rowLoop
+
+    jsr game_DrawWalls
 
     jsr ResetBall
 

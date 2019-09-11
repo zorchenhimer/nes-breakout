@@ -199,7 +199,7 @@ CreditsChrData:
 GameChrData:
     ; FIXME: generate the tile count for this stuff
     ; (and the lookup table below)
-    .incbin "game.chr", 0, (16 * 14)
+    .incbin "game.chr", 0, (16 * 16)
 TitleData:
     ; 128 tiles. includes a character set
     .incbin "title.chr", 0, 2048
@@ -743,7 +743,7 @@ Index_ChrData:
     .byte $FE   ; Destination pattern table & PRG bank
 
     .word GameChrData   ; Source address
-    .byte 14    ; Tile count
+    .byte 16    ; Tile count
     .byte $FE   ; Destination pattern table & PRG bank
 
     .word TitleData
