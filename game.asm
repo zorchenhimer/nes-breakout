@@ -383,7 +383,7 @@ game_DrawWalls:
     ; Right wall
     lda #$20
     sta AddressPointer0+1
-    lda #$3F
+    lda #$1F
     sta AddressPointer0+0
 
     ; bottom wall
