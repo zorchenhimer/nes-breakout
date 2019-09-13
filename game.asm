@@ -83,7 +83,7 @@ Paddle_Sprite_Tile = Paddle_Sprite_Start + 1
 Paddle_Sprite_Attr = Paddle_Sprite_Start + 2
 
 Pal_Game:
-    .byte $0F, $0A, $1A, $2A
+    .byte $0F, $01, $11, $21
 
 Pal_GameSprites:
     .byte $0F, $00, $10, $20
@@ -128,11 +128,11 @@ Init_Game:
     lda #4
     jsr LoadChrData
 
-    ;lda #$00
-    ;jsr Waves_LoadFrame
+    lda #$00
+    jsr Waves_LoadFrame
 
-    ;lda #$81
-    ;jsr Waves_LoadFrame
+    lda #$80
+    jsr Waves_LoadFrame
 
     jsr Wave_DrawBackground
 
