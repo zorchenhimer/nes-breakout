@@ -125,6 +125,22 @@ Init_Game:
     lda #1
     jsr LoadChrData
 
+    lda #4
+    jsr LoadChrData
+
+    ;lda #$00
+    ;jsr Waves_LoadFrame
+
+    ;lda #$81
+    ;jsr Waves_LoadFrame
+
+    jsr Wave_DrawBackground
+
+    lda #8
+    sta waves_AnimWait
+    lda #0
+    sta waves_AnimOdd
+
     jsr ClearSprites
 
     jsr Clear_NonGlobalRam
@@ -253,6 +269,9 @@ Init_Game:
     lda #%00011110
     sta $2001
 
+    lda #%10001000
+    sta PpuControl
+
     lda #$00
     sta $2005
     sta $2005
@@ -286,11 +305,41 @@ Frame_Game:
 
     jsr UpdateBoostSprite
 
+    jsr waves_PrepChrWrite
+
     jsr WaitForNMI
     jmp Frame_Game
 
 NMI_Game:
     jsr WriteSprites
+
+    dec waves_AnimWait
+    bne @noAnim
+    lda #8
+    sta waves_AnimWait
+
+    lda waves_AnimOdd
+    beq :+
+    lda #0
+    sta waves_AnimOdd
+    lda #%10001000
+    sta PpuControl
+    jmp @animDone
+:
+    lda #1
+    sta waves_AnimOdd
+    lda #%10011000
+    sta PpuControl
+
+@animDone:
+    inc waves_currentFrame
+    lda waves_currentFrame
+    cmp #15
+    bcc :+
+    lda #0
+    sta waves_currentFrame
+:
+@noAnim:
 
     lda #$3F
     sta $2006
@@ -314,11 +363,14 @@ NMI_Game:
     sta BrickDestroy+1
 :
 
+    lda waves_AnimOdd
+    jsr waves_WriteRow
+
     lda #0
     sta $2005
     sta $2005
 
-    lda #%10011000
+    lda PpuControl
     sta $2000
 
     dec Sleeping
@@ -431,7 +483,6 @@ game_DrawWalls:
     .endrepeat
     dex
     bne :-
-
     rts
 
 game_LoadChild:

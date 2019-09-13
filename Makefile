@@ -39,7 +39,27 @@ SOURCES := main.asm nes2header.inc \
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
-.PHONY: clean default maps tools names travis sample_credits chr cleanimg
+WAVE_FRAMES = waves_1 \
+			  waves_2 \
+			  waves_3 \
+			  waves_4 \
+			  waves_5 \
+			  waves_6 \
+			  waves_7 \
+			  waves_8 \
+			  waves_9 \
+			  waves_10 \
+			  waves_11 \
+			  waves_12 \
+			  waves_13 \
+			  waves_14 \
+			  waves_15
+
+WAVE_BMP := $(addsuffix .bmp,$(WAVE_FRAMES))
+#WAVE_CHR := $(addsuffix .chr,$(WAVE_FRAMES))
+WAVE_CHR = waves.chr
+
+.PHONY: clean default maps tools names travis sample_credits chr cleanimg waves
 .PRECIOUS: %.bmp
 
 default: all
@@ -48,7 +68,8 @@ names: tools chr clrNames credits_data.i bin/$(NAME).nes
 maps: tools chr map_data.i map_child_data.i
 tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
 travis: tools sample_credits chr bin/$(NAME).nes
-chr: game.chr credits.chr title.chr hex.chr
+chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR)
+waves: $(WAVE_CHR)
 
 ../subs/*.csv:
 	mkdir -p ../subs/
@@ -70,6 +91,9 @@ clrNames:
 
 %.chr: %.bmp
 	$(CHRUTIL) $< -o $@
+
+waves.chr: $(WAVE_BMP)
+	$(CHRUTIL) -o $@ $^
 
 $(GENCRED): generate-credits.go
 	go build -o $(GENCRED) generate-credits.go
@@ -106,6 +130,9 @@ child_map_data.i:$(CONVMAP) maps/child-boards_12x6.tmx
 
 %.bmp: images/%.aseprite
 	aseprite -b $< --save-as $@
+
+$(WAVE_BMP): images/waves.aseprite
+	aseprite -b $< --save-as waves_{frame1}.bmp
 
 $(CA):
 	$(MAKE) -C cc65/ ca65

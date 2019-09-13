@@ -67,6 +67,20 @@ IdxA:   .res 1
 IdxB:   .res 1
 IdxC:   .res 1
 
+PpuControl: .res 1
+
+; number of frames to wait between
+; animation frames
+waves_AnimWait: .res 1
+; which pattern table?
+waves_AnimOdd: .res 1
+; row to send to the ppu
+waves_currentRow: .res 1
+waves_currentFrame: .res 1
+
+waves_ChrDest:  .res 2  ; CHR address to start writing
+waves_ChrSrc:   .res 2  ; the start of an 8 tile row
+
 LastBank:      .res 1
 
 ; Bit 7, 0 - Down
@@ -178,6 +192,10 @@ Sprites: .res 256
     .byte 6
 .segment "PAGE07"
     .byte 7
+
+WaveChrData:
+    .incbin "waves.chr"
+
 .segment "PAGE08"
     .byte 8
 .segment "PAGE09"
@@ -195,6 +213,7 @@ Sprites: .res 256
 
 .segment "PAGE13"
     .byte 13
+;; Occupied by credit data
 
 .segment "PAGE14"
     .byte 14
@@ -759,6 +778,10 @@ Index_ChrData:
     .byte 16
     .byte $7E
 
+    .word GameChrData   ; Source address
+    .byte 16    ; Tile count
+    .byte $7E   ; Destination pattern table & PRG bank
+
 ; Button Constants
 BUTTON_A        = 1 << 7
 BUTTON_B        = 1 << 6
@@ -939,6 +962,230 @@ JumpToInit:
 
     ; do a long jump
     jmp LongJump
+
+; Draws the wave's tile IDs on the background
+Wave_DrawBackground:
+    ; row counter 0 - 7
+    ; col counter 0 - 7
+    ; repeat per row 0-3
+    bit $2002
+
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+
+    lda #0
+    sta IdxC    ; number of frames, vertically
+
+    lda #8
+    sta TmpZ    ; Number of rows in the frame
+
+@topFrame:  ; start of a row of frames
+    lda #0
+    sta IdxB    ; row of frame
+@topLoop:
+    ; calculate the value of the first tile
+    ; index in the frame's row.
+    lda IdxB
+    asl a
+    asl a
+    asl a
+    clc
+    adc #$C0
+    sta TmpX
+
+    lda #4
+    sta IdxA
+@screenRowLoop:
+    ldx TmpX
+    ; Draw a row of the animation frame
+    .repeat 8, i
+    stx $2007
+    inx
+    .endrepeat
+
+    dec IdxA
+    bne @screenRowLoop
+
+    inc IdxB
+    lda IdxB
+    cmp TmpZ
+    bcc @topLoop
+
+    inc IdxC
+    lda IdxC
+    cmp #3
+    bcc @topFrame
+
+    lda TmpZ
+    cmp #6
+    bne :+
+    rts
+:
+    lda #6
+    sta TmpZ
+    jmp @topFrame
+
+; Frame ID in A
+; Bit 7 determines pattern table
+;   0 - top
+;   1 - bottom
+Waves_LoadFrame:
+    bit $2002
+
+    sta IdxA
+    bit IdxA
+    bmi :+
+    lda #$0C
+    jmp :++
+:
+    lda #$1C
+:
+    sta $2006
+    lda #$00
+    sta $2006
+
+    lda IdxA
+    asl a
+    tax
+
+    lda data_WaveFrames, x
+    sta AddressPointer0
+    lda data_WaveFrames+1, x
+    sta AddressPointer0+1
+
+    lda $8000
+    pha
+
+    lda #7
+    jsr MMC1_Select_Page
+
+    ldx #4  ; page loop
+    ;sta TmpX    ; page loop
+    ldy #0
+@loop:
+    lda (AddressPointer0), y
+    sta $2007
+    iny
+    bne @loop
+
+    inc AddressPointer0+1
+    dex
+    bne @loop
+
+    pla
+    jsr MMC1_Select_Page
+    rts
+
+; sets up addresses and variables for waves_UnrolledRow
+waves_PrepChrWrite:
+    ; Write the destination CHR address
+    lda waves_AnimOdd   ; top or bottom pattern table
+    beq @bottom
+    lda #$0C
+    sta waves_ChrDest+1
+    jmp @rowOffset
+
+@bottom:
+    lda #$1C
+    sta waves_ChrDest+1
+
+@rowOffset:
+    ;lda #$00
+    ;sta waves_ChrDest+0
+
+    lda waves_currentRow
+    asl a
+    tax
+
+    ; add the offset for the row start
+    lda data_WaveRowOffsets, x
+    sta waves_ChrDest
+
+    lda data_WaveRowOffsets+1, x
+    clc
+    adc waves_ChrDest+1
+    sta waves_ChrDest+1
+
+    ; Figure out source address start
+
+    lda waves_currentFrame
+    asl a
+    tay
+
+    lda data_WaveFrames, y
+    sta waves_ChrSrc
+    lda data_WaveFrames+1, y
+    sta waves_ChrSrc+1
+
+    ;lda #<WaveChrData
+    ;sta waves_ChrSrc
+    ;lda #>WaveChrData
+    ;sta waves_ChrSrc+1
+
+    lda waves_currentRow
+    asl a
+    tax
+
+    ; Add the offset for the row start
+    lda data_WaveRowOffsets, x
+    clc
+    adc waves_ChrSrc
+    sta waves_ChrSrc
+
+    lda data_WaveRowOffsets+1, x
+    adc waves_ChrSrc+1
+    sta waves_ChrSrc+1
+
+    inc waves_currentRow
+    lda waves_currentRow
+    cmp #8
+    bcc :+
+    lda #0
+    sta waves_currentRow
+:
+    rts
+
+waves_WriteRow:
+    lda $8000
+    pha
+
+    lda #7
+    jsr MMC1_Select_Page
+
+    bit $2000
+    lda waves_ChrDest+1
+    sta $2006
+    lda waves_ChrDest+0
+    sta $2006
+
+    ldy #0
+
+.repeat 8, t   ; tile loop
+    .repeat 16, i ; bytes in the tile
+    ;lda WaveChrData + (t * 16) + i
+    lda (waves_ChrSrc), y
+    sta $2007
+    iny
+    .endrepeat
+.endrepeat
+
+    pla
+    jsr MMC1_Select_Page
+
+    rts
+
+data_WaveFrames:
+    .repeat 15, i
+    .word WaveChrData + (1024 * i)
+    .endrepeat
+
+data_WaveRowOffsets:
+    .repeat 8, i
+    .word ((16 * 8) * i)
+    ;.out .sprintf("> %d", ((16 * 8) * i))
+    .endrepeat
 
 data_Inits:
     ; Tile start ID, length, bank, init pointer
