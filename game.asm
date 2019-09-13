@@ -1889,6 +1889,8 @@ game_ActionSpawn:
     jsr FillNametable0
     jsr ClearAttrTable0
 
+    jsr Wave_DrawBackground
+
     ldx ChildId
 
     ; Get the start address of the child map
