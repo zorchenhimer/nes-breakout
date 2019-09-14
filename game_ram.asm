@@ -15,6 +15,7 @@
 ;   1 - init state (attached to paddle)
 BALL_STATE_MOVING = $00
 BALL_STATE_INIT = $01
+BALL_STATE_INIT_LEFT = $02
 
 BALL_DIR_UP = $80
 BALL_DIR_DOWN = $00

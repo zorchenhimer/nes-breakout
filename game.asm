@@ -588,7 +588,7 @@ UpdatePaddleCoords:
 
     lda BallDirection
     and #BALL_STATE_INIT
-    beq :+
+    beq @notInit
 
     ; When in the init state launch ball
     ; when A is pressed.
@@ -600,6 +600,17 @@ UpdatePaddleCoords:
     sta BallDirection
     jsr UpdateBallAngle
 :
+
+    lda #BUTTON_B
+    jsr ButtonPressedP1
+    beq :+
+
+    lda BallDirection
+    eor #BALL_STATE_INIT_LEFT
+    sta BallDirection
+:
+
+@notInit:
     ; Go slower with B pressed
     lda #BUTTON_B
     and controller1
@@ -609,8 +620,6 @@ UpdatePaddleCoords:
     lda #Paddle_Speed_Slow_WHOLE
     sta PaddleSpeed+1
 :
-
-@skipAB:
     ; Left bounds
     lda PaddleX+1
     cmp game_PaddleWallLeft
@@ -668,25 +677,36 @@ UpdatePaddleCoords:
 
     lda BallDirection
     and #BALL_STATE_INIT
-    beq :+
-
+    bne :+
+    rts
+:
     ; Ball is in the INIT state, move it
     ; with the paddle.
     lda PaddleX
     sta BallX
     lda PaddleY
     sta BallY
-
+    lda BallDirection
+    and #BALL_STATE_INIT_LEFT
+    bne :+
+    ; ball on right
     lda PaddleX+1
     clc
     adc #4
     sta BallX+1
-
+    jmp :++
+:
+    ; ball on left
+    lda PaddleX+1
+    sec
+    sbc #4
+    sta BallX+1
+:
+    ; Put the ball just above the paddle
     lda PaddleY+1
     sec
     sbc #6
     sta BallY+1
-:
     rts
 
 ApplyGravity:
