@@ -83,59 +83,7 @@ waves_ChrSrc:   .res 2  ; the start of an 8 tile row
 
 LastBank:      .res 1
 
-; Bit 7, 0 - Down
-; Bit 7, 1 - Up
-; Bit 6, 0 - Left
-; Bit 6, 1 - Right
-BallDirection: .res 1
-
-; Coordinates with sub-pixel accuracy
-; These are unsigned
-; First byte is fraction, second is whole
-BallX:  .res 2
-BallY:  .res 2
-
-PaddleX:  .res 2
-PaddleY:  .res 2
-
-; Only added/subtracted to/from the Paddle's X/Y while
-; movement buttons are held down.
-PaddleSpeed:    .res 2
-
-; These are signed
-; First byte is unsigned decimal, second is signed integer
-BallSpeedX: .res 2
-BallSpeedY: .res 2
-
 IgnoreInput: .res 1
-
-BrickPpuAddress:    .res 2
-BrickAddress:       .res 2
-BrickRow:           .res 1
-BrickCol:           .res 1
-
-game_BoardOffsetY:  .res 1
-game_BoardOffsetX:  .res 1
-game_BoardWidth:    .res 1
-game_BoardHeight:   .res 1
-
-game_PaddleWallLeft:    .res 1
-game_PaddleWallRight:   .res 1
-
-game_WallTop:   .res 1
-game_WallBot:   .res 1
-game_WallLeft:  .res 1
-game_WallRight: .res 1
-
-; Bit 7 - If 1, we're in a child board.
-;         If 0, we're in the main board
-; Bits 6-0: board ID in RAM
-CurrentBoard: .res 1
-
-Address_RowCoordTop:    .res 2
-Address_RowCoordBot:    .res 2
-Address_RowCoordLeft:   .res 2
-Address_RowCoordRight:  .res 2
 
 .segment "RAMGLOBAL"
 

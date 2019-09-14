@@ -21,7 +21,7 @@ MAX_BOOST_POOL = 2
 Initial_Ball_Speed_WHOLE = 1
 Initial_Ball_Speed_FRACT = 0
 
-Initial_Ball_Direction = BALL_DOWN | BALL_RIGHT
+Initial_Ball_Direction = BALL_UP | BALL_RIGHT
 
 Initial_Paddle_Speed_WHOLE = 2
 Initial_Paddle_Speed_FRACT = 0
@@ -290,7 +290,7 @@ Frame_Game:
     lda #BUTTON_A
     jsr ButtonPressedP1
     beq :+
-    jsr BoostTheBall
+    ;jsr BoostTheBall
 :
 
     jsr UpdateBallCoords
@@ -340,13 +340,6 @@ NMI_Game:
     sta waves_currentFrame
 :
 @noAnim:
-
-    lda #$3F
-    sta $2006
-    lda #$00
-    sta $2006
-    lda #$0F
-    sta $2007
 
     ; Destroy any bricks that need destroying
     lda BrickDestroy+1  ;check high byte for value
@@ -561,23 +554,26 @@ UpdateBoostSprite:
     rts
 
 ResetBall:
-    lda #$00
-    sta BallX
-    sta BallY
-
     lda #Initial_Ball_Direction
+    ora #BALL_STATE_INIT
     sta BallDirection
 
-    lda #Initial_Ball_X
+    lda PaddleX
+    sta BallX
+    lda PaddleY
+    sta BallY
+
+    lda PaddleX+1
     sta BallX+1
-    lda #Initial_Ball_Y
+    lda PaddleY+1
     sta BallY+1
 
-    lda #Initial_Ball_Speed_FRACT
+    ;lda #Initial_Ball_Speed_FRACT
+    lda #0
     sta BallSpeedY
     sta BallSpeedX
 
-    lda #Initial_Ball_Speed_WHOLE
+    ;lda #Initial_Ball_Speed_WHOLE
     sta BallSpeedY+1
     sta BallSpeedX+1
     rts
@@ -589,23 +585,21 @@ UpdatePaddleCoords:
     lda #Initial_Paddle_Speed_WHOLE
     sta PaddleSpeed+1
 
-    ; Do not change speed if both A and B are pressed
-    lda #BUTTON_A | BUTTON_B
-    and controller1
-    cmp #BUTTON_A | BUTTON_B
-    beq @skipAB
 
-    ; Go faster with A pressed
-    lda #BUTTON_A
-    and controller1
+    lda BallDirection
+    and #BALL_STATE_INIT
     beq :+
-    lda #Paddle_Speed_Fast_FRACT
-    sta PaddleSpeed
-    lda #Paddle_Speed_Fast_WHOLE
-    sta PaddleSpeed+1
-    jmp @skipAB
-:
 
+    ; When in the init state launch ball
+    ; when A is pressed.
+    lda #BUTTON_A
+    jsr ButtonPressedP1
+    beq :+
+    lda BallDirection
+    eor #BALL_STATE_INIT
+    sta BallDirection
+    jsr UpdateBallAngle
+:
     ; Go slower with B pressed
     lda #BUTTON_B
     and controller1
@@ -671,6 +665,28 @@ UpdatePaddleCoords:
     lda game_PaddleWallRight
     sta PaddleX+1
 :
+
+    lda BallDirection
+    and #BALL_STATE_INIT
+    beq :+
+
+    ; Ball is in the INIT state, move it
+    ; with the paddle.
+    lda PaddleX
+    sta BallX
+    lda PaddleY
+    sta BallY
+
+    lda PaddleX+1
+    clc
+    adc #4
+    sta BallX+1
+
+    lda PaddleY+1
+    sec
+    sbc #6
+    sta BallY+1
+:
     rts
 
 ApplyGravity:
@@ -726,7 +742,13 @@ ApplyGravity:
 ; them to sprite coords
 UpdateBallCoords:
 
-    jsr ApplyGravity ;lol
+    lda BallDirection
+    and #BALL_STATE_INIT
+    beq :+
+    rts
+:
+
+    ;jsr ApplyGravity ;lol
 
     ; Update coords in memory using the speeds
     bit BallDirection
@@ -1599,7 +1621,7 @@ CheckPointCollide:
     lda (AddressPointer0), y
     rts
 
-; Read the current map in RAM and draw it to the screen
+; Read the current main map in RAM and draw it to the screen
 DrawCurrentMap:
     lda #$90
     sta $2000
