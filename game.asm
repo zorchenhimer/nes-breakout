@@ -1267,7 +1267,9 @@ CheckBrickCollide:
     bit BrickRowIndex_Vert
     bpl :+
     jsr DoVerticalBrickCollide
-:
+    bne :++ ; DoBrickAction returns 1 if
+            ; everything else should be skipped.
+:           ; "everything" is to be determined.
 
     bit BrickRowIndex_Horiz
     bpl :+
