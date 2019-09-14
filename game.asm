@@ -349,9 +349,26 @@ NMI_Game:
     lda BrickDestroy
     sta $2006
 
+    lda game_PpuRow
+    and #$07
+    tax
+
+    ; first tile
+    lda game_PpuCol
+    and #$07
+    clc
+    adc Index_BgAnimRows, x
+    sta $2007
+
+    ; second tile
+    lda game_PpuCol
+    adc #1
+    and #$07
+    clc
+    adc Index_BgAnimRows, x
+    sta $2007
+
     lda #0
-    sta $2007
-    sta $2007
     sta BrickDestroy
     sta BrickDestroy+1
 :
@@ -1381,6 +1398,22 @@ game_GetAddressForChildBrick:
     bcc :+
     inc BrickPpuAddress+1
 :
+    lda game_BoardOffsetY
+    lsr a   ; offset is in pixels
+    lsr a   ; divide it by 8
+    lsr a
+    clc
+    adc BrickRow
+    sta game_PpuRow
+
+    lda game_BoardOffsetX
+    lsr a   ; offset is in pixels
+    lsr a   ; divide it by 8
+    lsr a
+    clc
+    adc BrickCol
+    sta game_PpuCol
+
     rts
 
 ; Take the brick X and Y (in TmpX and TmpY, respectively)
@@ -1404,6 +1437,22 @@ GetAddressesForBrick:
     bpl :+
     dec BrickCol
 :
+
+    lda game_BoardOffsetY
+    lsr a   ; offset is in pixels
+    lsr a   ; divide it by 8
+    lsr a
+    clc
+    adc BrickRow
+    sta game_PpuRow
+
+    lda game_BoardOffsetX
+    lsr a   ; offset is in pixels
+    lsr a   ; divide it by 8
+    lsr a
+    clc
+    adc BrickCol
+    sta game_PpuCol
 
     ; Add column onto brick address
     lda BrickCol
@@ -1680,6 +1729,20 @@ DrawCurrentMap:
 
 ; Expects the PPU address to already be set.
 game_DrawRow:
+    lda game_BoardOffsetY
+    lsr a   ; offset is in pixels
+    lsr a   ; divide it by 8
+    lsr a
+    clc
+    adc TmpX    ; TmpX is row
+    sta game_PpuRow
+
+    lda game_BoardOffsetX
+    lsr a   ; offset is in pixels
+    lsr a   ; divide it by 8
+    lsr a
+    sta game_PpuCol
+
     ldy #0
 @loop:
     lda (AddressPointer0), y
@@ -1691,6 +1754,9 @@ game_DrawRow:
     sbc #1  ; "health" is id 1, but index 0
     asl a
     tax
+
+    inc game_PpuCol
+    inc game_PpuCol
 
     lda Index_TileDefs, x
     sta $2007
@@ -1704,13 +1770,29 @@ game_DrawRow:
     rts
 
 @noTile:
-    lda #NoTileID
+
+    lda game_PpuRow
+    and #$07
+    tax
+
+    lda game_PpuCol
+    and #$07
+    clc
+    adc Index_BgAnimRows, x
     sta $2007
 
+    inc game_PpuCol
     iny
     cpy game_BoardWidth
     bne @loop
     rts
+
+; Tile ID's of the start of each row of tiles in
+; the background animation.
+Index_BgAnimRows:
+    .repeat 8, i
+    .byte (i * 8) + $C0
+    .endrepeat
 
 ;; Check two point's collision and return
 ;; the proper brick it collided with.

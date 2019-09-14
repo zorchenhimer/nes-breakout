@@ -70,6 +70,11 @@ Address_RowCoordBot:    .res 2
 Address_RowCoordLeft:   .res 2
 Address_RowCoordRight:  .res 2
 
+; Row/Column for background anmiation
+; drawing under playfield
+game_PpuRow: .res 1
+game_PpuCol: .res 1
+
 .segment "RAMGAME"
 ; Overworld map
 CurrentMap: .res (BOARD_WIDTH * BOARD_HEIGHT)
