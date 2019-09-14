@@ -70,6 +70,7 @@ tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
 travis: tools sample_credits chr bin/$(NAME).nes
 chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR)
 waves: $(WAVE_CHR)
+newwaves: clean rmwaves waves all
 
 ../subs/*.csv:
 	mkdir -p ../subs/
@@ -88,6 +89,9 @@ cleanimg:
 
 clrNames:
 	rm -f credits_data.i
+
+rmwaves:
+	rm -f waves*.bmp
 
 %.chr: %.bmp
 	$(CHRUTIL) $< -o $@
@@ -131,7 +135,7 @@ child_map_data.i:$(CONVMAP) maps/child-boards_12x6.tmx
 %.bmp: images/%.aseprite
 	aseprite -b $< --save-as $@
 
-$(WAVE_BMP): images/waves.aseprite
+$(WAVE_BMP): images/waves_d.aseprite
 	aseprite -b $< --save-as waves_{frame1}.bmp
 
 $(CA):
