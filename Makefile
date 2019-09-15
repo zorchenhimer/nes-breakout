@@ -55,7 +55,7 @@ WAVE_FRAMES = waves_1 \
 			  waves_14 \
 			  waves_15
 
-WAVE_BMP := $(addsuffix .bmp,$(WAVE_FRAMES))
+WAVE_BMP := $(addprefix images/,$(addsuffix .bmp,$(WAVE_FRAMES)))
 #WAVE_CHR := $(addsuffix .chr,$(WAVE_FRAMES))
 WAVE_CHR = waves.chr
 
@@ -85,15 +85,15 @@ cleanall:
 	$(MAKE) -C go-nes/ clean
 
 cleanimg:
-	rm -f *.chr *.bmp
+	rm -f *.chr images/*.bmp
 
 clrNames:
 	rm -f credits_data.i
 
 rmwaves:
-	rm -f waves*.bmp
+	rm -f images/waves*.bmp
 
-%.chr: %.bmp
+%.chr: images/%.bmp
 	$(CHRUTIL) $< -o $@
 
 waves.chr: $(WAVE_BMP)
@@ -136,7 +136,7 @@ child_map_data.i:$(CONVMAP) maps/child-boards_12x6.tmx
 	aseprite -b $< --save-as $@
 
 $(WAVE_BMP): images/waves_d.aseprite
-	aseprite -b $< --save-as waves_{frame1}.bmp
+	aseprite -b $< --save-as images/waves_{frame1}.bmp
 
 $(CA):
 	$(MAKE) -C cc65/ ca65
