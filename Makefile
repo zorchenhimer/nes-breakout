@@ -18,6 +18,7 @@ NESCFG = nes_snrom.cfg
 
 # Tool that generates credits from an input CSV file
 GENCRED = bin/generate-credits$(EXT)
+CREDCSV = ../subs/*.csv
 
 # Map data conversion tool
 CONVMAP = bin/convert-map$(EXT)
@@ -72,7 +73,8 @@ chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR)
 waves: $(WAVE_CHR)
 newwaves: clean rmwaves waves all
 
-../subs/*.csv:
+sample_credits:
+	$(eval CREDCSV=../subs/sample-credit-names.csv)
 	mkdir -p ../subs/
 	cp sample-credit-names.csv ../subs/sample-credit-names.csv
 
@@ -123,7 +125,7 @@ bin/$(NAME).nes: bin/main.o $(DATA_OBJ)
 subscriber-list.csv: sample-credit-names.csv
 	cp -u $< $@
 
-credits_data.i: ../subs/*.csv $(GENCRED)
+credits_data.i: $(GENCRED) $(CREDCSV)
 	$(GENCRED) -x zorchenhimer -o $@ -i ../subs/
 
 main_map_data.i: $(CONVMAP) maps/main-boards.tmx
