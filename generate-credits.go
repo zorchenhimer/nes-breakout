@@ -137,11 +137,13 @@ func main() {
 	var inputDirectory string
 	var outputName string
 	var exclude string
+	var samples bool
 
 	flag.StringVar(&inputDirectory, "i", "", "Directory with input CSV files.")
 	flag.StringVar(&outputName, "o", "credits_data.i", "Output assembly file.")
 	flag.BoolVar(&verbose, "verbose", false, "Verbose output.")
 	flag.StringVar(&exclude, "x", "", "A comma separated list of names to exclude.")
+	flag.BoolVar(&samples, "sample-names", false, "Use sample names csv in the provided directory")
 	flag.Parse()
 
 	if len(exclude) > 0 {
@@ -164,10 +166,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	files, err := filepath.Glob(filepath.Join(inputDirectory, "*.csv"))
-	if err != nil {
-		fmt.Printf("Error Glob()'ing input directory: %v\n", err)
-		os.Exit(1)
+	var files []string
+	if samples {
+		files = []string{filepath.Join(inputDirectory, "sample-credit-names.csv")}
+	} else {
+		files, err = filepath.Glob(filepath.Join(inputDirectory, "*.csv"))
+		if err != nil {
+			fmt.Printf("Error Glob()'ing input directory: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	if len(files) == 0 {

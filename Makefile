@@ -18,7 +18,6 @@ NESCFG = nes_snrom.cfg
 
 # Tool that generates credits from an input CSV file
 GENCRED = bin/generate-credits$(EXT)
-CREDCSV = ../subs/*.csv
 
 # Map data conversion tool
 CONVMAP = bin/convert-map$(EXT)
@@ -60,7 +59,7 @@ WAVE_BMP := $(addprefix images/,$(addsuffix .bmp,$(WAVE_FRAMES)))
 #WAVE_CHR := $(addsuffix .chr,$(WAVE_FRAMES))
 WAVE_CHR = waves.chr
 
-.PHONY: clean default maps tools names travis sample_credits chr cleanimg waves
+.PHONY: clean default maps tools names travis sample_credits chr cleanimg waves trav
 .PRECIOUS: %.bmp
 
 default: all
@@ -68,15 +67,16 @@ all: tools chr bin/$(NAME).nes
 names: tools chr clrNames credits_data.i bin/$(NAME).nes
 maps: tools chr map_data.i map_child_data.i
 tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
-travis: tools sample_credits chr bin/$(NAME).nes
+travis: tools sample_credits trav chr bin/$(NAME).nes
 chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR)
 waves: $(WAVE_CHR)
 newwaves: clean rmwaves waves all
 
+trav:
+	touch images/*.bmp
+
 sample_credits:
-	$(eval CREDCSV=../subs/sample-credit-names.csv)
-	mkdir -p ../subs/
-	cp sample-credit-names.csv ../subs/sample-credit-names.csv
+	$(GENCRED) -x zorchenhimer -o credits_data.i -i ./credit-names/ -sample-names
 
 clean:
 	rm -f bin/*.o bin/*.nes bin/*.map bin/*.dbg *.i *.chr
@@ -122,10 +122,7 @@ bin/map_data.o: map_data.asm main_map_data.i child_map_data.i
 bin/$(NAME).nes: bin/main.o $(DATA_OBJ)
 	$(LD) $(LDFLAGS) -o $@ $^
 
-subscriber-list.csv: sample-credit-names.csv
-	cp -u $< $@
-
-credits_data.i: $(GENCRED) $(CREDCSV)
+credits_data.i: $(GENCRED) ./credit-names/*.csv
 	$(GENCRED) -x zorchenhimer -o $@ -i ../subs/
 
 main_map_data.i: $(CONVMAP) maps/main-boards.tmx

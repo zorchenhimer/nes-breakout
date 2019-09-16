@@ -1,6 +1,9 @@
 bin/
+
+credit-names/*.csv
+!credit-names/sample-credit-names.csv
+
 *.exe
 *.chr
 *.json
 *.i
-subscriber-list.csv
