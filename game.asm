@@ -276,9 +276,8 @@ Init_Game:
     sta $2005
     sta $2005
 
-    NMI_Set NMI_Game
-
 Frame_Game:
+    NMI_Set NMI_Game
     jsr ReadControllers
 
     lda #BUTTON_SELECT
@@ -298,6 +297,9 @@ Frame_Game:
 
     jsr CheckWallCollide
     jsr CheckBrickCollide
+    beq :+
+    jmp Frame_Game
+:
     jsr CheckPaddleCollide
 
     jsr UpdateBallSprite
@@ -1354,8 +1356,8 @@ game_GetAddressForChildBrick:
     lda data_Mult12, x
 
     clc
-    adc BrickAddress
     adc BrickCol
+    adc BrickAddress
     sta BrickAddress
 
     bcc :+
@@ -1690,6 +1692,95 @@ CheckPointCollide:
     lda (AddressPointer0), y
     rts
 
+game_ReturnToMain:
+    NMI_Disable
+    jsr WaitForNMI
+
+    lda #$00
+    sta $2001
+
+    lda #0
+    jsr FillNametable0
+    jsr ClearAttrTable0
+
+    jsr Wave_DrawBackground
+
+    lda #BOARD_HEIGHT
+    sta game_BoardHeight
+    lda #BOARD_WIDTH
+    sta game_BoardWidth
+
+    lda #BOARD_OFFSET_Y
+    sta game_BoardOffsetY
+    lda #BOARD_OFFSET_X
+    sta game_BoardOffsetX
+
+    lda #<Row_Coord_Top
+    sta Address_RowCoordTop
+    lda #>Row_Coord_Top
+    sta Address_RowCoordTop+1
+
+    lda #<Row_Coord_Bot
+    sta Address_RowCoordBot
+    lda #>Row_Coord_Bot
+    sta Address_RowCoordBot+1
+
+    lda #<Row_Coord_Left
+    sta Address_RowCoordLeft
+    lda #>Row_Coord_Left
+    sta Address_RowCoordLeft+1
+
+    lda #<Row_Coord_Right
+    sta Address_RowCoordRight
+    lda #>Row_Coord_Right
+    sta Address_RowCoordRight+1
+
+    lda #Initial_Paddle_X
+    sta PaddleX+1
+    lda #Initial_Paddle_Y
+    sta PaddleY+1
+
+    lda #0
+    sta PaddleX
+    sta PaddleY
+
+    lda #WALL_TOP
+    sta game_WallTop
+    lda #WALL_BOTTOM
+    sta game_WallBot
+    lda #WALL_LEFT
+    sta game_WallLeft
+    lda #WALL_RIGHT
+    sta game_WallRight
+
+    lda #PADDLE_WALL_LEFT
+    sta game_PaddleWallLeft
+    lda #PADDLE_WALL_RIGHT
+    sta game_PaddleWallRight
+
+    lda #0
+    sta CurrentBoard
+
+    lda ChildBrickCount
+    bne :+
+    ; Remove brick from ram before drawing board, only if
+    ; the child board was cleared
+    ldy #0
+    lda #0
+    sta (EnteredRam), y
+    iny
+    sta (EnteredRam), y
+:
+
+    jsr ResetBall
+    jsr DrawCurrentMap
+
+    jsr game_DrawWalls
+
+    lda #%00011110
+    sta $2001
+    rts
+
 ; Read the current main map in RAM and draw it to the screen
 DrawCurrentMap:
     lda #$90
@@ -1697,6 +1788,7 @@ DrawCurrentMap:
 
     ldy #0
     sty TmpX
+    sty TmpW
 
 @loop:
     ; Load up current row's RAM address
@@ -1725,7 +1817,6 @@ DrawCurrentMap:
     cmp game_BoardHeight
     bne @loop
     rts
-
 
 ; Expects the PPU address to already be set.
 game_DrawRow:
@@ -1762,6 +1853,9 @@ game_DrawRow:
     sta $2007
     lda Index_TileDefs+1, x
     sta $2007
+
+    ; Brick count
+    inc TmpW
 
     iny
     iny
@@ -1973,6 +2067,13 @@ game_ActionHealth:
     rts
 
 game_ActionSpawn:
+    ; Save the brick addresses for when we
+    ; leave the child board.
+    lda BrickAddress
+    sta EnteredRam
+    lda BrickAddress+1
+    sta EnteredRam+1
+
     ldy #1
     lda (BrickAddress), y
     and #$7F
@@ -2017,7 +2118,9 @@ game_ActionSpawn:
 
     jsr Wave_DrawBackground
 
-    ldx ChildId
+    lda ChildId
+    asl a
+    tax
 
     ; Get the start address of the child map
     ; in RAM.
@@ -2077,6 +2180,7 @@ game_ActionSpawn:
 
     lda #0
     sta TmpX
+    sta TmpW
 
 @rowLoop:
     ; Get and write the PPU address
@@ -2108,6 +2212,18 @@ game_ActionSpawn:
 
     jsr game_DrawWalls
 
+    lda ChildId
+    asl a
+    tax
+    lda Child_Map_Addresses, x
+    sta AddressPointer2
+    lda Child_Map_Addresses+1, x
+    sta AddressPointer2+1
+
+    ; Store brick count
+    lda TmpW
+    sta ChildBrickCount
+
     jsr ResetBall
 
     NMI_Set NMI_Game
@@ -2123,6 +2239,16 @@ game_ActionItemDrop:
     jmp game_RemoveBrick
 
 game_RemoveBrick:
+    bit CurrentBoard
+    bpl :+
+    dec ChildBrickCount
+    bne :+
+    ; Board is empty, draw parent board
+    jsr game_ReturnToMain
+    lda #1
+    rts
+:
+    ; Check if this brick is the last one.
     ; Remove from screen
     lda BrickPpuAddress
     sta BrickDestroy

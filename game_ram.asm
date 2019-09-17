@@ -75,6 +75,11 @@ Address_RowCoordRight:  .res 2
 game_PpuRow: .res 1
 game_PpuCol: .res 1
 
+ChildBrickCount: .res 1
+
+; Pointer to spawn brick
+EnteredRam:   .res 2
+
 .segment "RAMGAME"
 ; Overworld map
 CurrentMap: .res (BOARD_WIDTH * BOARD_HEIGHT)
