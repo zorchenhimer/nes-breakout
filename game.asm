@@ -262,13 +262,6 @@ Init_Game:
     jsr LoadMap
     jsr DrawCurrentMap
 
-    ; Select first nametable
-    lda #%10011000
-    sta $2000
-
-    lda #%00011110
-    sta $2001
-
     lda #%10001000
     sta PpuControl
 
@@ -381,6 +374,9 @@ NMI_Game:
     lda #0
     sta $2005
     sta $2005
+
+    lda #%00011110
+    sta $2001
 
     lda PpuControl
     sta $2000
@@ -1782,8 +1778,6 @@ game_ReturnToMain:
 
     jsr game_DrawWalls
 
-    lda #%00011110
-    sta $2001
     rts
 
 ; Read the current main map in RAM and draw it to the screen
@@ -2234,9 +2228,6 @@ game_ActionSpawn:
     jsr ResetBall
 
     NMI_Set NMI_Game
-
-    lda #%00011110
-    sta $2001
 
     lda #1
     rts

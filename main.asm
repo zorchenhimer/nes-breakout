@@ -1028,8 +1028,6 @@ Waves_LoadFrame:
 
 ; sets up addresses and variables for waves_UnrolledRow
 waves_PrepChrWrite:
-    lda PpuControl
-    sta $2000
     ; Write the destination CHR address
     lda waves_AnimOdd   ; top or bottom pattern table
     beq @bottom
@@ -1098,6 +1096,9 @@ waves_PrepChrWrite:
     rts
 
 waves_WriteRow:
+    lda PpuControl
+    sta $2000
+
     lda $8000
     pha
 
