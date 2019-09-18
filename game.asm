@@ -942,6 +942,11 @@ CheckWallCollide:
     jmp @bounceVert
 
 @bounceVertBottom:
+    bit CurrentBoard
+    bpl @onMainBoard
+    jmp game_ReturnToMain
+
+@onMainBoard:
     ; TODO: kill wall
     jmp ResetBall
 
@@ -2090,19 +2095,21 @@ game_ActionSpawn:
     sta (BrickAddress), y
 
     ; load map
-    jsr game_LoadChild
+    lda ChildId
+    jsr LoadChildMap
 
     ; Update ChildID in the brick
-    ldy #1
-    lda (BrickAddress), y
+    lda #$80    ; Load the magic number for
+                ; a brick's second byte.
     ora ChildId
+    ldy #1
     sta (BrickAddress), y
 
+@drawChildMap:
     lda ChildId
     ora #$80
     sta CurrentBoard
 
-@drawChildMap:
     ; Map is loaded, draw it
 
     NMI_Disable
