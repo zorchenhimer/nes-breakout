@@ -60,7 +60,7 @@ WAVE_BMP := $(addprefix images/,$(addsuffix .bmp,$(WAVE_FRAMES)))
 WAVE_CHR = waves.chr
 
 .PHONY: clean default maps tools names travis sample_credits chr cleanimg waves trav
-.PRECIOUS: %.bmp
+.PRECIOUS: images/%.bmp
 
 default: all
 all: tools chr bin/$(NAME).nes
@@ -131,10 +131,10 @@ main_map_data.i: $(CONVMAP) maps/main-boards.tmx
 child_map_data.i:$(CONVMAP) maps/child-boards_12x6.tmx
 	cd maps && ../$(CONVMAP) child-boards_12x6.tmx child ../child_map_data.i
 
-%.bmp: images/%.aseprite
+images/%.bmp: images/%.aseprite
 	aseprite -b $< --save-as $@
 
-$(WAVE_BMP): images/waves_d.aseprite
+$(WAVE_BMP): images/waves_e.aseprite
 	aseprite -b $< --save-as images/waves_{frame1}.bmp
 
 $(CA):

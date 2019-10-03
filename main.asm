@@ -20,6 +20,17 @@ CHILD_OFFSET_X = 80
 CHILD_BOARD_HEIGHT = 6
 CHILD_BOARD_WIDTH = 12
 
+; Button Constants
+BUTTON_A        = 1 << 7
+BUTTON_B        = 1 << 6
+BUTTON_SELECT   = 1 << 5
+BUTTON_START    = 1 << 4
+BUTTON_UP       = 1 << 3
+BUTTON_DOWN     = 1 << 2
+BUTTON_LEFT     = 1 << 1
+BUTTON_RIGHT    = 1 << 0
+
+
 .macro NMI_Disable
     lda #NMI_RTI
     sta NMI_Instr
@@ -95,6 +106,8 @@ controller1_Old:    .res 1
 controller2:        .res 1
 controller2_Old:    .res 1
 
+; One row of the background animation
+ChrRamCacheRow: .res 128
 
 .segment "NMIRAM"
 NMI_Instr:      .res 1
@@ -730,16 +743,6 @@ Index_ChrData:
     .byte 16    ; Tile count
     .byte $7E   ; Destination pattern table & PRG bank
 
-; Button Constants
-BUTTON_A        = 1 << 7
-BUTTON_B        = 1 << 6
-BUTTON_SELECT   = 1 << 5
-BUTTON_START    = 1 << 4
-BUTTON_UP       = 1 << 3
-BUTTON_DOWN     = 1 << 2
-BUTTON_LEFT     = 1 << 1
-BUTTON_RIGHT    = 1 << 0
-
 ; Was a button pressed this frame?
 ButtonPressedP1:
     sta TmpX
@@ -1026,7 +1029,45 @@ Waves_LoadFrame:
     jsr MMC1_Select_Page
     rts
 
-; sets up addresses and variables for waves_UnrolledRow
+waves_CacheRow:
+    jsr waves_PrepChrWrite
+
+    lda NMI_Pointer
+    pha
+    lda NMI_Pointer+1
+    pha
+
+    NMI_Disable
+
+    lda $8000
+    pha
+
+    lda #7
+    jsr MMC1_Select_Page
+
+    ldx #128
+    ldy #0
+@loop:
+    lda (waves_ChrSrc), y
+    sta ChrRamCacheRow, y
+    iny
+    dex
+    bne @loop
+
+    pla
+    jsr MMC1_Select_Page
+
+    lda #NMI_JMP
+    sta NMI_Instr
+
+    pla
+    sta NMI_Pointer+1
+    pla
+    sta NMI_Pointer
+    rts
+
+; Prepare a row of 8 tiles (128 bytes) from the
+; background animation to send with waves_UnrolledRow
 waves_PrepChrWrite:
     ; Write the destination CHR address
     lda waves_AnimOdd   ; top or bottom pattern table
@@ -1095,6 +1136,29 @@ waves_PrepChrWrite:
 :
     rts
 
+waves_WriteCachedRow:
+    lda PpuControl
+    sta $2000
+
+    bit $2000
+    lda waves_ChrDest+1
+    sta $2006
+    lda waves_ChrDest+0
+    sta $2006
+
+.repeat 8, t   ; tile loop
+    .repeat 16, i ; bytes in the tile
+    ;lda WaveChrData + (t * 16) + i
+    lda ChrRamCacheRow + (t * 16) + i
+    sta $2007
+    .endrepeat
+.endrepeat
+    rts
+
+; Write a single row of background animation to CHR
+; RAM.  One row is 8 tiles (128 bytes).  The row data
+; needs to be prepared during the previous frame draw
+; before calling this.
 waves_WriteRow:
     lda PpuControl
     sta $2000

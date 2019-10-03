@@ -300,7 +300,8 @@ Frame_Game:
 
     jsr UpdateBoostSprite
 
-    jsr waves_PrepChrWrite
+    ;jsr waves_PrepChrWrite
+    jsr waves_CacheRow
 
     jsr WaitForNMI
     jmp Frame_Game
@@ -369,7 +370,8 @@ NMI_Game:
 :
 
     lda waves_AnimOdd
-    jsr waves_WriteRow
+    ;jsr waves_WriteRow
+    jsr waves_WriteCachedRow
 
     lda #0
     sta $2005
