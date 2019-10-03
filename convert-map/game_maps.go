@@ -28,10 +28,10 @@ type GameMap struct {
 	// List of tile values
 	TileValues []int
 
-	BrickCount int
-	CountSpawn int
-	CountHealth int
-	CountPowerUp int
+	BrickCount     int
+	CountSpawn     int
+	CountHealth    int
+	CountPowerUp   int
 	CountPowerDown int
 }
 
@@ -153,7 +153,7 @@ type Tileset []Tile
 
 func NewTileset() Tileset {
 	return Tileset{
-		Tile{Id:0, Type:TILE_UNKNOWN, Value:0},
+		Tile{Id: 0, Type: TILE_UNKNOWN, Value: 0},
 	}
 }
 

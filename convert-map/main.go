@@ -124,7 +124,7 @@ func main() {
 
 		tileValues := []string{}
 		for _, val := range m.TileValues {
-			tileValues = append(tileValues, fmt.Sprintf("$%02X" ,val))
+			tileValues = append(tileValues, fmt.Sprintf("$%02X", val))
 		}
 		if len(tileValues) == 0 {
 			tileValues = append(tileValues, "$00")
@@ -164,7 +164,7 @@ func main() {
 		if width == 0 && height == 0 {
 			width = layer[0]
 			height = layer[1]
-		} else if width != layer[0] || height != layer[1]  {
+		} else if width != layer[0] || height != layer[1] {
 			fmt.Printf("  [%d] %d, %d vs %d %d\n", id, width, height, layer[0], layer[1])
 			fmt.Printf("Missmatched layer sizes!")
 			os.Exit(1)

@@ -15,24 +15,25 @@ const CLEAR_TILE_ID = "$20"
 const CR_EOD = "    .byte $00"
 
 type Group struct {
-	Name string
-	Label string
+	Name   string
+	Label  string
 	Tenure int
-	Subs []Subscriber
+	Subs   []Subscriber
 }
 
 var SubGroups = []*Group{
-	&Group{"1 Year",   "cr_data_1year", 12, []Subscriber{}},
+	&Group{"1 Year", "cr_data_1year", 12, []Subscriber{}},
 	&Group{"9 Months", "cr_data_9months", 9, []Subscriber{}},
 	&Group{"6 Months", "cr_data_6months", 6, []Subscriber{}},
 	&Group{"3 Months", "cr_data_3months", 3, []Subscriber{}},
-	&Group{"1 Month",  "cr_data_1month", 1, []Subscriber{}},
+	&Group{"1 Month", "cr_data_1month", 1, []Subscriber{}},
 }
 
 type SortSubs []Subscriber
-func (ss SortSubs) Len() int { return len(ss) }
+
+func (ss SortSubs) Len() int           { return len(ss) }
 func (ss SortSubs) Less(i, j int) bool { return ss[i].SubDate.Before(ss[j].SubDate) }
-func (ss SortSubs) Swap(i, j int) { ss[i], ss[j] = ss[j], ss[i] }
+func (ss SortSubs) Swap(i, j int)      { ss[i], ss[j] = ss[j], ss[i] }
 
 var excludeNames = []string{}
 
@@ -203,10 +204,10 @@ func main() {
 		}
 
 		if verbose {
-			fmt.Printf("Found %d records\n", len(records) - 1)
+			fmt.Printf("Found %d records\n", len(records)-1)
 		}
 
-READ_RECORDS:
+	READ_RECORDS:
 		for _, row := range records[1:] {
 			for _, ex := range excludeNames {
 				if ex == strings.ToLower(row[0]) {
@@ -266,7 +267,7 @@ SL_SORT:
 	}
 
 	// TODO: load and generate attribution data
-	fmt.Fprintf(outFile, "\n.export CR_GROUP_COUNT\nCR_GROUP_COUNT = %d\n", len(SubGroups) + 1)
+	fmt.Fprintf(outFile, "\n.export CR_GROUP_COUNT\nCR_GROUP_COUNT = %d\n", len(SubGroups)+1)
 
 	count := 0
 	byteLen := 0
