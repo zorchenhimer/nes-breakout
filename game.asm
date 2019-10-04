@@ -1126,7 +1126,9 @@ UpdateBallAngle:
     sta BallDirection
     rts
 
-; TODO: remove constants from this too? (variable width paddle)
+; Check for a collision between the ball and the
+; left or right side of the paddle.  The ball will
+; bounce horizontally, but not vertically.
 CheckPaddleHorizCollide:
     lda BallX+1
     cmp PaddleX+1
@@ -1141,6 +1143,7 @@ CheckPaddleHorizCollide:
 
     lda PaddleX+1
     clc
+    ; TODO: remove these constants
     adc #PADDLE_CENTER_WIDTH + EDGE_COLLIDE_OFFSET
     cmp BallX+1
     bcs :+
@@ -1156,15 +1159,31 @@ CheckPaddleHorizCollide:
 :
     lda PaddleX+1
     sec
+    ; TODO: remove these constants
     sbc #PADDLE_CENTER_WIDTH + EDGE_COLLIDE_OFFSET + 1
     cmp BallX+1
     bcc :+
     rts ; ball is to the right of paddle
 :
     jmp BounceHoriz
-    ;rts
 
-;; Brick Collision
+; Main entry point for ball to brick collisions.
+; First, the vertical collisions are checked (brick top
+; or brick bottom, depending on ball travel direction),
+; the the horizontal collisions are check (brick left
+; or right).
+;
+; The collision detection uses two points per side of the
+; ball.  The two points are checked for colliding with a
+; brick.  If both points collide with the same brick, do
+; the brick action on that brick.  Otherwise, if the ball
+; collides with two different bricks, check a third point
+; of collision between the original two points and collide
+; against that brick.
+;
+; Even though "check" is in the name, the collisions are
+; acted upon in this routine.  That includes bouncing the
+; ball, removing bricks, and spawning child boards.
 CheckBrickCollide:
     ;; Check vertical points
 
@@ -1324,7 +1343,6 @@ CheckBrickCollide:
     lda CollisionCol_Ret
     sta BrickColIndex_Horiz
     jmp @doCollisions
-    ;jmp @actOnVert
 
 @noHorizCollide:
     lda #0
@@ -1346,6 +1364,14 @@ CheckBrickCollide:
 :
     rts
 
+; Get the address for the brick on the child board
+; at the given row and column coordinates.
+;
+; Both the address in RAM and the address in the PPU
+; are calculated here.
+;
+; Input: BrickRow, Brickcol
+; Output: BrickAddress, BrickPpuAddress
 game_GetAddressForChildBrick:
     lda CurrentBoard
     and #$7F
@@ -1426,8 +1452,14 @@ game_GetAddressForChildBrick:
 
     rts
 
-; Take the brick X and Y (in TmpX and TmpY, respectively)
-; and return the start address for that brick in AddressPointer0
+; Get the address for the brick on the main board
+; at the given row and column coordinates.
+;
+; Both the address in RAM and the address in the PPU
+; are calculated here.
+;
+; Input: BrickRow, Brickcol
+; Output: BrickAddress, BrickPpuAddress
 GetAddressesForBrick:
     bit CurrentBoard
     bmi game_GetAddressForChildBrick
@@ -1495,6 +1527,21 @@ GetAddressesForBrick:
 
     rts
 
+; Perform the vertical collision on a brick.
+;
+; First determine the vertical direction of travel,
+; then determine how far the ball is embedded into
+; the brick.
+;
+; The ball will be moved in the oposite direction of
+; movement so it is no longer embedded in the brick.
+; The distance moved is determined by the difference
+; between the wall of the brick and the Y coordinate
+; of the ball.
+;
+; Lastly, reverse the ball's direction of travel.
+;
+; Input: BrickRowIndex_Vert, BrickColIndex_Vert, BallY
 DoVerticalBrickCollide:
     ; Determine up or down travel
     ; find the brick coordinate bounds
@@ -1546,6 +1593,21 @@ DoVerticalBrickCollide:
 
     jmp BounceVert
 
+; Perform the horizontal collision on a brick.
+;
+; First determine the horizontal direction of travel,
+; then determine how far the ball is embedded into
+; the brick.
+;
+; The ball will be moved in the oposite direction of
+; movement so it is no longer embedded in the brick.
+; The distance moved is determined by the difference
+; between the wall of the brick and the Y coordinate
+; of the ball.
+;
+; Lastly, reverse the ball's direction of travel.
+;
+; Input: BrickRowIndex_Horiz, BrickColIndex_Horiz, BallX
 DoHorizontalBrickCollide:
     lda BrickRowIndex_Horiz
     and #$7F
@@ -1589,6 +1651,7 @@ DoHorizontalBrickCollide:
 
     jmp BounceHoriz
 
+; Swap the ball's vertical movement direction.
 BounceVert:
     ; Bit 7 is vertical
     lda BallDirection
@@ -1596,6 +1659,7 @@ BounceVert:
     sta BallDirection
     rts
 
+; Swap the ball's horizontal movement direction.
 BounceHoriz:
     ; Bit 6 is horizontal
     lda BallDirection
@@ -1603,9 +1667,24 @@ BounceHoriz:
     sta BallDirection
     rts
 
-; Check collision point for a brick
-; Point coords in TmpX and TmpY for X and Y,
-; respectively
+; Check if the given point, determined by TmpX and
+; TmpY collide with a brick.
+;
+; First, verify the point is within the bounds of the
+; playfield.  If the point is outside the bounds there
+; cannot be a brick collision, therefore return early.
+;
+; If the point is within the bounds of the playfield,
+; subtract the board's offset and divide the X and Y
+; coordinates by eight to get the row and column
+; coordinates of a tile location.
+;
+; Load the tile loaction and return.  No further
+; processing on the brick is done aside from loading
+; it in A.
+;
+; Input: TmpY, TmpX
+; Output: A
 CheckPointCollide:
     lda TmpY
     ; Y >= BOARD_OFFSET_Y, continue
@@ -1894,9 +1973,9 @@ Index_BgAnimRows:
     .byte (i * 8) + $C0
     .endrepeat
 
-;; Check two point's collision and return
-;; the proper brick it collided with.
-;; Return values in CollisionRow_Ret and CollisionCol_Ret
+; Check two point's collision and return
+; the proper brick it collided with.
+; Return values in CollisionRow_Ret and CollisionCol_Ret
 CheckTwoPointCollision:
     lda PointA_X
     sta TmpX

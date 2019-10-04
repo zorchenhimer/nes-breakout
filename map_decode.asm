@@ -1,8 +1,5 @@
 ; asmsyntax=ca65
 
-.import main_Index_Maps
-.import child_Index_Maps
-
 ; == Byte data format ==
 ; First byte:
 ; 01le tttt
@@ -19,7 +16,7 @@
 ; |             For health: remaining hits to destroy tile
 ; |             For powerup/down: ID of drop
 ; +---------- Always 1
-
+;
 ; Tile types:
 ; %0        No brick
 ; %10       Standard brick (health)
@@ -27,7 +24,12 @@
 ; %1110     Powerup
 ; %11110    PowerDown
 
-; Child map ID in A
+.import main_Index_Maps
+.import child_Index_Maps
+
+; Load a child map into RAM starting at $6000
+; Input: A
+; Output: $6000
 LoadChildMap:
     asl a
     tax

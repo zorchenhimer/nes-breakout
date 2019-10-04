@@ -841,7 +841,9 @@ credits_LoadName:
     rts
 
     ; padding to fix the dissassembly in the debugger
-    .byte $EA, $EA
+    ;.byte $EA, $EA
+    nop
+    nop
 
 cr_colors_T2:
     .byte $00
