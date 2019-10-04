@@ -1207,7 +1207,9 @@ CheckBrickCollide:
     bit CollisionRow_Ret
     bpl @noVertCollide
 
-    ; something collided, check for adjacent brick
+    ; Something collided, check for adjacent brick.
+    ; This is to avoid colliding with a edge that is
+    ; touching another brick.
     lda CollisionRow_Ret
     and #$7F
     tax
@@ -1228,12 +1230,15 @@ CheckBrickCollide:
     beq @vertDoCollide
 :
 
-    lda Row_Addresses_Low, x
-    sta AddressPointer0
-    lda Row_Addresses_High, x
-    sta AddressPointer0+1
-    lda (AddressPointer0), y
-    bne @noVertCollide ; there is a brick, do not collide
+    stx BrickRow
+    sty BrickCol
+    jsr GetAddressesForBrick
+
+    ldy #0
+    lda (BrickAddress), y
+    ; There is an adjacent brick, do
+    ; not collide with that brick.
+    bne @noVertCollide
 
 @vertDoCollide:
     ; Something collided, store it
@@ -1304,12 +1309,12 @@ CheckBrickCollide:
     beq @horizDoCollide
 :
 
-    lda Row_Addresses_Low, x
-    sta AddressPointer0
-    lda Row_Addresses_High, x
-    sta AddressPointer0+1
+    stx BrickRow
+    sty BrickCol
+    jsr GetAddressesForBrick
 
-    lda (AddressPointer0), y
+    ldy #0
+    lda (BrickAddress), y
     bne @noHorizCollide ; there is a brick, do not collide
 
 @horizDoCollide:
