@@ -122,6 +122,9 @@
 </data>
  </layer>
  <layer id="13" name="board-12" width="12" height="6" visible="0">
+  <properties>
+   <property name="gravity" type="bool" value="true"/>
+  </properties>
   <data encoding="csv">
 22,0,0,0,22,0,0,0,22,0,0,0,
 22,0,0,0,22,0,0,0,22,0,0,0,

@@ -262,6 +262,9 @@ Init_Game:
     jsr LoadMap
     jsr DrawCurrentMap
 
+    lda Gravity_MainMap
+    sta game_currentGravity
+
     lda #%10001000
     sta PpuControl
 
@@ -279,11 +282,16 @@ Frame_Game:
     jsr ResetBall
 :
 
+
+    lda BallDirection
+    and #BALL_STATE_INIT
+    bne @Init
     lda #BUTTON_A
     jsr ButtonPressedP1
     beq :+
-    ;jsr BoostTheBall
+    jsr BoostTheBall
 :
+@Init:
 
     jsr UpdateBallCoords
     jsr UpdatePaddleCoords
@@ -495,21 +503,11 @@ game_DrawWalls:
     bne :-
     rts
 
-game_LoadChild:
-    lda ChildId
-    pha
-
-    inc ChildId
-    lda ChildId
-    cmp #child_NUMBER_OF_MAPS
-    bcc :+
-    lda #0
-    sta ChildId
-:
-    pla
-    jmp LoadChildMap
-
 BoostTheBall:
+    lda game_currentGravity
+    bne :+
+    rts
+:
     lda BoostPool
     bne :+
     rts
@@ -727,13 +725,18 @@ UpdatePaddleCoords:
     rts
 
 ApplyGravity:
+    lda game_currentGravity
+    bne :+
+    rts
+:
+
     bit BallDirection
     bpl @down
     ;up
 
     lda BallSpeedY
     sec
-    sbc #GRAVITY_VALUE
+    sbc game_currentGravity
     sta BallSpeedY
 
     lda BallSpeedY+1
@@ -785,7 +788,7 @@ UpdateBallCoords:
     rts
 :
 
-    ;jsr ApplyGravity ;lol
+    jsr ApplyGravity ;lol
 
     ; Update coords in memory using the speeds
     bit BallDirection
@@ -1035,6 +1038,8 @@ CheckPaddleCollide:
     ;rts ; Ball is to the left of paddle
     jmp CheckPaddleHorizCollide
 :
+    lda game_currentGravity
+    beq :+
     inc BoostPool
     lda BoostPool
     cmp #MAX_BOOST_POOL
@@ -1792,6 +1797,9 @@ game_ReturnToMain:
 
     jsr Wave_DrawBackground
 
+    lda Gravity_MainMap
+    sta game_currentGravity
+
     lda #BOARD_HEIGHT
     sta game_BoardHeight
     lda #BOARD_WIDTH
@@ -2215,6 +2223,10 @@ game_ActionSpawn:
     sta AddressPointer0
     lda Child_Map_Addresses+1, x
     sta AddressPointer0+1
+
+    ldy #$48
+    lda (AddressPointer0), y
+    sta game_currentGravity
 
     lda #CHILD_BOARD_HEIGHT
     sta game_BoardHeight

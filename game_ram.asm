@@ -60,6 +60,10 @@ game_WallBot:   .res 1
 game_WallLeft:  .res 1
 game_WallRight: .res 1
 
+; The gravity value for the currently
+; loaded map (either main or child).
+game_currentGravity: .res 1
+
 ; Bit 7 - If 1, we're in a child board.
 ;         If 0, we're in the main board
 ; Bits 6-0: board ID in RAM
@@ -115,5 +119,8 @@ BoostPool:  .res 1
 ChildId:    .res 1 ; next child ID to load
 
 NextChildOffset:    .res 1
+
+; Gravity setting for the currently loaded main map.
+Gravity_MainMap: .res 1
 
 .popseg

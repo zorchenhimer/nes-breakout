@@ -130,10 +130,14 @@ func main() {
 			tileValues = append(tileValues, "$00")
 		}
 
-		fmt.Fprintf(outfile, "%s_Meta_Map%02d:\n    .word %s_Data_Map%02d_Tiles\n    .word %s_Data_Map%02d_TileValues\n    .byte %d\n\n",
+		flags := m.Health | (BoolToAsm(m.Gravity) << 7) | (BoolToAsm(m.RandomDrops) << 6) | (BoolToAsm(m.RandomChildren) << 5)
+
+		fmt.Fprintf(outfile, "%s_Meta_Map%02d:\n    .word %s_Data_Map%02d_Tiles\n    .word %s_Data_Map%02d_TileValues\n    .byte %%%08b\n\n",
 			prefix, m.Id,
 			prefix, m.Id,
-			prefix, m.Id, m.Health)
+			prefix, m.Id,
+			flags,
+		)
 
 		fmt.Fprintf(outfile, "%s_Data_Map%02d_TileValues:\n", prefix, m.Id)
 		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(tileValues, ", "))
@@ -172,4 +176,11 @@ func main() {
 	}
 
 	fmt.Fprintf(outfile, "%s_BOARD_DATA_WIDTH = %d\n%s_BOARD_DATA_HEIGHT = %d\n", prefix, width, prefix, height)
+}
+
+func BoolToAsm(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
 }

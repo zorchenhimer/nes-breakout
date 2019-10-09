@@ -65,7 +65,27 @@ LoadChildMap:
     lda Child_Map_Addresses+1, x
     sta AddressPointer0+1
 
-    lda #80
+    ; Get the flags and rewrite just the health
+    lda TmpZ
+    bpl @noGrav
+    lda #GRAVITY_VALUE
+    jmp :+
+@noGrav:
+    lda #0
+:
+    ldy #$48
+    sta (AddressPointer0), y
+
+    bit TmpZ
+    bvc @noRandoDrops
+    ; TODO save it lol
+@noRandoDrops:
+
+    lda TmpZ
+    and #$1F
+    sta TmpZ
+
+    lda #72
     sta TmpW    ; tile count
 @loadLoop:
     jsr map_ReadTile
@@ -167,6 +187,31 @@ LoadMap:
     sta AddressPointer0+1
 
     jsr map_LoadMetaData
+
+    ; Get the flags and rewrite just the health
+    lda TmpZ
+    bpl @noGrav
+    lda #GRAVITY_VALUE
+    jmp :+
+@noGrav:
+    lda #0
+:
+    sta Gravity_MainMap
+
+    bit TmpZ
+    bvc @noRandoDrops
+    ; TODO save it lol
+@noRandoDrops:
+
+    lda TmpZ
+    and #$20
+    beq @noRandoChildren
+    ; TODO save it lol
+@noRandoChildren:
+
+    lda TmpZ
+    and #$1F
+    sta TmpZ
 
     ; Load map dest address in pointer0
     lda #<CurrentMap

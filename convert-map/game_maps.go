@@ -21,6 +21,9 @@ type GameMap struct {
 	// Start health for the standard tiles.
 	Health int
 
+	// Does this map have gravity?  (gravity value is global to the game)
+	Gravity bool
+
 	// Bricks and empty tiles take up one element
 	// regardless of actual tile size.
 	Tiles []Tile
@@ -91,9 +94,10 @@ func LoadGameMap(layer XmlLayer, tileset Tileset) (*GameMap, error) {
 		TileValues: []int{},
 	}
 
-	gm.RandomChildren = layer.Properties.GetBoolProperty("random-children", true)
-	gm.RandomDrops = layer.Properties.GetBoolProperty("random-drops", true)
+	gm.RandomChildren = layer.Properties.GetBoolProperty("random-children", false)
+	gm.RandomDrops = layer.Properties.GetBoolProperty("random-drops", false)
 	gm.Health = layer.Properties.GetIntProperty("health", 0)
+	gm.Gravity = layer.Properties.GetBoolProperty("gravity", false)
 	gm.Id = layer.GetId()
 
 	// TODO: Fix the tile width logic to be more robust and flexable.

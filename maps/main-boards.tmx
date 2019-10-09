@@ -24,7 +24,7 @@
  </layer>
  <layer id="2" name="board-01" width="24" height="12" visible="0">
   <properties>
-   <property name="health" type="int" value="0"/>
+   <property name="health" type="int" value="1"/>
    <property name="random-children" type="bool" value="false"/>
    <property name="random-drops" type="bool" value="false"/>
   </properties>
@@ -143,7 +143,7 @@
 22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0,22,0
 </data>
  </layer>
- <layer id="8" name="board-07" width="24" height="12">
+ <layer id="8" name="board-07" width="24" height="12" visible="0">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -159,7 +159,10 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer id="9" name="board-08" width="24" height="12" visible="0">
+ <layer id="9" name="board-08" width="24" height="12">
+  <properties>
+   <property name="gravity" type="bool" value="true"/>
+  </properties>
   <data encoding="csv">
 22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,0,
 0,0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,0,0,22,0,
@@ -172,7 +175,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 23,0,23,0,23,0,23,0,23,0,23,0,23,0,23,0,23,0,23,0,23,0,23,0,
 23,0,23,0,23,0,23,0,23,0,23,0,23,0,23,0,23,0,23,0,23,0,23,0,
-18,0,18,0,18,0,18,0,18,0,18,0,18,0,18,0,18,0,18,0,18,0,18,0
+3,0,3,0,3,0,3,0,3,0,3,0,18,0,18,0,18,0,18,0,18,0,18,0
 </data>
  </layer>
 </map>
