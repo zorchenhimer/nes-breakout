@@ -2,27 +2,30 @@
 
 ; == Byte data format ==
 ; First byte:
-; 01le tttt
-; |||| ++++-- Tile type (0 doesn't have a second byte)
-; |||+------- Has this tile been entered/interacted with?
-; ||+-------- Has this byte been loaded (child spawn only)?
-; ++--------- Always 01
+;
+;     01le tttt
+;     |||| ++++-- Tile type (0 doesn't have a second byte)
+;     |||+------- Has this tile been entered/interacted with?
+;     ||+-------- Has this byte been loaded (child spawn only)?
+;     ++--------- Always 01
 ;
 ; Second byte:
-; 1ddd dddd
-; |+++-++++-- Tile value.
-; |             For child: if loaded, its index in RAM.
-; |                        if not loaded, its map ID to load.
-; |             For health: remaining hits to destroy tile
-; |             For powerup/down: ID of drop
-; +---------- Always 1
+;
+;     1ddd dddd
+;     |+++-++++-- Tile value.
+;     |             For child: if loaded, its index in RAM.
+;     |                        if not loaded, its map ID to load.
+;     |             For health: remaining hits to destroy tile
+;     |             For powerup/down: ID of drop
+;     +---------- Always 1
 ;
 ; Tile types:
-; %0        No brick
-; %10       Standard brick (health)
-; %110      Child spawn
-; %1110     Powerup
-; %11110    PowerDown
+;
+;     %0        No brick
+;     %10       Standard brick (health)
+;     %110      Child spawn
+;     %1110     Powerup
+;     %11110    PowerDown
 
 .import main_Index_Maps
 .import child_Index_Maps

@@ -3,17 +3,10 @@
 .importzp main_NUMBER_OF_MAPS
 
 TITLE_SpriteTop = 79    ; topmost Y coordinate of cursor
-TITLE_MenuLength = 3
+;TITLE_MenuLength = 3
 
 Pal_Title:
     .byte $0F, $00, $10, $20
-
-Data_Title_Menu1:
-    .byte "Title", $00
-Data_Title_Menu2:
-    .byte "Game", $00
-Data_Title_Menu3:
-    .byte "Credits", $00
 
 Init_Title:
     NMI_Disable
@@ -32,6 +25,7 @@ Init_Title:
     sta $2007
 .endrepeat
 
+    jsr Clear_NonGlobalRam
     jsr ClearSprites
 
     lda #79
@@ -69,39 +63,44 @@ Init_Title:
     lda #$00
     jsr FillNametable0
 
-    ; TODO: Draw a menu
+    ; Draw a menu
     lda #$21
-    sta $2006
+    sta AddressPointer0+1
     lda #$4E
+    sta AddressPointer0+0
+
+    ldx #0
+    ldy #0
+@menuLoop:
+    lda AddressPointer0+1
+    sta $2006
+    lda AddressPointer0+0
     sta $2006
 
-    lda #<Data_Title_Menu1
+    clc
+    adc #64
     sta AddressPointer0+0
-    lda #>Data_Title_Menu1
+
+    lda AddressPointer0+1
+    adc #0
     sta AddressPointer0+1
+
     jsr title_DrawText
 
-    lda #$21
-    sta $2006
-    lda #$8E
-    sta $2006
+    ; Read the init index
+    iny
+    lda data_TitleMenu, y
+    sta title_MenuItems, x
+    inx
+    stx title_MenuLength
 
-    lda #<Data_Title_Menu2
-    sta AddressPointer0+0
-    lda #>Data_Title_Menu2
-    sta AddressPointer0+1
-    jsr title_DrawText
+    ; Check for next item
+    iny
+    lda data_TitleMenu, y
 
-    lda #$21
-    sta $2006
-    lda #$CE
-    sta $2006
-
-    lda #<Data_Title_Menu3
-    sta AddressPointer0+0
-    lda #>Data_Title_Menu3
-    sta AddressPointer0+1
-    jsr title_DrawText
+    beq @menuDone
+    jmp @menuLoop
+@menuDone:
 
     jsr WaitForNMI
 
@@ -112,8 +111,8 @@ Init_Title:
     ; Currently selected item
     sta IdxA
 
-    lda #TITLE_MenuLength
-    sta IdxB
+    ;lda #TITLE_MenuLength
+    ;sta IdxB
 
     NMI_Set NMI_Title
 
@@ -193,7 +192,7 @@ t_sel_up:
     bpl :+
 
     ; Wrap around to end
-    lda IdxB
+    lda title_MenuLength
     sec
     sbc #1
     sta IdxA
@@ -204,7 +203,7 @@ t_sel_up:
 t_sel_down:
     inc IdxA
     lda IdxA
-    cmp IdxB
+    cmp title_MenuLength
     bcc :+
 
     ; wrap the index around to zero
@@ -230,9 +229,9 @@ NMI_Title:
 ; Null terminated string in AddressPointer0, PPU
 ; address should already be set.
 title_DrawText:
-    ldy #0
+    ;ldy #0
 :
-    lda (AddressPointer0), y
+    lda data_TitleMenu, y
     beq :+
     sta $2007
     iny
@@ -244,5 +243,12 @@ title_SelectMenuOption:
     NMI_Disable
     jsr WaitForNMI
 
-    lda IdxA
+    ldx IdxA
+    lda title_MenuItems, x
     jmp JumpToInit
+
+data_TitleMenu:
+    .byte "Start", $00, 1
+    .byte "Level Select", $00, 1
+    .byte "Credits", $00, 2
+    .byte $00
