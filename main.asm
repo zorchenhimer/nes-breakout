@@ -1,6 +1,11 @@
 ; asmsyntax=ca65
 
+.feature leading_dot_in_identifiers
+.feature underline_in_numbers
+
 .importzp main_BOARD_DATA_WIDTH, main_BOARD_DATA_HEIGHT
+
+.include "macros.asm"
 
 .ifdef ROW26
     BOARD_WIDTH = 26
@@ -30,22 +35,6 @@ BUTTON_DOWN     = 1 << 2
 BUTTON_LEFT     = 1 << 1
 BUTTON_RIGHT    = 1 << 0
 
-
-.macro NMI_Disable
-    lda #NMI_RTI
-    sta NMI_Instr
-.endmacro
-
-.macro NMI_Set addr
-    lda #NMI_JMP
-    sta NMI_Instr
-
-    lda #<addr
-    sta NMI_Pointer
-    lda #>addr
-    sta NMI_Pointer+1
-.endmacro
-
 .include "nes2header.inc"
 nes2mapper 1
 nes2prg 16 * 16 * 1024  ; 256k PRG
@@ -55,6 +44,8 @@ nes2wram 1 * 8 * 1024
 nes2mirror 'V'
 nes2tv 'N'
 nes2end
+
+.include "menu_ram.asm"
 
 .segment "VECTORS"
     .word NMI_Instr
@@ -109,6 +100,9 @@ controller2_Old:    .res 1
 ; One row of the background animation
 ChrRamCacheRow: .res 128
 
+; Each level is a bit
+CompletedLevels: .res 2
+
 .segment "NMIRAM"
 NMI_Instr:      .res 1
 NMI_Pointer:    .res 2
@@ -141,7 +135,9 @@ Sprites: .res 256
 
 .segment "PAGE02"
     .byte 2
+
 .include "title.asm"
+.include "level-select.asm"
 
 .segment "PAGE03"
     .byte 3
@@ -191,6 +187,9 @@ TitleData:
 
 HexTileData:
     .incbin "hex.chr", 0, (16 * 16)
+
+LevelSelectTileData:
+    .incbin "level-select.chr"
 
 .segment "PAGE_FIXED"
     .byte 15
@@ -251,14 +250,6 @@ RESET:
     lda #2
     jmp LongJump
 
-    ;lda #2
-    ;jsr MMC1_Select_Page
-
-    ;jmp Init_Title
-    ;jmp Init_Game
-    ;jmp Init_Credits
-    ;jmp NtSwapTest
-
 Forever:
     jsr WaitForNMI
     jmp Forever
@@ -270,7 +261,7 @@ WaitForNMI:
     cmp #NMI_RTI
     bne :+
 
-    NMI_Set NMI_Bare
+    .NMI_Set NMI_Bare
 
 :   bit Sleeping
     bpl :-
@@ -717,32 +708,6 @@ LoadChrData:
 
     rts
 
-; TODO: find a way to auto-generate this table
-Index_ChrData:
-    ; Address of data start
-    ; Tile count
-    ; Dest table in bit 7, bank in bits 6-0
-
-    .word CreditsChrData    ; Source address
-    .byte $00   ; Tile count
-    .byte $FE   ; Destination pattern table & PRG bank
-
-    .word GameChrData   ; Source address
-    .byte 16    ; Tile count
-    .byte $FE   ; Destination pattern table & PRG bank
-
-    .word TitleData
-    .byte 144   ; Tile Count
-    .byte $FE   ; Destination pattern table & PRG bank
-
-    .word HexTileData
-    .byte 16
-    .byte $7E
-
-    .word GameChrData   ; Source address
-    .byte 16    ; Tile count
-    .byte $7E   ; Destination pattern table & PRG bank
-
 ; Was a button pressed this frame?
 ButtonPressedP1:
     sta TmpX
@@ -837,6 +802,15 @@ IncPointer0:
     bne :+
     inc AddressPointer0+1
 :   rts
+
+Clear_NonGlobalZp:
+    ldx #$80
+    lda #0
+:
+    sta $00, x
+    inx
+    bne :-
+    rts
 
 ; Clears ram from $0400 to $07FC
 Clear_NonGlobalRam:
@@ -1037,7 +1011,7 @@ waves_CacheRow:
     lda NMI_Pointer+1
     pha
 
-    NMI_Disable
+    .NMI_Disable
 
     lda $8000
     pha
@@ -1210,6 +1184,38 @@ data_Inits:
         .word Init_Game
     .byte $00, 0, 13
         .word Init_Credits
+    .byte $00, 0, 2
+        .word Init_LevelSelect
+
+; TODO: find a way to auto-generate this table
+Index_ChrData:
+    ; Address of data start
+    ; Tile count
+    ; Dest table in bit 7, bank in bits 6-0
+
+    .word CreditsChrData    ; Source address
+    .byte $00   ; Tile count
+    .byte $FE   ; Destination pattern table & PRG bank
+
+    .word GameChrData   ; Source address
+    .byte 16    ; Tile count
+    .byte $FE   ; Destination pattern table & PRG bank
+
+    .word TitleData
+    .byte 144   ; Tile Count
+    .byte $FE   ; Destination pattern table & PRG bank
+
+    .word HexTileData
+    .byte 16
+    .byte $7E
+
+    .word GameChrData   ; Source address
+    .byte 16    ; Tile count
+    .byte $7E   ; Destination pattern table & PRG bank
+
+    .word LevelSelectTileData
+    .byte 0
+    .byte $7E
 
 data_Mult5:
 .repeat 10, i

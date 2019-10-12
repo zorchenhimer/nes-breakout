@@ -9,10 +9,8 @@ Pal_Title:
     .byte $0F, $00, $10, $20
 
 Init_Title:
-    NMI_Disable
-
-    lda #$00
-    sta $2001
+    .NMI_Disable
+    .Disable_Drawing
 
     ; Load up a palette
     bit $2002
@@ -114,7 +112,7 @@ Init_Title:
     ;lda #TITLE_MenuLength
     ;sta IdxB
 
-    NMI_Set NMI_Title
+    .NMI_Set NMI_Title
 
 Frame_Title:
     jsr ReadControllers
@@ -240,7 +238,7 @@ title_DrawText:
     rts
 
 title_SelectMenuOption:
-    NMI_Disable
+    .NMI_Disable
     jsr WaitForNMI
 
     ldx IdxA
@@ -249,6 +247,6 @@ title_SelectMenuOption:
 
 data_TitleMenu:
     .byte "Start", $00, 1
-    .byte "Level Select", $00, 1
+    .byte "Level Select", $00, 3
     .byte "Credits", $00, 2
     .byte $00

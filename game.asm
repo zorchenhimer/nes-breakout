@@ -89,11 +89,10 @@ Pal_GameSprites:
     .byte $0F, $00, $10, $20
 
 Init_Game:
-    NMI_Disable
+    .NMI_Disable
 
     ; Disable drawing BG and sprites
-    lda #$00
-    sta $2001
+    .Disable_Drawing
 
     bit $2002
     lda #$3F
@@ -273,7 +272,7 @@ Init_Game:
     sta $2005
 
 Frame_Game:
-    NMI_Set NMI_Game
+    .NMI_Set NMI_Game
     jsr ReadControllers
 
     lda #BUTTON_SELECT
@@ -385,8 +384,7 @@ NMI_Game:
     sta $2005
     sta $2005
 
-    lda #%00011110
-    sta $2001
+    .Update_PpuMask PPU_MASK_ON
 
     lda PpuControl
     sta $2000
@@ -542,8 +540,8 @@ BoostTheBall:
     ; handle underflow
     lda #0
     sec
-    sbc BallSpeedY
-    sta BallSpeedY
+    sbc BallSpeedY+0
+    sta BallSpeedY+0
 
     lda BallSpeedY+1
     sbc #0
@@ -1785,11 +1783,10 @@ CheckPointCollide:
     rts
 
 game_ReturnToMain:
-    NMI_Disable
+    .NMI_Disable
     jsr WaitForNMI
 
-    lda #$00
-    sta $2001
+    .Disable_Drawing
 
     lda #0
     jsr FillNametable0
@@ -2200,12 +2197,11 @@ game_ActionSpawn:
 
     ; Map is loaded, draw it
 
-    NMI_Disable
+    .NMI_Disable
     jsr WaitForNMI
 
     ; Turn off BG and sprites
-    lda #$00
-    sta $2001
+    .Disable_Drawing
 
     lda #0
     jsr FillNametable0
@@ -2325,7 +2321,7 @@ game_ActionSpawn:
 
     jsr ResetBall
 
-    NMI_Set NMI_Game
+    .NMI_Set NMI_Game
 
     lda #1
     rts

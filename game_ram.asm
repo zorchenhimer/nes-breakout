@@ -2,7 +2,7 @@
 
 .pushseg
 
-.segment "ZEROPAGE"
+.segment "ZPGAME" : zeropage
 
 ; Bit 7
 ;   0 - Down

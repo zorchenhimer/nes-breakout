@@ -30,7 +30,7 @@ CR_SCROLL_TO_PAUSE = 48 ; lines to scroll before pausing.
 
 Init_Credits:
     ; "Disable" NMI
-    NMI_Disable
+    .NMI_Disable
 
     ; Disable drawing BG and sprites
     lda #$00
@@ -129,7 +129,7 @@ credits_LoadNextGroup:
 ; the header, and draws the initial screen for the group.
 credits_LoadGroup:
     pha
-    NMI_Disable
+    .NMI_Disable
 
     jsr WaitForNMI
     pla
@@ -151,7 +151,7 @@ credits_LoadGroup:
     sta AddressPointer0+1
 
     ; Wait for the next NMI to avoid artifacts
-    NMI_Set NMI_Bare
+    .NMI_Set NMI_Bare
     jsr WaitForNMI
 
     ; Disable drawing BG and sprites
@@ -893,7 +893,7 @@ Credits_FrameBare:
     jmp Credits_FrameBare
 
 Credits_Frame:
-    NMI_Set Credits_NMI
+    .NMI_Set Credits_NMI
 
     jsr ReadControllers
 
