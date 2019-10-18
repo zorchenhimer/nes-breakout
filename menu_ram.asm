@@ -15,6 +15,12 @@ LEVELSELECT_SPRITE_OFFSET = 5
 ; Pointers to scroll update routines for sprites
 ;menu_ScrollPointers:    .res 32
 
+tmp_SpriteX: .res 1
+tmp_SpriteY: .res 1
+tmp_SpriteTile: .res 1
+tmp_SpriteFlags: .res 1
+;tmp_Sprite
+
 .segment "RAMMENU"
 title_MenuLength: .res 1
 title_MenuItems: .res 10
@@ -50,6 +56,8 @@ ls_SpriteFlags: .res 16
 
 ; Tile IDs
 ls_SpriteTiles: .res 16
+
+ls_SpriteFrames: .res 16
 
 ; X/Y of each meta-sprite (X is 9bit number)
 ; Sprite flags

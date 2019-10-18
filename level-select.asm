@@ -146,7 +146,7 @@ Init_LevelSelect:
     lda #0
     sta menu_DrawnSprites
 
-    jsr ls_LoadSprites
+    ;jsr ls_LoadSprites
 
     ; Setup sprite zero
     lda #$FD
@@ -183,10 +183,14 @@ Frame_LevelSelect:
     sta IdxA
 :
     lda IdxA
+    jsr ls_SpriteAnimate
+
+    lda IdxA
     jsr ls_SpriteScroll
+
     inc IdxA
     lda IdxA
-    cmp #3
+    cmp #LS_SPRITES_TO_LOAD
     bne :-
 
     ldx menu_DrawnSprites
@@ -363,48 +367,67 @@ ls_SpriteScroll:
     inc menu_DrawnSprites
     rts
 
-ls_LoadSprites:
-    ldy #0
-    ldx #0
-:
+;ls_LoadSprites:
+ls_SpriteAnimate:
+    sta TmpX
+    tax
+    asl a
+    asl a
+    tay
+
+    ;ldy #0
+    ;ldx #0
+;@loop:
+    stx TmpX
+
+    lda ls_SpriteFrames, x  ; load current frame idx
+    tax
+
     lda data_LevelSprites_meta, y
-    sta ls_SpriteX, x
+    clc
+    adc data_LevelSprites_FrameData_X, x
+    sta tmp_SpriteX
     iny
 
     lda data_LevelSprites_meta, y
-    sta ls_SpriteY, x
+    clc
+    adc data_LevelSprites_FrameData_Y, x
+    sta tmp_SpriteY
     iny
 
     lda data_LevelSprites_meta, y
-    sta ls_SpriteTiles, x
+    sta tmp_SpriteTile
     iny
 
     lda #0
+    sta tmp_SpriteFlags
+
+    ldx TmpX    ; get the sprite ID again
+
+    ; increment the frame and handle rollover
+    inc ls_SpriteFrames, x
+    lda ls_SpriteFrames, x
+    cmp data_LevelSprites_FrameCount, x
+    bcc :+
+    lda #0
+    sta ls_SpriteFrames, x
+:
+
+    ; copy values from tmp
+    lda tmp_SpriteX
+    sta ls_SpriteX, x
+    lda tmp_SpriteY
+    sta ls_SpriteY, x
+
+    lda tmp_SpriteTile
+    sta ls_SpriteTiles, x
+    lda tmp_SpriteFlags
     sta ls_SpriteFlags, x
-    iny
-    inx
-    cpx #LS_SPRITES_TO_LOAD
-    bne :-
 
-    ;lda data_LevelSprites_meta+0
-    ;sta ls_SpriteX+0
-    ;lda data_LevelSprites_meta+1
-    ;sta ls_SpriteY+0
-    ;lda data_LevelSprites_meta+2
-    ;sta ls_SpriteTiles+0
-    ;lda #0
-    ;sta ls_SpriteFlags+0
-
-    ;ldx #1
-    ;ldy #4
-    ;lda data_LevelSprites_meta+0, y
-    ;sta ls_SpriteX, x
-    ;lda data_LevelSprites_meta+1, y
-    ;sta ls_SpriteY, x
-    ;lda data_LevelSprites_meta+2, y
-    ;sta ls_SpriteTiles, x
-    ;lda #0
-    ;sta ls_SpriteFlags, x
+    ;iny
+    ;inx
+    ;cpx #LS_SPRITES_TO_LOAD
+    ;bne @loop
 
     rts
 
@@ -453,6 +476,23 @@ data_LevelSprites_meta:
     .byte 80, 35, $33, 0 ; stack
     .byte 88, 35, $34, 0
     .byte 96, 35, $35, 0
+
+data_LevelSprites_FrameCount:
+    .byte 4
+    .byte 4
+    .byte 4
+
+; Relative X coordinate values
+data_LevelSprites_FrameData_X:
+    .byte 0, 0, 0, 0
+    .byte 0, 0, 0, 0
+    .byte 0, 0, 0, 0
+
+; Relative Y coordinate values
+data_LevelSprites_FrameData_Y:
+    .byte 0, 6, 12, 6
+    .byte 0, 6, 12, 6
+    .byte 0, 6, 12, 6
 
 LS_SPRITES_TO_LOAD = 3
 
