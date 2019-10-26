@@ -57,6 +57,9 @@ AddressPointer0:    .res 2
 AddressPointer1:    .res 2
 AddressPointer2:    .res 2
 AddressPointer3:    .res 2
+AddressPointer4:    .res 2
+AddressPointer5:    .res 2
+AddressPointer6:    .res 2
 
 Sleeping: .res 1
 

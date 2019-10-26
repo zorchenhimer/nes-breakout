@@ -7,6 +7,7 @@
 ; Horizontal scroll for the map
 menu_ScrollValue:   .res 1
 menu_DrawnSprites:  .res 1
+menu_LoadedSprites: .res 1
 LEVELSELECT_SPRITE_OFFSET = 5
 
 ; Pointers to animation update routines for sprites
@@ -20,6 +21,9 @@ tmp_SpriteY: .res 1
 tmp_SpriteTile: .res 1
 tmp_SpriteFlags: .res 1
 
+tmp_BaseX:  .res 1
+tmp_BaseY:  .res 1
+
 .segment "RAMMENU"
 title_MenuLength: .res 1
 title_MenuItems: .res 10
@@ -28,34 +32,23 @@ title_MenuItems: .res 10
 menu_LevelWidth:  .res 16
 menu_LevelHeight: .res 16
 
-.struct StackAnim
-
-    Frame .byte
-
-    Y0 .byte
-    X1 .byte 3
-    ;X2 .byte
-    ;X3 .byte
-
-.endstruct
-
-anim_StackA: .tag StackAnim
-anim_StackB: .tag StackAnim
-
 ; Relative to nametable, not current scroll.
 ls_SpriteX: .res 16
 ls_SpriteY: .res 16
 
-; Bit 7 - X coord 9th bit
-; Bit 6 - Priority
-; Bit 3 - Flip Vertically
-; Bit 2 - Flip Horizontally
+; Bit 7 - Flip Vertically
+; Bit 6 - Flip Horizontally
+; Bit 5 - Priority
+; Bit 4 - unused
+; Bit 3 - X coord 9th bit
+; Bit 2 - unused
 ; Bits 0,1 - Palette ID
 ls_SpriteFlags: .res 16
 
 ; Tile IDs
 ls_SpriteTiles: .res 16
 
+; one entry per sprite obj
 ls_SpriteFrames: .res 16
 ls_SpriteFrameTimer: .res 16
 

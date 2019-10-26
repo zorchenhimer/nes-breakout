@@ -1,23 +1,5 @@
 ; asmsyntax=ca65
 
-.scope anim_StackCoords
-    Y_Coords:   .byte 0, 8, 16 ; y, for frame
-    Len:        .byte * - Y_Coords
-    Tile:       .byte $33
-    Flags:      .byte 0
-
-    BaseX:      .byte 83, 97
-    BaseY:      .byte 33, 33
-    Count:      .byte * - BaseY
-    ;.byte 83, 33, $33, 0 ; stack
-    ;.byte 97, 33, $33, 0
-.endscope
-
-.scope anim_ServerCoords
-    Y_Coords: .byte 0, 8, 16 ; y
-    Len:      .byte * - Y_Coords
-.endscope
-
 ls_SpritePalettes:
     .byte $0F, $34, $20, $20
 
@@ -176,41 +158,44 @@ Frame_LevelSelect:
 :
 
     lda #0
+    sta menu_LoadedSprites
     sta menu_DrawnSprites
     sta IdxA
-:
+
+@animLoop:
     lda IdxA
     jsr ls_SpriteAnimate
 
+    inc IdxA
+    lda IdxA
+    cmp #SPRITE_OBJ_COUNT
+    bne @animLoop
+
+; scroll all sprites
+    ldx #0
+    stx IdxA
+@scrollLoop:
     lda IdxA
     jsr ls_SpriteScroll
 
     inc IdxA
     lda IdxA
     cmp #LS_SPRITES_TO_LOAD
-    bne :-
+    bne @scrollLoop
 
-    ldx menu_DrawnSprites
-:
-    cpx #LS_SPRITES_TO_LOAD  ; max number of sprites
-    beq :+
-
-    ; Index -> offset
-    txa
+    ; sprite ID -> offset
+    lda menu_DrawnSprites
     clc
     adc #LEVELSELECT_SPRITE_OFFSET
     asl a
     asl a
-    tay
+    tax
 
     lda #$FF
-    sta Sprites+0, y
-    sta Sprites+1, y
-    sta Sprites+2, y
-    sta Sprites+3, y
-    inx
-    jmp :-
 :
+    sta Sprites, x
+    inx
+    bne :-
 
     jsr WaitForSpriteZero
     lda #0
@@ -294,30 +279,6 @@ ls_DrawLevelIcon:
 
 @done:
     rts
-anim_StackSpriteA:
-    ;lda #whatever
-;    ldx anim_StackA;+StackAnim::Frame
-;
-;    lda anim_StackCoords::Y_Coords, x
-;    sta anim_StackA+StackAnim::Y0
-;
-;    ; loop through the tiles in sprite
-;    ldy #0
-;:
-;    lda anim_StackCoords::BaseX, y
-;    sta anim_StackA::X1, y
-;    iny
-;    cpy #3
-;    bne :-
-
-    jmp anim_StackSprite_real
-
-anim_StackSpriteB:
-    ;lda #other
-
-anim_StackSprite_real:
-    ; ...
-    rts
 
 ; Sprite ID in a
 ; Read the sprite data from RAM, manipulate the
@@ -325,7 +286,7 @@ anim_StackSprite_real:
 ls_SpriteScroll:
     tax
     lda ls_SpriteX, x
-    ; TODO: Set carry depending on X's 9th bit?
+    ; TODO: Set carry depending on X's 9th bit? (bit 3 of flags)
     sec
     sbc menu_ScrollValue
     bcs :+
@@ -351,7 +312,7 @@ ls_SpriteScroll:
 
     ; Palette is in lower two bits
     lda ls_SpriteFlags, x
-    and #$03
+    ;and #$03
     sta Sprites, y
     iny
 
@@ -362,27 +323,58 @@ ls_SpriteScroll:
     rts
 
 ; Initial sprite loading stuff
+; Loads the frame rate info into RAM
 ls_LoadSprites:
     ldx #0
 :
-    lda data_LevelSprites_FrameRate, x
+    ; ID -> DWORD index
+    txa
+    asl a
+    asl a
+    tay
+
+    lda data_SpriteObject_List+0, y
+    sta AddressPointer0+0
+    lda data_SpriteObject_List+1, y
+    sta AddressPointer0+1
+
+    ; frame rate
+    ldy #0
+    lda (AddressPointer0), y
     sta ls_SpriteFrameTimer, x
     inx
-    cpx #LS_SPRITES_TO_LOAD
-    bne :-
 
+    cpx #SPRITE_OBJ_COUNT
+    bne :-
     rts
 
 ; Animate a given sprite.  If it is not time to
 ; animate this frame, write the last frame again.
 ls_SpriteAnimate:
-    sta TmpX    ; A holds the sprite index
+    sta TmpX    ; A holds the obj sprite index
+
+    ; ID -> DWORD index
+    asl a
+    asl a
     tax
 
-    ; shift to a double-word (4-byte) data index
-    asl a
-    asl a
-    tay
+    ; sprite obj definition
+    lda data_SpriteObject_List, x
+    sta AddressPointer0+0
+    inx
+    lda data_SpriteObject_List, x
+    sta AddressPointer0+1
+    inx
+
+    ; Base X/X
+    lda data_SpriteObject_List, x
+    sta tmp_BaseX
+    inx
+    lda data_SpriteObject_List, x
+    sta tmp_BaseY
+
+    ; reload sprite obj ID
+    ldx TmpX
 
     ; check if it's time to animate
     dec ls_SpriteFrameTimer, x
@@ -391,14 +383,20 @@ ls_SpriteAnimate:
     ; Update frame number
     inc ls_SpriteFrames, x
     lda ls_SpriteFrames, x
-    cmp data_LevelSprites_FrameCount, x
+
+    ; frame count in the definition
+    ldy #2
+    cmp (AddressPointer0), y
+
     bcc :+
+    ; handle overflow
     lda #0
     sta ls_SpriteFrames, x
 :
 
     ; Reset the framerate counter
-    lda data_LevelSprites_FrameRate
+    ldy #0
+    lda (AddressPointer0), y
     sta ls_SpriteFrameTimer, x
 
 @noAnim:
@@ -406,32 +404,106 @@ ls_SpriteAnimate:
     ; on every frame, the only difference is not
     ; updating the frame number.
 
-    lda ls_SpriteFrames, x  ; load current frame idx
-    tax
+    ldy #1
+    lda (AddressPointer0), y
+    sta IdxC    ; sprite count in obj
 
-    lda data_LevelSprites_meta, y
+    ldy #3
+    ; Tile data pointer
+    lda (AddressPointer0), y
+    sta AddressPointer1+0
+    iny
+
+    lda (AddressPointer0), y
+    sta AddressPointer1+1
+    iny
+
+    ; Attribute data pointer
+    lda (AddressPointer0), y
+    sta AddressPointer2+0
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer2+1
+    iny
+
+    ; X data pointer
+    lda (AddressPointer0), y
+    sta AddressPointer3+0
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer3+1
+    iny
+
+    ; Y data pointer
+    lda (AddressPointer0), y
+    sta AddressPointer4+0
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer4+1
+    iny
+
+    ; Frame X data pointer
+    lda (AddressPointer0), y
+    sta AddressPointer5+0
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer5+1
+    iny
+
+    ; Frame Y data pointer
+    lda (AddressPointer0), y
+    sta AddressPointer6+0
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer6+1
+    iny
+
+    ; Reload the current frame index
+    lda ls_SpriteFrames, x
+    tay
+
+    ; Add base Y offset to frame X offset
+    lda (AddressPointer5), y
     clc
-    adc data_LevelSprites_FrameData_X, x
-    sta tmp_SpriteX
-    iny
+    adc tmp_BaseX
+    sta tmp_BaseX
 
-    lda data_LevelSprites_meta, y
+    ; Add base Y offset to frame Y offset
+    lda (AddressPointer6), y
     clc
-    adc data_LevelSprites_FrameData_Y, x
-    sta tmp_SpriteY
-    iny
+    adc tmp_BaseY
+    sta tmp_BaseY
 
-    ldx TmpX    ; get the sprite ID again
-    ; increment the frame and handle rollover
-
-    lda data_LevelSprites_meta, y
-    sta tmp_SpriteTile
-    iny
-
+    ; indiviual sprites in the obj
     lda #0
+    sta IdxB    ; current sprite in obj
+@spriteLoop:
+    ; load sprite IDX in OBJ
+    ldy IdxB
+
+    ; foreach sprite in obj, write its X coord to RAM
+    lda (AddressPointer3), y
+    clc
+    adc tmp_BaseX
+    sta tmp_SpriteX
+
+    ; foreach sprite in obj, write its Y coord to RAM
+    lda (AddressPointer4), y
+    clc
+    adc tmp_BaseY
+    sta tmp_SpriteY
+
+    ; sprite tile
+    lda (AddressPointer1), y
+    sta tmp_SpriteTile
+
+    ; sprite Attr
+    lda (AddressPointer2), y
     sta tmp_SpriteFlags
 
     ; copy values from tmp
+    ldx menu_LoadedSprites
+
     lda tmp_SpriteX
     sta ls_SpriteX, x
     lda tmp_SpriteY
@@ -442,83 +514,15 @@ ls_SpriteAnimate:
     lda tmp_SpriteFlags
     sta ls_SpriteFlags, x
 
-@end:
+    inx
+    stx menu_LoadedSprites
+
+    ; increment current sprite in OBJ
+    inc IdxB
+    lda IdxB
+    cmp IdxC    ; cmp to total sprites in OBJ
+    bne @spriteLoop
     rts
-
-; Start PPU address
-data_LevelIcons_Addr:
-    .word $2104
-
-    .word $208A
-    .word $218A
-
-    .word $2050
-    .word $2110
-    .word $2210
-
-    .word $20B5
-    .word $2195
-
-    .word $205C
-    .word $20FC
-    .word $219C
-    .word $221C
-
-    .word $0000
-
-
-; Animation data
-;
-data_LevelSprites_meta:
-    ;.byte X, Y, ID, X's 9th/Palette
-    .byte 80, 35, $33, 0 ; stack (top)
-    .byte 88, 35, $34, 0
-    .byte 96, 35, $35, 0
-
-    .byte 80, 99, $33, 0 ; stack (bottom)
-    .byte 88, 99, $34, 0
-    .byte 96, 99, $35, 0
-
-data_LevelSprites_FrameCount:
-    .byte 4
-    .byte 4
-    .byte 4
-
-    .byte 4
-    .byte 4
-    .byte 4
-
-; whole frames for now
-data_LevelSprites_FrameRate:
-    .byte 10
-    .byte 10
-    .byte 10
-
-    .byte 10
-    .byte 10
-    .byte 10
-
-; Relative X coordinate values
-data_LevelSprites_FrameData_X:
-    .byte 0, 0, 0, 0
-    .byte 0, 0, 0, 0
-    .byte 0, 0, 0, 0
-
-    .byte 0, 0, 0, 0
-    .byte 0, 0, 0, 0
-    .byte 0, 0, 0, 0
-
-; Relative Y coordinate values
-data_LevelSprites_FrameData_Y:
-    .byte 0, 6, 12, 6
-    .byte 0, 6, 12, 6
-    .byte 0, 6, 12, 6
-
-    .byte 0, 6, 12, 6
-    .byte 0, 6, 12, 6
-    .byte 0, 6, 12, 6
-
-LS_SPRITES_TO_LOAD = 6
 
 ; Background tile data
 ; Everything is encoded with RLE Inc.
@@ -606,3 +610,46 @@ data_LevelIcons:
 
     ; Null terminated
     .byte $00
+
+; List of all the sprite objects
+; A "sprite object" is a meta-sprite for animation.
+data_SpriteObject_List:
+    .word data_SpriteObj_Def_Stack
+        .byte 80, 35    ; base X/Y
+    .word data_SpriteObj_Def_Stack
+        .byte 80, 99    ; base X/Y
+
+SPRITE_OBJ_COUNT = (* - data_SpriteObject_List) / 4
+
+; TODO: find a way to calculate this
+LS_SPRITES_TO_LOAD = 6
+
+data_SpriteObj_Def_Stack:
+    .byte 10        ; frame rate
+    .byte 3         ; sprite count
+    .byte 4         ; frame count
+
+    .word data_SpriteObj_01Tiles
+    .word data_SpriteObj_01Attr
+    .word data_SpriteObj_01X
+    .word data_SpriteObj_01Y
+    .word data_SpriteObj_01FrameX
+    .word data_SpriteObj_01FrameY
+
+data_SpriteObj_01Tiles:
+    .byte $33, $34, $33  ;tile IDs
+
+data_SpriteObj_01Attr:
+    .byte 0, 0, $40 ; attr data
+
+; X/Y offsets
+data_SpriteObj_01X:
+    .byte 0, 8, 16
+data_SpriteObj_01Y:
+    .byte 0, 0, 0
+
+; Frame data
+data_SpriteObj_01FrameX:
+    .byte 0, 0, 0, 0
+data_SpriteObj_01FrameY:
+    .byte 0, 6, 12, 6
