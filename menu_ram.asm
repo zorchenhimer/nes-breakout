@@ -19,7 +19,6 @@ tmp_SpriteX: .res 1
 tmp_SpriteY: .res 1
 tmp_SpriteTile: .res 1
 tmp_SpriteFlags: .res 1
-;tmp_Sprite
 
 .segment "RAMMENU"
 title_MenuLength: .res 1
@@ -58,6 +57,7 @@ ls_SpriteFlags: .res 16
 ls_SpriteTiles: .res 16
 
 ls_SpriteFrames: .res 16
+ls_SpriteFrameTimer: .res 16
 
 ; X/Y of each meta-sprite (X is 9bit number)
 ; Sprite flags

@@ -146,7 +146,7 @@ Init_LevelSelect:
     lda #0
     sta menu_DrawnSprites
 
-    ;jsr ls_LoadSprites
+    jsr ls_LoadSprites
 
     ; Setup sprite zero
     lda #$FD
@@ -367,18 +367,50 @@ ls_SpriteScroll:
     inc menu_DrawnSprites
     rts
 
-;ls_LoadSprites:
+; Initial sprite loading stuff
+ls_LoadSprites:
+    ldx #0
+:
+    lda data_LevelSprites_FrameRate, x
+    sta ls_SpriteFrameTimer, x
+    inx
+    cpx #LS_SPRITES_TO_LOAD
+    bne :-
+
+    rts
+
+; Animate a given sprite.  If it is not time to
+; animate this frame, write the last frame again.
 ls_SpriteAnimate:
-    sta TmpX
+    sta TmpX    ; A holds the sprite index
     tax
+
+    ; shift to a double-word (4-byte) data index
     asl a
     asl a
     tay
 
-    ;ldy #0
-    ;ldx #0
-;@loop:
-    stx TmpX
+    ; check if it's time to animate
+    dec ls_SpriteFrameTimer, x
+    bne @noAnim    ; not time to animate
+
+    ; Update frame number
+    inc ls_SpriteFrames, x
+    lda ls_SpriteFrames, x
+    cmp data_LevelSprites_FrameCount, x
+    bcc :+
+    lda #0
+    sta ls_SpriteFrames, x
+:
+
+    ; Reset the framerate counter
+    lda data_LevelSprites_FrameRate
+    sta ls_SpriteFrameTimer, x
+
+@noAnim:
+    ; The animation data still needs to be written
+    ; on every frame, the only difference is not
+    ; updating the frame number.
 
     lda ls_SpriteFrames, x  ; load current frame idx
     tax
@@ -395,23 +427,15 @@ ls_SpriteAnimate:
     sta tmp_SpriteY
     iny
 
+    ldx TmpX    ; get the sprite ID again
+    ; increment the frame and handle rollover
+
     lda data_LevelSprites_meta, y
     sta tmp_SpriteTile
     iny
 
     lda #0
     sta tmp_SpriteFlags
-
-    ldx TmpX    ; get the sprite ID again
-
-    ; increment the frame and handle rollover
-    inc ls_SpriteFrames, x
-    lda ls_SpriteFrames, x
-    cmp data_LevelSprites_FrameCount, x
-    bcc :+
-    lda #0
-    sta ls_SpriteFrames, x
-:
 
     ; copy values from tmp
     lda tmp_SpriteX
@@ -424,11 +448,7 @@ ls_SpriteAnimate:
     lda tmp_SpriteFlags
     sta ls_SpriteFlags, x
 
-    ;iny
-    ;inx
-    ;cpx #LS_SPRITES_TO_LOAD
-    ;bne @loop
-
+@end:
     rts
 
 ; Start PPU address
@@ -452,6 +472,7 @@ data_LevelIcons_Addr:
 
     .word $0000
 
+; Background tile data
 ; Width, Height, Tile ID, padding
 data_LevelIcons_Meta:
     .byte 3, 2, $00, 0  ; bricks
@@ -471,6 +492,8 @@ data_LevelIcons_Meta:
     .byte 2, 2, $06, 0
     .byte 2, 2, $06, 0
 
+; Animation data
+;
 data_LevelSprites_meta:
     ;.byte X, Y, ID, X's 9th/Palette
     .byte 80, 35, $33, 0 ; stack
@@ -481,6 +504,12 @@ data_LevelSprites_FrameCount:
     .byte 4
     .byte 4
     .byte 4
+
+; whole frames for now
+data_LevelSprites_FrameRate:
+    .byte 10
+    .byte 10
+    .byte 10
 
 ; Relative X coordinate values
 data_LevelSprites_FrameData_X:
