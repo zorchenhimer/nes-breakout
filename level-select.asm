@@ -195,7 +195,7 @@ Frame_LevelSelect:
 
     ldx menu_DrawnSprites
 :
-    cpx #3  ; max number of sprites
+    cpx #LS_SPRITES_TO_LOAD  ; max number of sprites
     beq :+
 
     ; Index -> offset
@@ -496,11 +496,19 @@ data_LevelIcons_Meta:
 ;
 data_LevelSprites_meta:
     ;.byte X, Y, ID, X's 9th/Palette
-    .byte 80, 35, $33, 0 ; stack
+    .byte 80, 35, $33, 0 ; stack (top)
     .byte 88, 35, $34, 0
     .byte 96, 35, $35, 0
 
+    .byte 80, 99, $33, 0 ; stack (bottom)
+    .byte 88, 99, $34, 0
+    .byte 96, 99, $35, 0
+
 data_LevelSprites_FrameCount:
+    .byte 4
+    .byte 4
+    .byte 4
+
     .byte 4
     .byte 4
     .byte 4
@@ -511,8 +519,16 @@ data_LevelSprites_FrameRate:
     .byte 10
     .byte 10
 
+    .byte 10
+    .byte 10
+    .byte 10
+
 ; Relative X coordinate values
 data_LevelSprites_FrameData_X:
+    .byte 0, 0, 0, 0
+    .byte 0, 0, 0, 0
+    .byte 0, 0, 0, 0
+
     .byte 0, 0, 0, 0
     .byte 0, 0, 0, 0
     .byte 0, 0, 0, 0
@@ -523,7 +539,11 @@ data_LevelSprites_FrameData_Y:
     .byte 0, 6, 12, 6
     .byte 0, 6, 12, 6
 
-LS_SPRITES_TO_LOAD = 3
+    .byte 0, 6, 12, 6
+    .byte 0, 6, 12, 6
+    .byte 0, 6, 12, 6
+
+LS_SPRITES_TO_LOAD = 6
 
 pointers_levelAnim:
     .word anim_StackSpriteA
