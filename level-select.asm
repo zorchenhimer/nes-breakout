@@ -113,34 +113,31 @@ Init_LevelSelect:
     .Update_PpuControl PPU_CTRL_NMI
 
     ; Draw the level icons
-    lda #0
-    sta IdxA
-@levelIconLoop:
-    lda IdxA
-    asl a
-    tay
-
-    lda data_LevelIcons_Addr+1, y
+    ldx #0
+@iconDataLoop:
+    lda data_LevelIcons, x
     beq @iconDone
 
-    sta AddressPointer0+1
-    lda data_LevelIcons_Addr+0, y
-    sta AddressPointer0+0
+    lda data_LevelIcons+1, x
+    sta $2006
+    lda data_LevelIcons, x
+    sta $2006
+    inx
+    inx
 
-    tya
-    asl a
-    tay
-
-    lda data_LevelIcons_Meta+0, y
+    ; data length
+    ldy data_LevelIcons, x
+    inx
+    lda data_LevelIcons, x
     sta TmpX
-    lda data_LevelIcons_Meta+1, y
-    sta TmpY
-    lda data_LevelIcons_Meta+2, y
-    sta TmpW
-
-    jsr ls_DrawLevelIcon
-    inc IdxA
-    jmp @levelIconLoop
+:
+    lda TmpX
+    inc TmpX
+    sta $2007
+    dey
+    bne :-
+    inx
+    jmp @iconDataLoop
 
 @iconDone:
     lda #0
@@ -229,9 +226,6 @@ NMI_LevelSelect:
     .Update_PpuMask PPU_MASK_ON
     .Update_PpuControl PPU_CTRL_NMI
 
-    ;lda #$80
-    ;sta $2000
-
     ;.SetScroll_Var 0
     bit $2000
     lda menu_ScrollValue
@@ -256,7 +250,6 @@ JsrPointer:
 @end:
     nop
     rts
-
 
 ; PPU Address in AddressPointer0
 ; Width of tiles in TmpX
@@ -342,7 +335,8 @@ ls_SpriteScroll:
     sta TmpX
     lda menu_DrawnSprites
     clc
-    adc #LEVELSELECT_SPRITE_OFFSET  ; increment past sprite zero and cursor sprites
+    ; increment past sprite zero and cursor sprites
+    adc #LEVELSELECT_SPRITE_OFFSET
     asl a
     asl a
     tay
@@ -472,25 +466,6 @@ data_LevelIcons_Addr:
 
     .word $0000
 
-; Background tile data
-; Width, Height, Tile ID, padding
-data_LevelIcons_Meta:
-    .byte 3, 2, $00, 0  ; bricks
-
-    .byte 3, 3, $03, 0  ; stack
-    .byte 3, 3, $03, 0
-
-    .byte 2, 2, $0B, 0  ; modem
-    .byte 2, 2, $0B, 0
-    .byte 2, 2, $0B, 0
-
-    .byte 3, 3, $0D, 0  ; satelites
-    .byte 3, 3, $0D, 0
-
-    .byte 2, 2, $06, 0  ; servers
-    .byte 2, 2, $06, 0
-    .byte 2, 2, $06, 0
-    .byte 2, 2, $06, 0
 
 ; Animation data
 ;
@@ -545,8 +520,89 @@ data_LevelSprites_FrameData_Y:
 
 LS_SPRITES_TO_LOAD = 6
 
-pointers_levelAnim:
-    .word anim_StackSpriteA
-    .word anim_StackSpriteB
+; Background tile data
+; Everything is encoded with RLE Inc.
+; Start PPU address, data length, data (tile ID) start
+data_LevelIcons:
+    ; bricks
+    .word $2104
+        .byte 3, $00
+    .word $2124
+        .byte 3, $10
 
-COUNT_ANIM_POINTER = * - pointers_levelAnim
+    ; top stack
+    .word $208A
+        .byte 3, $03
+    .word $20AA
+        .byte 3, $13
+    .word $20CA
+        .byte 3, $23
+
+    ; bottom stack
+    .word $218A
+        .byte 3, $03
+    .word $21AA
+        .byte 3, $13
+    .word $21CA
+        .byte 3, $23
+
+    ; modem A
+    .word $2052
+        .byte 1, $0C
+    .word $2071
+        .byte 2, $1B
+
+    ; modem B
+    .word $2111
+        .byte 1, $0C
+    .word $2130
+        .byte 2, $1B
+
+    ; modem B
+    .word $2211
+        .byte 1, $0C
+    .word $2230
+        .byte 2, $1B
+
+    ; top sat
+    .word $20B5
+        .byte 3, $0D
+    .word $20D5
+        .byte 3, $1D
+    .word $20F6
+        .byte 2, $2E
+
+    ; bot sat
+    .word $2195
+        .byte 3, $0D
+    .word $21B5
+        .byte 3, $1D
+    .word $21D6
+        .byte 2, $2E
+
+    ; server 1
+    .word $205C
+        .byte 2, $06
+    .word $207C
+        .byte 2, $16
+
+    ; server 2
+    .word $20FC
+        .byte 2, $06
+    .word $211C
+        .byte 2, $16
+
+    ; server 3
+    .word $219C
+        .byte 2, $06
+    .word $21BC
+        .byte 2, $16
+
+    ; server 4
+    .word $221C
+        .byte 2, $06
+    .word $223C
+        .byte 2, $16
+
+    ; Null terminated
+    .byte $00
