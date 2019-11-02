@@ -13,14 +13,10 @@ Init_Title:
     .Disable_Drawing
 
     ; Load up a palette
-    bit $2002
-    lda #$3F
-    sta $2006
-    lda #$00
-    sta $2006
 .repeat 4, i
     lda Pal_Title+i
-    sta $2007
+    sta PaletteBuffer+i
+    sta PaletteBufferSprites+i
 .endrepeat
 
     jsr Clear_NonGlobalRam
@@ -213,13 +209,16 @@ t_sel_down:
 
 NMI_Title:
     ; Select first nametable
+    jsr WritePalettes
+    jsr WriteSprites
+
     lda #%10011000
     sta $2000
 
     lda #%00011110
     sta $2001
 
-    jsr WriteSprites
+    .SetScroll $00
 
     dec Sleeping
     rti
@@ -250,3 +249,6 @@ data_TitleMenu:
     .byte "Level Select", $00, 3
     .byte "Credits", $00, 2
     .byte $00
+
+title_PalBackground:
+    .byte $0F, $11, $14, $1B

@@ -90,6 +90,9 @@ LastBank:      .res 1
 
 IgnoreInput: .res 1
 
+PaletteBuffer: .res 4*4
+PaletteBufferSprites: .res 4*4
+
 .segment "RAMGLOBAL"
 
 ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
@@ -1165,7 +1168,22 @@ waves_WriteRow:
 
     pla
     jsr MMC1_Select_Page
+    rts
 
+WritePalettes:
+    ;lda #PPU_CTRL_HORIZ
+    ;sta $2000
+
+    bit $2002
+    lda #$3F
+    sta $2006
+    lda #$00
+    sta $2006
+
+.repeat 32, i
+    lda PaletteBuffer+i
+    sta $2007
+.endrepeat
     rts
 
 data_WaveFrames:

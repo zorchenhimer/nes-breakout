@@ -1,33 +1,38 @@
 ; asmsyntax=ca65
 
-ls_SpritePalettes:
-    .byte $0F, $34, $20, $20
+ls_PalStack:
+    .byte $0F, $20, $20, $20
 
     nop
     nop
 
-Init_LevelSelect:
-    ; TODO: load palletes first
-
+; Intial load of palettes
+ls_LoadPalettes:
     ldx #0
-    bit $2000
-    lda #$3F
-    sta $2006
-    lda #$10
-    sta $2006
-
-:
-    lda ls_SpritePalettes, x
-    sta $2007
+@stack:
+    lda ls_PalStack, x
+    sta PaletteBufferSprites, x
     inx
     cpx #4
-    bne :-
+    bne @stack
 
+; TODO: Read this from the animation data
+    lda #1
+    ldx #7
+:
+    sta ls_PaletteFrameTimer, x
+    dex
+    bpl :-
+    rts
+
+Init_LevelSelect:
     .NMI_Disable
     .Disable_Drawing
 
     jsr Clear_NonGlobalZp
     jsr ClearSprites
+
+    jsr ls_LoadPalettes
 
     lda #$FF
     jsr FillNametable0
@@ -180,7 +185,7 @@ Frame_LevelSelect:
 
     inc IdxA
     lda IdxA
-    cmp #LS_SPRITES_TO_LOAD
+    cmp menu_LoadedSprites
     bne @scrollLoop
 
     ; sprite ID -> offset
@@ -197,6 +202,18 @@ Frame_LevelSelect:
     inx
     bne :-
 
+; Animate all palettes
+    ldx #0
+    stx IdxA
+@palLoop:
+    lda IdxA
+    jsr ls_PaletteAnimate
+
+    inc IdxA
+    lda IdxA
+    cmp #PAL_ANIM_COUNT
+    bne @palLoop
+
     jsr WaitForSpriteZero
     lda #0
     sta $2005
@@ -206,6 +223,8 @@ Frame_LevelSelect:
     jmp Frame_LevelSelect
 
 NMI_LevelSelect:
+
+    jsr WritePalettes
 
     .WriteSprites
     .Update_PpuMask PPU_MASK_ON
@@ -280,6 +299,71 @@ ls_DrawLevelIcon:
 @done:
     rts
 
+; Animate palettes
+; Palette animation index in A
+ls_PaletteAnimate:
+    asl a
+    tax
+    lda data_PaletteAnim_List+0, x
+    sta AddressPointer0+0
+    lda data_PaletteAnim_List+1, x
+    sta AddressPointer0+1
+
+    ldy #0
+    ; Palette Index
+    lda (AddressPointer0), y
+    tax
+    asl a
+    asl a
+    sta TmpY
+
+    dec ls_PaletteFrameTimer, x
+    bne @noAnim
+
+    inc ls_PaletteFrames, x
+    lda ls_PaletteFrames, x
+
+    ; check for overflow
+    ldy #1
+    cmp (AddressPointer0), y
+    bcc :+
+    lda #0
+    sta ls_PaletteFrames, x
+:
+
+    iny
+    lda (AddressPointer0), y
+    sta ls_PaletteFrameTimer, x
+
+@noAnim:
+    lda ls_PaletteFrames, x
+    asl a
+    asl a
+    clc
+    adc #3
+    tay
+
+    ldx #0
+:
+    lda (AddressPointer0), y
+    sta ls_PalTmp, x
+    iny
+    inx
+    cpx #4
+    bne :-
+
+    ldy TmpY    ; reload palette offset
+    ldx #0
+:
+    lda ls_PalTmp, x
+    sta PaletteBuffer, y
+    iny
+    inx
+    cpx #4
+    bne :-
+
+    rts
+
 ; Sprite ID in a
 ; Read the sprite data from RAM, manipulate the
 ; coords, and write it to OAM if it is on screen.
@@ -339,7 +423,7 @@ ls_LoadSprites:
     sta AddressPointer0+1
 
     ; frame rate
-    ldy #0
+    ldy #1
     lda (AddressPointer0), y
     sta ls_SpriteFrameTimer, x
     inx
@@ -395,7 +479,7 @@ ls_SpriteAnimate:
 :
 
     ; Reset the framerate counter
-    ldy #0
+    ldy #1
     lda (AddressPointer0), y
     sta ls_SpriteFrameTimer, x
 
@@ -404,11 +488,88 @@ ls_SpriteAnimate:
     ; on every frame, the only difference is not
     ; updating the frame number.
 
-    ldy #1
+    ; animation type
+    ldy #0
+    lda (AddressPointer0), y
+    beq @ls_SpriteAnimate_Move
+    iny
+    ; static "animation"
+
+    ; Sprite count
+    lda (AddressPointer0), y
+    sta IdxC
+    iny
+
+    ; Tile data pointer
+    lda (AddressPointer0), y
+    sta AddressPointer1+0
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer1+1
+    iny
+
+    ; Attribute data pointer
+    lda (AddressPointer0), y
+    sta AddressPointer2+0
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer2+1
+    iny
+
+    ; X data pointer
+    lda (AddressPointer0), y
+    sta AddressPointer3+0
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer3+1
+    iny
+
+    ; Y data pointer
+    lda (AddressPointer0), y
+    sta AddressPointer4+0
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer4+1
+    iny
+
+    ; individual sprites in obj
+    lda #0
+    sta IdxB    ; current sprite in obj
+@spriteLoopA:
+    ldy IdxB
+    ldx menu_LoadedSprites
+
+    lda (AddressPointer3), y
+    clc
+    adc tmp_BaseX
+    sta ls_SpriteX, x
+
+    lda (AddressPointer4), y
+    clc
+    adc tmp_BaseY
+    sta ls_SpriteY, x
+
+    lda (AddressPointer1), y
+    sta ls_SpriteTiles, x
+
+    lda (AddressPointer2), y
+    sta ls_SpriteFlags, x
+
+    inx
+    stx menu_LoadedSprites
+
+    inc IdxB
+    lda IdxB
+    cmp IdxC
+    bne @spriteLoopA
+    rts
+
+@ls_SpriteAnimate_Move:
+    ldy #2
     lda (AddressPointer0), y
     sta IdxC    ; sprite count in obj
 
-    ldy #3
+    ldy #4
     ; Tile data pointer
     lda (AddressPointer0), y
     sta AddressPointer1+0
@@ -611,6 +772,22 @@ data_LevelIcons:
     ; Null terminated
     .byte $00
 
+data_PaletteAnim_List:
+    .word data_PaletteAnim_Def00
+
+PAL_ANIM_COUNT = (* - data_PaletteAnim_List) / 2
+
+data_PaletteAnim_Def00:
+    .byte 5     ; palette index
+    .byte 3     ; number of frames
+    .byte 6     ; frame rate
+
+    ; frame data
+    .byte $0F, $20, $00, $00
+    .byte $0F, $00, $20, $00
+    .byte $0F, $00, $00, $20
+    ;.byte $0F, $0F, $20, $0F
+
 ; List of all the sprite objects
 ; A "sprite object" is a meta-sprite for animation.
 data_SpriteObject_List:
@@ -619,12 +796,39 @@ data_SpriteObject_List:
     .word data_SpriteObj_Def_Stack
         .byte 80, 99    ; base X/Y
 
+    .word data_SpriteObj_Def_Modem
+        .byte 136, 16
+    .word data_SpriteObj_Def_Modem
+        .byte 128, 64
+    .word data_SpriteObj_Def_Modem
+        .byte 128, 128
+
 SPRITE_OBJ_COUNT = (* - data_SpriteObject_List) / 4
 
-; TODO: find a way to calculate this
-LS_SPRITES_TO_LOAD = 6
+; Static "animation" (only palette is animated)
+data_SpriteObj_Def_Modem:
+    .byte 1         ; animation type
+    .byte 1         ; sprite count
+
+    .word data_SpriteObj_02Tiles
+    .word data_SpriteObj_02Attr
+    .word data_SpriteObj_02X
+    .word data_SpriteObj_02Y
+
+data_SpriteObj_02Tiles:
+    .byte $0B
+
+data_SpriteObj_02Attr:
+    .byte $01
+
+data_SpriteObj_02X:
+    .byte $00
+
+data_SpriteObj_02Y:
+    .byte $00
 
 data_SpriteObj_Def_Stack:
+    .byte 0         ; animation type
     .byte 10        ; frame rate
     .byte 3         ; sprite count
     .byte 4         ; frame count

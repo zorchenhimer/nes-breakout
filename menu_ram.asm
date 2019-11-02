@@ -24,6 +24,11 @@ tmp_SpriteFlags: .res 1
 tmp_BaseX:  .res 1
 tmp_BaseY:  .res 1
 
+ls_SpritesToLoad: .res 1
+
+; Palette data idx for modem sprites
+ls_ModemPal: .res 1
+
 .segment "RAMMENU"
 title_MenuLength: .res 1
 title_MenuItems: .res 10
@@ -51,6 +56,11 @@ ls_SpriteTiles: .res 16
 ; one entry per sprite obj
 ls_SpriteFrames: .res 16
 ls_SpriteFrameTimer: .res 16
+
+ls_PaletteFrames: .res 8
+ls_PaletteFrameTimer: .res 8
+
+ls_PalTmp: .res 4
 
 ; X/Y of each meta-sprite (X is 9bit number)
 ; Sprite flags
