@@ -136,9 +136,9 @@ Init_Game:
     jsr Wave_DrawBackground
 
     lda #8
-    sta waves_AnimWait
+    sta z:waves_AnimWait
     lda #0
-    sta waves_AnimOdd
+    sta z:waves_AnimOdd
 
     jsr ClearSprites
 
@@ -316,31 +316,31 @@ Frame_Game:
 NMI_Game:
     jsr WriteSprites
 
-    dec waves_AnimWait
+    dec z:waves_AnimWait
     bne @noAnim
     lda #8
-    sta waves_AnimWait
+    sta z:waves_AnimWait
 
-    lda waves_AnimOdd
+    lda z:waves_AnimOdd
     beq :+
     lda #0
-    sta waves_AnimOdd
+    sta z:waves_AnimOdd
     lda #%10001000
     sta PpuControl
     jmp @animDone
 :
     lda #1
-    sta waves_AnimOdd
+    sta z:waves_AnimOdd
     lda #%10011000
     sta PpuControl
 
 @animDone:
-    inc waves_currentFrame
-    lda waves_currentFrame
+    inc z:waves_currentFrame
+    lda z:waves_currentFrame
     cmp #15
     bcc :+
     lda #0
-    sta waves_currentFrame
+    sta z:waves_currentFrame
 :
 @noAnim:
 
@@ -376,7 +376,7 @@ NMI_Game:
     sta BrickDestroy+1
 :
 
-    lda waves_AnimOdd
+    lda z:waves_AnimOdd
     ;jsr waves_WriteRow
     jsr waves_WriteCachedRow
 

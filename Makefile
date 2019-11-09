@@ -36,7 +36,7 @@ SOURCES := main.asm nes2header.inc \
 		  game.asm game_ram.asm map_decode.asm \
 		  credits.asm credits_ram.asm \
 		  title.asm menu_ram.asm level-select.asm \
-		  macros.asm
+		  macros.asm bg_anim.asm
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
