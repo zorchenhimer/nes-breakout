@@ -138,11 +138,27 @@ Sprites: .res 256
     .byte 5
 .segment "PAGE06"
     .byte 6
+
+anim_Matrix_Data14:
+    .incbin "matrix14.chr"
+
+anim_Matrix_Data7:
+    .incbin "matrix7.chr"
+
 .segment "PAGE07"
     .byte 7
 
 WaveChrData:
     .incbin "waves.chr"
+
+am_Waves_TileLayout_b:
+    .repeat 4
+        .repeat 8, i
+            .repeat 4
+            .byte OP_BG_INC, 8, $C0 + (i*8)
+            .endrepeat
+        .endrepeat
+    .endrepeat
 
 .segment "PAGE08"
     .byte 8

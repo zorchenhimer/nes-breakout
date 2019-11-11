@@ -19,7 +19,88 @@ waves_ChrSrc:   .res 2  ; the start of an 8 tile row
 ; One row of the background animation
 ChrRamCacheRow: .res 128
 
+; current frame for each animation
+bg_frames: .res 8
+; number of total frames for each animation
+bg_frameCount: .res 8
+
 .popseg
+
+; OP, write count, start value
+OP_BG_INC = $01
+
+; op, write count, value
+OP_BG_RLE = $02
+
+; op, length, list of data
+OP_BG_BYT = $04
+
+Animation_Meta_Waves:
+    .byte 1
+    .byte 0
+
+    .word am_Waves_AnimIndex
+    .word am_Waves_TileLayout
+
+am_Waves_AnimIndex:
+    .repeat 15, i
+    .word WaveChrData + (1024 * i)
+    .endrepeat
+
+am_Waves_TileLayout:
+    .repeat 4
+        .repeat 8, i
+            .repeat 4
+            .byte OP_BG_INC, 8, $C0 + (i*8)
+            .endrepeat
+        .endrepeat
+    .endrepeat
+
+; Entire bg animation, made up of smaller animations.
+Animation_Meta_Matrix:
+    .byte 2 ; number of animations
+    .byte 1 ; write direction for tiles
+
+    ; Animation frame lookup table
+    .word am_Matrix_AnimIndex
+
+    ; Nametable tile data
+    .word am_Matrix_TileLayout
+
+am_Matrix_AnimIndex:
+    .word am_Matrix_Col14
+    .word am_Matrix_Col7
+
+am_Matrix_Col14:
+    .byte 14 | $C0  ; number of frames AND'd with bitplanes
+    .byte 14    ; number of tiles per frame
+    .byte $C0   ; start tile ID (dest)
+    .byte $06   ; Bank ID
+
+    .word anim_Matrix_Data14Lookup
+
+anim_Matrix_Data14Lookup:
+    .repeat 14, i
+    .word anim_Matrix_Data14 + ((14 * 16) * i)
+    .endrepeat
+
+am_Matrix_Col7:
+    .byte 14 | $C0  ; number of frames AND'd with bitplanes
+    .byte 7     ; number of tiles per frame
+    .byte $C0   ; start tile ID (dest)
+    .byte $06   ; Bank ID
+
+    .word anim_Matrix_Data14Lookup
+
+anim_Matrix_Data7Lookup:
+    .repeat 14, i
+    .word anim_Matrix_Data7 + ((14 * 16) * i)
+    .endrepeat
+
+am_Matrix_TileLayout:
+    ; tile data. RLE, ByteList, RLE_Inc.
+
+; Animation_Meta_Matrix end
 
 ; Draws the wave's tile IDs on the background
 Wave_DrawBackground:

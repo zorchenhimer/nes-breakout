@@ -56,9 +56,43 @@ WAVE_FRAMES = waves_1 \
 			  waves_14 \
 			  waves_15
 
+MATRIX14_FRAMES = matrix14_1 \
+				  matrix14_2 \
+				  matrix14_3 \
+				  matrix14_4 \
+				  matrix14_5 \
+				  matrix14_6 \
+				  matrix14_7 \
+				  matrix14_8 \
+				  matrix14_9 \
+				  matrix14_10 \
+				  matrix14_11 \
+				  matrix14_12 \
+				  matrix14_13 \
+				  matrix14_14
+
+MATRIX7_FRAMES = matrix7_1 \
+				 matrix7_2 \
+				 matrix7_3 \
+				 matrix7_4 \
+				 matrix7_5 \
+				 matrix7_6 \
+				 matrix7_7 \
+				 matrix7_8 \
+				 matrix7_9 \
+				 matrix7_10 \
+				 matrix7_11 \
+				 matrix7_12 \
+				 matrix7_13 \
+				 matrix7_14
+
 WAVE_BMP := $(addprefix images/,$(addsuffix .bmp,$(WAVE_FRAMES)))
+MATRIX14_BMP := $(addprefix images/,$(addsuffix .bmp,$(MATRIX14_FRAMES)))
+MATRIX7_BMP := $(addprefix images/,$(addsuffix .bmp,$(MATRIX7_FRAMES)))
 #WAVE_CHR := $(addsuffix .chr,$(WAVE_FRAMES))
 WAVE_CHR = waves.chr
+MATRIX14_CHR = matrix14.chr
+MATRIX7_CHR = matrix7.chr
 
 .PHONY: clean default maps tools names travis sample_credits chr cleanimg waves trav
 .PRECIOUS: images/%.bmp
@@ -69,9 +103,11 @@ names: tools chr clrNames credits_data.i bin/$(NAME).nes
 maps: tools chr map_data.i map_child_data.i
 tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
 travis: tools sample_credits trav chr bin/$(NAME).nes
-chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR)
+chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR) $(MATRIX14_CHR) $(MATRIX7_CHR)
 waves: $(WAVE_CHR)
 newwaves: clean rmwaves waves all
+
+matrix: $(MATRIX14_CHR) $(MATRIX7_CHR)
 
 trav:
 	touch images/*.bmp
@@ -102,11 +138,14 @@ rmwaves:
 waves.chr: $(WAVE_BMP)
 	$(CHRUTIL) -o $@ $^
 
+matrix14.chr: $(MATRIX14_BMP)
+	$(CHRUTIL) --first-plane -o $@ $^
+
+matrix7.chr: $(MATRIX7_BMP)
+	$(CHRUTIL) --first-plane -o $@ $^
+
 $(GENCRED): generate-credits.go
 	go build -o $(GENCRED) generate-credits.go
-
-$(BMP2CHR): bmp2chr.go
-	go build -o $(BMP2CHR) bmp2chr.go
 
 $(CONVMAP): convert-map/*.go
 	cd convert-map && go build -o ../$(CONVMAP)
@@ -137,6 +176,12 @@ images/%.bmp: images/%.aseprite
 
 $(WAVE_BMP): images/waves_e.aseprite
 	aseprite -b $< --save-as images/waves_{frame1}.bmp
+
+$(MATRIX14_BMP): images/matrix-14.aseprite
+	aseprite -b $< --save-as images/matrix14_{frame1}.bmp
+
+$(MATRIX7_BMP): images/matrix-7.aseprite
+	aseprite -b $< --save-as images/matrix7_{frame1}.bmp
 
 $(CA):
 	$(MAKE) -C cc65/ ca65
