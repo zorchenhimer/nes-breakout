@@ -189,6 +189,10 @@ func main() {
 			fmt.Printf("Reading file %q\n", inputFile)
 		}
 
+		if !samples && filepath.Base(inputFile) == "sample-credit-names.csv" {
+			continue
+		}
+
 		file, err := os.Open(inputFile)
 		if err != nil {
 			fmt.Println("ERROR: Unable to open subscriber-list.csv: ", err)

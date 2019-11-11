@@ -124,7 +124,7 @@ bin/$(NAME).nes: bin/main.o $(DATA_OBJ)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 credits_data.i: $(GENCRED) ./credit-names/*.csv
-	$(GENCRED) -x zorchenhimer -o $@ -i ../subs/
+	$(GENCRED) -x zorchenhimer -o $@ -i ./credit-names/
 
 main_map_data.i: $(CONVMAP) maps/main-boards.tmx
 	cd maps && ../$(CONVMAP) main-boards.tmx main ../main_map_data.i
