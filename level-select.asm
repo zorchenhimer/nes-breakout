@@ -945,6 +945,11 @@ data_SpriteObject_List:
     .word data_SpriteObj_Def_Modem
         .byte 128, 128
 
+    .word data_SpriteObj_Def_Sat
+        .byte 168, 55
+    .word data_SpriteObj_Def_Sat
+        .byte 168, 111
+
 SPRITE_OBJ_COUNT = (* - data_SpriteObject_List) / 4
 
 ; Static "animation" (only palette is animated)
@@ -967,6 +972,27 @@ data_SpriteObj_02X:
     .byte $00
 
 data_SpriteObj_02Y:
+    .byte $00
+
+data_SpriteObj_Def_Sat:
+    .byte 1         ; animation type
+    .byte 1         ; sprite count
+
+    .word data_SpriteObj_03Tiles
+    .word data_SpriteObj_03Attr
+    .word data_SpriteObj_03X
+    .word data_SpriteObj_03Y
+
+data_SpriteObj_03Tiles:
+    .byte $2D
+
+data_SpriteObj_03Attr:
+    .byte $01
+
+data_SpriteObj_03X:
+    .byte $00
+
+data_SpriteObj_03Y:
     .byte $00
 
 data_SpriteObj_Def_Stack:
@@ -1013,19 +1039,19 @@ data_LevelSelect_Cursor:
     .byte 81, 94, 14, 17
 
     ; 3
-    .byte 135, 14, 10, 10
-    .byte 127, 62, 10, 10
+    .byte 135, 14,  10, 10
+    .byte 127, 62,  10, 10
     .byte 127, 126, 10, 10
 
     ; 4
-    .byte 20, 30, 16, 16
-    .byte 20, 30, 16, 16
+    .byte 146, 37, 20, 20
+    .byte 146, 93, 20, 20
 
     ; 5
-    .byte 20, 30, 16, 16
-    .byte 20, 30, 16, 16
-    .byte 20, 30, 16, 16
-    .byte 20, 30, 16, 16
+    .byte 202, 13, 12, 12
+    .byte 202, 53, 12, 12
+    .byte 202, 93, 12, 12
+    .byte 202, 125, 12, 12
 
     ; 6
     .byte 20, 30, 24, 24
