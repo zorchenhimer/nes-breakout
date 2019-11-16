@@ -345,11 +345,38 @@ NMI_Game:
 @noAnim:
 
     ; Destroy any bricks that need destroying
-    lda BrickDestroy+1  ;check high byte for value
+    lda BrickDestroyA+1  ;check high byte for value
     beq :+
     bit $2002
     sta $2006
-    lda BrickDestroy
+    lda BrickDestroyA
+    sta $2006
+
+    lda game_PpuRow
+    and #$07
+    tax
+
+    ; first tile
+    lda game_PpuCol
+    and #$07
+    clc
+    adc Index_BgAnimRows, x
+    sta $2007
+
+    ; second tile
+    lda game_PpuCol
+    adc #1
+    and #$07
+    clc
+    adc Index_BgAnimRows, x
+    sta $2007
+:
+
+    lda BrickDestroyB+1  ;check high byte for value
+    beq :+
+    bit $2002
+    sta $2006
+    lda BrickDestroyB
     sta $2006
 
     lda game_PpuRow
@@ -371,10 +398,12 @@ NMI_Game:
     adc Index_BgAnimRows, x
     sta $2007
 
-    lda #0
-    sta BrickDestroy
-    sta BrickDestroy+1
 :
+    lda #0
+    sta BrickDestroyA
+    sta BrickDestroyA+1
+    sta BrickDestroyB
+    sta BrickDestroyB+1
 
     lda z:waves_AnimOdd
     ;jsr waves_WriteRow
@@ -2342,11 +2371,20 @@ game_RemoveBrick:
 :
     ; Check if this brick is the last one.
     ; Remove from screen
+    lda BrickDestroyA
+    bne :+
     lda BrickPpuAddress
-    sta BrickDestroy
+    sta BrickDestroyA
     lda BrickPpuAddress+1
-    sta BrickDestroy+1
+    sta BrickDestroyA+1
+    jmp @aDone
+:
+    lda BrickPpuAddress
+    sta BrickDestroyB
+    lda BrickPpuAddress+1
+    sta BrickDestroyB+1
 
+@aDone:
     ; Remove from RAM
     lda #0
     ldy #0
