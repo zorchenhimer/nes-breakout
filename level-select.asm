@@ -144,6 +144,35 @@ Init_LevelSelect:
     lda #0
     sta Sprites+2
 
+    ; Load up current selection data
+    lda menu_PrevLevel
+    asl a
+    tax
+
+    lda data_Level_Progression_Idx, x
+    sta ls_LevelProg
+    lda data_Level_Progression_Idx+1, x
+    sta ls_LevelProg+1
+
+    ; load data into cursor section stuff
+    ldy #0
+    ldx #0
+    stx ls_NumActiveLevels
+:
+    lda (ls_LevelProg), y
+    bmi :+
+    sta ls_ActiveLevels, x
+    inc ls_NumActiveLevels
+    inx
+    iny
+    jmp :-
+:
+
+    lda #LS_CURSOR_ANIM_FRAMES
+    sta ls_cursorAnim
+    lda #LS_CURSOR_COLOR_START
+    sta ls_cursorColorBuff
+
     .NMI_Set NMI_LevelSelect
     jsr WaitForNMI
 
@@ -151,16 +180,63 @@ Frame_LevelSelect:
     jsr ReadControllers
 
     lda #BUTTON_RIGHT
-    and controller1
+    jsr ButtonPressedP1
     beq :+
-    inc menu_ScrollValue
+    inc ls_SelectedLevel
+    jmp @incOver
+:
+    lda #BUTTON_DOWN
+    jsr ButtonPressedP1
+    beq :+
+    inc ls_SelectedLevel
+:
+
+@incOver:
+    ; handle overflow
+    lda ls_SelectedLevel
+    cmp ls_NumActiveLevels
+    bne :+
+    lda #0
+    sta ls_SelectedLevel
 :
 
     lda #BUTTON_LEFT
-    and controller1
+    jsr ButtonPressedP1
     beq :+
-    dec menu_ScrollValue
+    dec ls_SelectedLevel
+    jmp @decUnder
 :
+    lda #BUTTON_UP
+    jsr ButtonPressedP1
+    beq :+
+    dec ls_SelectedLevel
+:
+
+@decUnder:
+    ; handle underflow
+    lda ls_SelectedLevel
+    bpl :+
+    lda ls_NumActiveLevels
+    sec
+    sbc #1
+    sta ls_SelectedLevel
+:
+
+    dec ls_cursorAnim
+    bne @noCursorAnim
+    lda #LS_CURSOR_ANIM_FRAMES
+    sta ls_cursorAnim
+
+    inc ls_cursorColorBuff
+    lda ls_cursorColorBuff
+    cmp #LS_CURSOR_COLOR_END
+    bne :+
+    lda #LS_CURSOR_COLOR_START
+    sta ls_cursorColorBuff
+:
+@noCursorAnim:
+
+    jsr ls_DrawCursor
 
     lda #0
     sta menu_LoadedSprites
@@ -176,7 +252,7 @@ Frame_LevelSelect:
     cmp #SPRITE_OBJ_COUNT
     bne @animLoop
 
-; scroll all sprites
+; scroll animation sprites
     ldx #0
     stx IdxA
 @scrollLoop:
@@ -685,6 +761,72 @@ ls_SpriteAnimate:
     bne @spriteLoop
     rts
 
+LS_CURSOR_1 = Sprites + (4 * 1)
+LS_CURSOR_2 = Sprites + (4 * 2)
+LS_CURSOR_3 = Sprites + (4 * 3)
+LS_CURSOR_4 = Sprites + (4 * 4)
+LS_CURSOR_PAL = $03
+
+ls_DrawCursor:
+    ldx ls_SelectedLevel
+    lda ls_ActiveLevels, x
+    ; index into data_LevelSelect_Cursor is in A
+
+    ; index -> offset
+    asl a
+    asl a
+
+    ; X for left side
+    tay
+    lda data_LevelSelect_Cursor, y
+    sta LS_CURSOR_1 + 3
+    sta LS_CURSOR_3 + 3
+
+    ; X for right side
+    clc
+    adc data_LevelSelect_Cursor + 2, y
+    sta LS_CURSOR_2 + 3
+    sta LS_CURSOR_4 + 3
+
+    ; Y for top
+    lda data_LevelSelect_Cursor + 1, y
+    sta LS_CURSOR_1 + 0
+    sta LS_CURSOR_2 + 0
+
+    ; Y for bottom
+    clc
+    adc data_LevelSelect_Cursor + 3, y
+    sta LS_CURSOR_3 + 0
+    sta LS_CURSOR_4 + 0
+
+    lda #CURSOR_TILE
+    sta LS_CURSOR_1 + 1
+    sta LS_CURSOR_2 + 1
+    sta LS_CURSOR_3 + 1
+    sta LS_CURSOR_4 + 1
+
+    ; top left
+    lda #LS_CURSOR_PAL
+    sta LS_CURSOR_1 + 2
+
+    ; top right
+    lda #LS_CURSOR_PAL | $40
+    sta LS_CURSOR_2 + 2
+
+    ; bottom left
+    lda #LS_CURSOR_PAL | $80
+    sta LS_CURSOR_3 + 2
+
+    ; bottom right
+    lda #LS_CURSOR_PAL | $C0
+    sta LS_CURSOR_4 + 2
+
+    ; Scroll screen
+    ldy ls_ActiveLevels, x
+    lda data_LevelSelect_CursorScroll, y
+    sta menu_ScrollValue
+    rts
+
 ; Background tile data
 ; Everything is encoded with RLE Inc.
 ; Start PPU address, data length, data (tile ID) start
@@ -857,3 +999,118 @@ data_SpriteObj_01FrameX:
     .byte 0, 0, 0, 0
 data_SpriteObj_01FrameY:
     .byte 0, 6, 12, 6
+
+CURSOR_TILE = $26
+
+; Cursor data for the level select
+data_LevelSelect_Cursor:
+    ; X, Y, w, h
+    ; 1
+    .byte 31, 62, 18, 9
+
+    ; 2
+    .byte 81, 30, 14, 17
+    .byte 81, 94, 14, 17
+
+    ; 3
+    .byte 135, 14, 10, 10
+    .byte 127, 62, 10, 10
+    .byte 127, 126, 10, 10
+
+    ; 4
+    .byte 20, 30, 16, 16
+    .byte 20, 30, 16, 16
+
+    ; 5
+    .byte 20, 30, 16, 16
+    .byte 20, 30, 16, 16
+    .byte 20, 30, 16, 16
+    .byte 20, 30, 16, 16
+
+    ; 6
+    .byte 20, 30, 24, 24
+    .byte 20, 30, 24, 24
+    .byte 20, 30, 24, 24
+
+    ; 7
+    .byte 20, 30, 24, 24
+
+; Scroll of screen for each cursor value
+data_LevelSelect_CursorScroll:
+    ; 1
+    .byte 0
+
+    ; 2
+    .byte 0
+    .byte 0
+
+    ; 3
+    .byte 0
+    .byte 0
+    .byte 0
+
+    ; 4
+    .byte 20
+    .byte 20
+
+    ; 5
+    .byte 20
+    .byte 20
+    .byte 20
+    .byte 20
+
+    ; 6
+    .byte 20
+    .byte 20
+    .byte 20
+
+    ; 7
+    .byte 20
+
+data_Level_Progression_Idx:
+    .word :+
+    .word :++
+    .word :+++
+    .word :++++
+    .word :+++++
+    .word :++++++
+    .word :+++++++
+    .word :++++++++
+    .word :+++++++++
+    .word :++++++++++
+    .word :+++++++++++
+    .word :++++++++++++
+    .word :+++++++++++++
+    .word :++++++++++++++
+    .word :+++++++++++++++
+    .word :++++++++++++++++
+
+data_Level_Progression:
+; 1
+:   .byte 1, 2, $FF
+
+; 2
+:   .byte 3, 4, $FF
+:   .byte 4, 5, $FF
+
+; 3
+:   .byte 8, 6, $FF
+:   .byte 6, 7, $FF
+:   .byte 7, $FF
+
+; 4
+:   .byte 9, 10, $FF
+:   .byte 9, 10, 11, $FF
+
+; 5
+:   .byte 15, $FF
+:   .byte 12, 13, $FF
+:   .byte 12, 13, $FF
+:   .byte 13, 14, $FF
+
+; 6
+:   .byte 15, $FF
+:   .byte 15, $FF
+:   .byte 15, $FF
+
+:   .byte $FF

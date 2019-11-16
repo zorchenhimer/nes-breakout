@@ -96,6 +96,9 @@ Init_Title:
     jmp @menuLoop
 @menuDone:
 
+    lda #$FF
+    sta menu_PrevLevel
+
     jsr WaitForNMI
 
     lda #0
@@ -147,9 +150,12 @@ Frame_Title:
     beq :+
     dec CurrentBoard
     bpl :+
-    lda #main_NUMBER_OF_MAPS
-    sec
-    sbc #1
+    cmp #$FF
+    beq :+
+    ;lda #main_NUMBER_OF_MAPS
+    ;sec
+    ;sbc #1
+    lda #15
     sta CurrentBoard
 
 :   lda #BUTTON_RIGHT
@@ -157,9 +163,11 @@ Frame_Title:
     beq :+
     inc CurrentBoard
     lda CurrentBoard
-    cmp #main_NUMBER_OF_MAPS
+    ;cmp #main_NUMBER_OF_MAPS
+    cmp #16
     bcc :+
-    lda #0
+    ;lda #0
+    lda #$FF
     sta CurrentBoard
 :
     lda CurrentBoard
@@ -237,6 +245,9 @@ title_DrawText:
     rts
 
 title_SelectMenuOption:
+    lda CurrentBoard
+    sta menu_PrevLevel
+
     .NMI_Disable
     jsr WaitForNMI
 

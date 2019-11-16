@@ -29,9 +29,22 @@ ls_SpritesToLoad: .res 1
 ; Palette data idx for modem sprites
 ls_ModemPal: .res 1
 
+; Pointer to the progression data
+ls_LevelProg: .res 2
+;ls_cursorColor: .res 1
+ls_cursorAnim: .res 1
+
+LS_CURSOR_COLOR_START = $21
+LS_CURSOR_COLOR_END = $2D
+LS_CURSOR_ANIM_FRAMES = 3
+ls_cursorColorBuff = PaletteBufferSprites + 15
+
 .segment "RAMMENU"
 title_MenuLength: .res 1
 title_MenuItems: .res 10
+
+; Level that was just completed.  $FF if from title screen.
+menu_PrevLevel: .res 1
 
 ; Width and height of the icon
 menu_LevelWidth:  .res 16
@@ -61,6 +74,10 @@ ls_PaletteFrames: .res 8
 ls_PaletteFrameTimer: .res 8
 
 ls_PalTmp: .res 4
+
+ls_NumActiveLevels: .res 1  ; number of options available
+ls_ActiveLevels: .res 8     ; list of indexes for active levels
+ls_SelectedLevel: .res 1
 
 ; X/Y of each meta-sprite (X is 9bit number)
 ; Sprite flags
