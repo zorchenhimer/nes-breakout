@@ -333,6 +333,21 @@ ls_DoAnimations:
     bne @palLoop
     rts
 
+tr_frames:
+    ; scroll the screen
+    ; move the cursor offset
+
+    jsr Animate
+    jsr ScrollSprite
+    jsr WaitForNMI
+
+    ; scroll the screen
+    ; move the cursor offset
+
+    jsr Animate
+    jsr ScrollSprite
+    jsr WaitForNMI
+
 NMI_LevelSelect:
 
     jsr WritePalettes
@@ -1132,14 +1147,14 @@ data_LevelSelect_CursorScroll:
     .byte 0
 
     ; 4
-    .byte 20
-    .byte 20
+    .byte 50
+    .byte 50
 
     ; 5
+    .byte 50
+    .byte 50
     .byte 20
-    .byte 20
-    .byte 20
-    .byte 20
+    .byte 50
 
     ; 6
     .byte 40
