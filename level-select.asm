@@ -1026,8 +1026,6 @@ data_SpriteObj_01FrameX:
 data_SpriteObj_01FrameY:
     .byte 0, 6, 12, 6
 
-CURSOR_TILE = $26
-
 ; Cursor data for the level select
 data_LevelSelect_Cursor:
     ; X, Y, w, h
@@ -1093,6 +1091,7 @@ data_LevelSelect_CursorScroll:
     ; 7
     .byte 20
 
+; This table is indexed with menu_PrevLevel
 data_Level_Progression_Idx:
     .word :+
     .word :++
@@ -1111,6 +1110,8 @@ data_Level_Progression_Idx:
     .word :+++++++++++++++
     .word :++++++++++++++++
 
+; Uses menu_PrevLevel to determine which
+; levels are available for selection.
 data_Level_Progression:
 ; 1
 :   .byte 1, 2, $FF
