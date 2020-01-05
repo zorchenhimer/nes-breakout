@@ -222,6 +222,14 @@ Frame_LevelSelect:
     sta ls_SelectedLevel
 :
 
+    ; Go back to the main menu on SELECT
+    lda #BUTTON_SELECT
+    jsr ButtonPressedP1
+    beq :+
+    jsr WaitForNMI
+    jmp Init_Title
+:
+
     jsr ls_LoadCursor
     jsr ls_DoAnimations
 
