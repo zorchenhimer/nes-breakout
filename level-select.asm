@@ -222,6 +222,20 @@ Frame_LevelSelect:
     sta ls_SelectedLevel
 :
 
+    jsr ls_LoadCursor
+    jsr ls_DoAnimations
+
+    jsr WaitForSpriteZero
+    lda #0
+    sta $2005
+    sta $2005
+
+    jsr WaitForNMI
+    jmp Frame_LevelSelect
+
+
+ls_DoAnimations:
+    ; Cursor palette animation
     dec ls_cursorAnim
     bne @noCursorAnim
     lda #LS_CURSOR_ANIM_FRAMES
@@ -236,13 +250,12 @@ Frame_LevelSelect:
 :
 @noCursorAnim:
 
-    jsr ls_DrawCursor
-
     lda #0
     sta menu_LoadedSprites
     sta menu_DrawnSprites
     sta IdxA
 
+; Load visible sprite animations
 @animLoop:
     lda IdxA
     jsr ls_SpriteAnimate
@@ -289,14 +302,7 @@ Frame_LevelSelect:
     lda IdxA
     cmp #PAL_ANIM_COUNT
     bne @palLoop
-
-    jsr WaitForSpriteZero
-    lda #0
-    sta $2005
-    sta $2005
-
-    jsr WaitForNMI
-    jmp Frame_LevelSelect
+    rts
 
 NMI_LevelSelect:
 
@@ -767,6 +773,30 @@ LS_CURSOR_3 = Sprites + (4 * 3)
 LS_CURSOR_4 = Sprites + (4 * 4)
 LS_CURSOR_PAL = $03
 
+; Load cursor values given the currently selected level.
+ls_LoadCursor:
+    ldx ls_SelectedLevel
+    lda ls_ActiveLevels, x
+    ; index into data_LevelSelect_Cursor is in A
+
+    ; index -> offset
+    asl a
+    asl a
+    tay
+
+    ;; Position and size
+    ; Width/Height
+    lda data_LevelSelect_Cursor + 2, y
+    sta TmpX
+    lda data_LevelSelect_Cursor + 3, y
+    sta TmpY
+
+    ; X/Y
+    ldx data_LevelSelect_Cursor, y
+    lda data_LevelSelect_Cursor + 1, y
+    tay
+    ; Fall into next routine
+
 ; Draw cursor at a given X/Y coordinate.
 ; X is in X regsiter
 ; Y is in Y register
@@ -794,32 +824,6 @@ ls_DrawCursorXY:
     adc TmpY
     sta LS_CURSOR_3 + 0
     sta LS_CURSOR_4 + 0
-    rts
-
-ls_DrawCursor:
-    ldx ls_SelectedLevel
-    lda ls_ActiveLevels, x
-    ; index into data_LevelSelect_Cursor is in A
-
-    ; index -> offset
-    asl a
-    asl a
-    tay
-
-    ;; Position and size
-    ; Width/Height
-    lda data_LevelSelect_Cursor + 2, y
-    sta TmpX
-    lda data_LevelSelect_Cursor + 3, y
-    sta TmpY
-
-    ; X/Y
-    ldx data_LevelSelect_Cursor, y
-    lda data_LevelSelect_Cursor + 1, y
-    tay
-
-    ; Set values
-    jsr ls_DrawCursorXY
 
     ;; Tile
     lda #CURSOR_TILE
