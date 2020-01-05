@@ -767,6 +767,35 @@ LS_CURSOR_3 = Sprites + (4 * 3)
 LS_CURSOR_4 = Sprites + (4 * 4)
 LS_CURSOR_PAL = $03
 
+; Draw cursor at a given X/Y coordinate.
+; X is in X regsiter
+; Y is in Y register
+; Width in TmpX
+; Height in TmpY
+ls_DrawCursorXY:
+    ; X for left side
+    stx LS_CURSOR_1 + 3
+    stx LS_CURSOR_3 + 3
+
+    ; Y for top
+    sty LS_CURSOR_1 + 0
+    sty LS_CURSOR_2 + 0
+
+    ; X for right side
+    txa
+    clc
+    adc TmpX
+    sta LS_CURSOR_2 + 3
+    sta LS_CURSOR_4 + 3
+
+    ; Y for bottom
+    tya
+    clc
+    adc TmpY
+    sta LS_CURSOR_3 + 0
+    sta LS_CURSOR_4 + 0
+    rts
+
 ls_DrawCursor:
     ldx ls_SelectedLevel
     lda ls_ActiveLevels, x
@@ -775,36 +804,31 @@ ls_DrawCursor:
     ; index -> offset
     asl a
     asl a
-
-    ; X for left side
     tay
-    lda data_LevelSelect_Cursor, y
-    sta LS_CURSOR_1 + 3
-    sta LS_CURSOR_3 + 3
 
-    ; X for right side
-    clc
-    adc data_LevelSelect_Cursor + 2, y
-    sta LS_CURSOR_2 + 3
-    sta LS_CURSOR_4 + 3
+    ;; Position and size
+    ; Width/Height
+    lda data_LevelSelect_Cursor + 2, y
+    sta TmpX
+    lda data_LevelSelect_Cursor + 3, y
+    sta TmpY
 
-    ; Y for top
+    ; X/Y
+    ldx data_LevelSelect_Cursor, y
     lda data_LevelSelect_Cursor + 1, y
-    sta LS_CURSOR_1 + 0
-    sta LS_CURSOR_2 + 0
+    tay
 
-    ; Y for bottom
-    clc
-    adc data_LevelSelect_Cursor + 3, y
-    sta LS_CURSOR_3 + 0
-    sta LS_CURSOR_4 + 0
+    ; Set values
+    jsr ls_DrawCursorXY
 
+    ;; Tile
     lda #CURSOR_TILE
     sta LS_CURSOR_1 + 1
     sta LS_CURSOR_2 + 1
     sta LS_CURSOR_3 + 1
     sta LS_CURSOR_4 + 1
 
+    ;; Attributes
     ; top left
     lda #LS_CURSOR_PAL
     sta LS_CURSOR_1 + 2
@@ -821,7 +845,8 @@ ls_DrawCursor:
     lda #LS_CURSOR_PAL | $C0
     sta LS_CURSOR_4 + 2
 
-    ; Scroll screen
+    ;; Scroll screen
+    ldx ls_SelectedLevel
     ldy ls_ActiveLevels, x
     lda data_LevelSelect_CursorScroll, y
     sta menu_ScrollValue
