@@ -1,7 +1,7 @@
 ; asmsyntax=ca65
 
 ls_PalStack:
-    .byte $0F, $20, $20, $20
+    .byte $19, $20, $20, $20
 
     nop
     nop
@@ -33,10 +33,6 @@ Init_LevelSelect:
     jsr ClearSprites
 
     jsr ls_LoadPalettes
-
-    lda #$FF
-    jsr FillNametable0
-    jsr FillNametable1
 
     jsr ClearAttrTable0
     jsr ClearAttrTable1
@@ -99,34 +95,59 @@ Init_LevelSelect:
 
     .Update_PpuControl PPU_CTRL_NMI
 
-    ; Draw the level icons
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+
+    ; Draw the background
     ldx #0
-@iconDataLoop:
-    lda data_LevelIcons, x
-    beq @iconDone
-
-    lda data_LevelIcons+1, x
-    sta $2006
-    lda data_LevelIcons, x
-    sta $2006
-    inx
-    inx
-
-    ; data length
-    ldy data_LevelIcons, x
-    inx
-    lda data_LevelIcons, x
-    sta TmpX
 :
-    lda TmpX
-    inc TmpX
+    lda data_LS_BackgroundA, x
     sta $2007
-    dey
-    bne :-
     inx
-    jmp @iconDataLoop
+    bne :-
 
-@iconDone:
+:
+    lda data_LS_BackgroundA+256, x
+    sta $2007
+    inx
+    bne :-
+
+:
+    lda data_LS_BackgroundA+512, x
+    sta $2007
+    inx
+    cpx #128
+    bne :-
+
+    lda #$24
+    sta $2006
+    lda #$00
+    sta $2006
+
+    ; Draw the second background
+    ldx #0
+:
+    lda data_LS_BackgroundB, x
+    sta $2007
+    inx
+    bne :-
+
+:
+    lda data_LS_BackgroundB+256, x
+    sta $2007
+    inx
+    bne :-
+
+:
+    lda data_LS_BackgroundB+512, x
+    sta $2007
+    inx
+    cpx #128
+    bne :-
+
+    ; Draw the level icons
     lda #0
     sta menu_DrawnSprites
 
@@ -233,10 +254,10 @@ Frame_LevelSelect:
     jsr ls_LoadCursor
     jsr ls_DoAnimations
 
-    jsr WaitForSpriteZero
-    lda #0
-    sta $2005
-    sta $2005
+    ;jsr WaitForSpriteZero
+    ;lda #0
+    ;sta $2005
+    ;sta $2005
 
     jsr WaitForNMI
     jmp Frame_LevelSelect
@@ -1089,12 +1110,12 @@ data_LevelSelect_Cursor:
     .byte 202, 125, 12, 12
 
     ; 6
-    .byte 20, 30, 24, 24
-    .byte 20, 30, 24, 24
-    .byte 20, 30, 24, 24
+    .byte 202, 30, 24, 24
+    .byte 202, 30, 24, 24
+    .byte 202, 30, 24, 24
 
     ; 7
-    .byte 20, 30, 24, 24
+    .byte 200, 30, 24, 24
 
 ; Scroll of screen for each cursor value
 data_LevelSelect_CursorScroll:
@@ -1121,12 +1142,12 @@ data_LevelSelect_CursorScroll:
     .byte 20
 
     ; 6
-    .byte 20
-    .byte 20
-    .byte 20
+    .byte 40
+    .byte 40
+    .byte 40
 
     ; 7
-    .byte 20
+    .byte 80
 
 ; This table is indexed with menu_PrevLevel
 data_Level_Progression_Idx:
@@ -1178,3 +1199,5 @@ data_Level_Progression:
 :   .byte 15, $FF
 
 :   .byte $FF
+
+.include "lsbg.i"

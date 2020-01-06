@@ -36,7 +36,8 @@ SOURCES := main.asm nes2header.inc \
 		  game.asm game_ram.asm map_decode.asm \
 		  credits.asm credits_ram.asm \
 		  title.asm menu_ram.asm level-select.asm \
-		  macros.asm bg_anim.asm
+		  macros.asm bg_anim.asm \
+		  lsbg.i
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
@@ -100,7 +101,7 @@ MATRIX7_CHR = matrix7.chr
 default: all
 all: tools chr bin/$(NAME).nes
 names: tools chr clrNames credits_data.i bin/$(NAME).nes
-maps: tools chr map_data.i map_child_data.i
+maps: tools chr map_data.i map_child_data.i lsbg.i
 tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
 travis: tools sample_credits trav chr bin/$(NAME).nes
 chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR) $(MATRIX14_CHR) $(MATRIX7_CHR)
@@ -168,8 +169,11 @@ credits_data.i: $(GENCRED) ./credit-names/*.csv
 main_map_data.i: $(CONVMAP) maps/main-boards.tmx
 	cd maps && ../$(CONVMAP) main-boards.tmx main ../main_map_data.i
 
-child_map_data.i:$(CONVMAP) maps/child-boards_12x6.tmx
+child_map_data.i: $(CONVMAP) maps/child-boards_12x6.tmx
 	cd maps && ../$(CONVMAP) child-boards_12x6.tmx child ../child_map_data.i
+
+lsbg.i: $(CONVMAP) maps/lsbg-wang.tmx
+	cd maps && ../$(CONVMAP) -levelselect lsbg-wang.tmx ../$@
 
 images/%.bmp: images/%.aseprite
 	aseprite -b $< --save-as $@

@@ -6,7 +6,7 @@ TITLE_SpriteTop = 79    ; topmost Y coordinate of cursor
 ;TITLE_MenuLength = 3
 
 Pal_Title:
-    .byte $0F, $00, $10, $20
+    .byte $19, $00, $10, $09
 
 Init_Title:
     .NMI_Disable

@@ -8,8 +8,10 @@ package main
 */
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -18,6 +20,18 @@ func usage() {
 }
 
 func main() {
+	var levelselect bool
+	flag.BoolVar(&levelselect, "levelselect", false, "Convert level select background")
+	flag.Parse()
+
+	if levelselect {
+		if err := doLevelSelectInstead(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	if len(os.Args) != 4 {
 		//fmt.Println("Missing input file")
 		usage()
@@ -176,6 +190,66 @@ func main() {
 	}
 
 	fmt.Fprintf(outfile, "%s_BOARD_DATA_WIDTH = %d\n%s_BOARD_DATA_HEIGHT = %d\n", prefix, width, prefix, height)
+}
+
+func doLevelSelectInstead() error {
+	fmt.Println("doing level select")
+
+	inputName := flag.Arg(0)
+	if inputName == "" {
+		return fmt.Errorf("Missing input file")
+	}
+
+	outputName := flag.Arg(1)
+	if outputName == "" {
+		return fmt.Errorf("Missing output file")
+	}
+
+	xml, err := LoadMap(inputName)
+	if err != nil {
+		return err
+	}
+
+	if len(xml.Boards) < 3 {
+		return fmt.Errorf("not enough layers")
+	}
+
+	one, two := []string{}, []string{}
+
+	data := strings.Split(strings.ReplaceAll(xml.Boards[2].Data, "\n", ""), ",")
+	for i := 0; i < len(data); i++ {
+		num, err := strconv.ParseInt(data[i], 10, 32)
+		if err != nil {
+			return fmt.Errorf("Invalid number in map data at offset %d: %q", i, data[i])
+		}
+
+		if num != 0 {
+			num -= 1
+		} else {
+			num = 0xFE
+		}
+
+		if i % 64 < 32 {
+			one = append(one, fmt.Sprintf("%d", num))
+		} else {
+			two = append(two, fmt.Sprintf("%d", num))
+		}
+	}
+
+	fmt.Printf("nametable 0: %d\nnametable 1: %d\ntotal: %d\n", len(one), len(two), (len(one) + len(two)))
+
+	outfile, err := os.Create(outputName)
+	if err != nil {
+		return err
+	}
+	defer outfile.Close()
+
+	fmt.Fprintf(outfile, "data_LS_BackgroundA:\n    .byte ")
+	fmt.Fprintf(outfile, strings.Join(one, ", "))
+	fmt.Fprintf(outfile, "\n\ndata_LS_BackgroundB:\n    .byte ")
+	fmt.Fprintf(outfile, strings.Join(two, ", "))
+	fmt.Fprintf(outfile, "\n")
+	return nil
 }
 
 func BoolToAsm(value bool) int {
