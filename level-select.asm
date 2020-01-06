@@ -337,16 +337,19 @@ tr_frames:
     ; scroll the screen
     ; move the cursor offset
 
-    jsr Animate
-    jsr ScrollSprite
+    ; find offset between two steps
+    ; move cursor one step per frame
+    ; ignore all input during animation
+    ; animate other sprites during this transition
+
+    jsr ls_DoAnimations
+    jsr ls_StepCursor
     jsr WaitForNMI
 
-    ; scroll the screen
-    ; move the cursor offset
+    jmp Frame_LevelSelect
 
-    jsr Animate
-    jsr ScrollSprite
-    jsr WaitForNMI
+ls_StepCursor:
+    rts
 
 NMI_LevelSelect:
 
