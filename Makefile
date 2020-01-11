@@ -37,7 +37,7 @@ SOURCES := main.asm nes2header.inc \
 		  credits.asm credits_ram.asm \
 		  title.asm menu_ram.asm level-select.asm \
 		  macros.asm bg_anim.asm \
-		  lsbg.i
+		  lsbg.i level-select-data.asm
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
