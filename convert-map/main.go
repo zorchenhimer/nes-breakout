@@ -226,7 +226,7 @@ func doLevelSelectInstead() error {
 		if num != 0 {
 			num -= 1
 		} else {
-			num = 0xFE
+			num = 0xFC
 		}
 
 		if i % 64 < 32 {

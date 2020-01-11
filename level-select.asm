@@ -1,7 +1,11 @@
 ; asmsyntax=ca65
 
 ls_PalStack:
-    .byte $19, $20, $20, $20
+    .byte $0F, $20, $20, $20
+
+data_ls_BGPalettes:
+    .byte $0F, $19, $10, $09
+    .byte $0F, $39, $0F, $19
 
     nop
     nop
@@ -15,6 +19,15 @@ ls_LoadPalettes:
     inx
     cpx #4
     bne @stack
+
+    ; background palettes
+    ldx #0
+:
+    lda data_ls_BGPalettes, x
+    sta PaletteBuffer, x
+    inx
+    cpx #8
+    bne :-
 
 ; TODO: Read this from the animation data
     lda #1
@@ -194,22 +207,36 @@ Init_LevelSelect:
     lda #LS_CURSOR_COLOR_START
     sta ls_cursorColorBuff
 
+    ; this is borked, somehow
+    ;lda #0
+    ;sta ls_SelectedLevel
+    ;jsr ls_LightTrace
+
     .NMI_Set NMI_LevelSelect
     jsr WaitForNMI
 
 Frame_LevelSelect:
+    lda #0
+    sta TmpZ
+
     jsr ReadControllers
 
     lda #BUTTON_RIGHT
     jsr ButtonPressedP1
     beq :+
+    lda ls_SelectedLevel
+    sta ls_SelectedLevel_Prev
     inc ls_SelectedLevel
+    inc TmpZ
     jmp @incOver
 :
     lda #BUTTON_DOWN
     jsr ButtonPressedP1
     beq :+
+    lda ls_SelectedLevel
+    sta ls_SelectedLevel_Prev
     inc ls_SelectedLevel
+    inc TmpZ
 :
 
 @incOver:
@@ -224,13 +251,19 @@ Frame_LevelSelect:
     lda #BUTTON_LEFT
     jsr ButtonPressedP1
     beq :+
+    lda ls_SelectedLevel
+    sta ls_SelectedLevel_Prev
     dec ls_SelectedLevel
+    inc TmpZ
     jmp @decUnder
 :
     lda #BUTTON_UP
     jsr ButtonPressedP1
     beq :+
+    lda ls_SelectedLevel
+    sta ls_SelectedLevel_Prev
     dec ls_SelectedLevel
+    inc TmpZ
 :
 
 @decUnder:
@@ -249,6 +282,13 @@ Frame_LevelSelect:
     beq :+
     jsr WaitForNMI
     jmp Init_Title
+:
+
+    ; Write trace attributes if selection changed
+    lda TmpZ
+    beq :+
+    jsr ls_ResetTrace
+    jsr ls_LightTrace
 :
 
     jsr ls_LoadCursor
@@ -358,6 +398,11 @@ NMI_LevelSelect:
     .WriteSprites
     .Update_PpuMask PPU_MASK_ON
     .Update_PpuControl PPU_CTRL_NMI
+
+    lda ls_AttrUpdate
+    beq :+
+    jsr ls_WriteTraceAttr
+:
 
     ;.SetScroll_Var 0
     bit $2000
@@ -903,6 +948,160 @@ ls_DrawCursorXY:
     sta menu_ScrollValue
     rts
 
+TheStack = $0100
+TheClear = $0130
+
+ls_ResetTrace:
+    lda menu_PrevLevel
+    asl a
+    tax
+
+    lda from_idx, x
+    sta AddressPointer0
+    lda from_idx+1, x
+    sta AddressPointer0+1
+
+    lda ls_SelectedLevel_Prev
+    asl a
+    tay
+
+    lda (AddressPointer0), y
+    sta AddressPointer1
+
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer1+1
+
+    ; load the data
+    ldy #0
+    ldx #0
+    stx TmpZ    ; number of attr updates
+@loop:
+    lda (AddressPointer1), y
+    sta TmpX    ; low byte
+    iny
+    lda (AddressPointer1), y
+    beq @done   ; check high byte for NIL
+
+    ; store the address
+    sta TheClear, x
+
+    lda TmpX    ; high stored first
+    inx
+    sta TheClear, x ;low byte second
+
+    inc TmpZ
+    iny
+    iny
+    inx
+    jmp @loop
+@done:
+
+    lda TmpZ
+    sta ls_AttrUpdate_Clr
+    rts
+
+; Light up the trace as determined by
+; menu_PrevLevel and ls_SelectedLevel
+ls_LightTrace:
+    lda menu_PrevLevel
+    asl a
+    tax
+
+    lda from_idx, x
+    sta AddressPointer0
+    lda from_idx+1, x
+    sta AddressPointer0+1
+
+    lda ls_SelectedLevel
+    asl a
+    tay
+
+    lda (AddressPointer0), y
+    sta AddressPointer1
+
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer1+1
+
+    ; load the data
+    ldy #0
+    ldx #0
+    stx TmpZ    ; number of attr updates
+@loop:
+    lda (AddressPointer1), y
+    sta TmpX    ; low byte
+    iny
+    lda (AddressPointer1), y
+    beq @done   ; check high byte for NIL
+
+    ; store the address
+    sta TheStack, x
+
+    lda TmpX    ; high stored first
+    inx
+    sta TheStack, x ;low byte second
+
+    iny
+    inx
+    lda (AddressPointer1), y
+    sta TheStack, x
+
+    inc TmpZ
+    iny
+    inx
+    jmp @loop
+@done:
+
+    lda TmpZ
+    sta ls_AttrUpdate
+    rts
+
+ls_WriteTraceAttr:
+    ; Backup stack pointer, and point it to $0100
+    tsx
+    stx IdxA    ; store stack pointer
+    ldx #$FF
+    txs
+    tay ; number of updates
+
+    ; light new trace
+:
+    pla
+    sta $2006
+    pla
+    sta $2006
+    pla
+    sta $2007
+    dey
+    bne :-
+
+    lda #0
+    sta ls_AttrUpdate
+
+    ; point stack to clear addresses
+    ldx #$2F
+    txs
+
+    ldy ls_AttrUpdate_Clr
+    ; Clear prev trace
+    ldx #0
+:
+    pla
+    sta $2006
+    pla
+    sta $2006
+    stx $2007
+    dey
+    bne :-
+    lda #0
+    sta ls_AttrUpdate_Clr
+
+    ; Restore stack pointer
+    ldx IdxA
+    txs
+    rts
+
 ; Background tile data
 ; Everything is encoded with RLE Inc.
 ; Start PPU address, data length, data (tile ID) start
@@ -1001,30 +1200,31 @@ data_PaletteAnim_Def00:
     .byte 6     ; frame rate
 
     ; frame data
-    .byte $0F, $20, $00, $00
-    .byte $0F, $00, $20, $00
-    .byte $0F, $00, $00, $20
+    .byte $20, $20, $00, $00
+    .byte $20, $00, $20, $00
+    .byte $20, $00, $00, $20
     ;.byte $0F, $0F, $20, $0F
 
 ; List of all the sprite objects
 ; A "sprite object" is a meta-sprite for animation.
 data_SpriteObject_List:
     .word data_SpriteObj_Def_Stack
-        .byte 80, 35    ; base X/Y
+        .byte 112, 35    ; base X/Y
     .word data_SpriteObj_Def_Stack
-        .byte 80, 99    ; base X/Y
+        .byte 104, 115    ; base X/Y
 
     .word data_SpriteObj_Def_Modem
-        .byte 136, 16
+        .byte 240, 16
     .word data_SpriteObj_Def_Modem
-        .byte 128, 64
+        .byte 184, 64
     .word data_SpriteObj_Def_Modem
-        .byte 128, 128
+        .byte 168, 112
 
+    ; TODO: 2nd screen
     .word data_SpriteObj_Def_Sat
-        .byte 168, 55
+        .byte 255, 71
     .word data_SpriteObj_Def_Sat
-        .byte 168, 111
+        .byte 232, 127
 
 SPRITE_OBJ_COUNT = (* - data_SpriteObject_List) / 4
 
@@ -1109,13 +1309,13 @@ data_LevelSelect_Cursor:
     .byte 31, 62, 18, 9
 
     ; 2
-    .byte 81, 30, 14, 17
-    .byte 81, 94, 14, 17
+    .byte 113, 31, 14, 16
+    .byte 105, 111, 14, 16
 
     ; 3
-    .byte 135, 14,  10, 10
-    .byte 127, 62,  10, 10
-    .byte 127, 126, 10, 10
+    .byte 119, 14,  10, 10
+    .byte 119, 62,  10, 10
+    .byte 119, 110, 10, 10
 
     ; 4
     .byte 146, 37, 20, 20
@@ -1145,9 +1345,9 @@ data_LevelSelect_CursorScroll:
     .byte 0
 
     ; 3
-    .byte 0
-    .byte 0
-    .byte 0
+    .byte 120
+    .byte 64
+    .byte 48
 
     ; 4
     .byte 50
@@ -1166,6 +1366,165 @@ data_LevelSelect_CursorScroll:
 
     ; 7
     .byte 80
+
+from_idx:
+    .word from_1
+
+    .word from_2a
+    .word from_2b
+
+    .word from_3a
+    .word from_3b
+    .word from_3c
+
+    .word from_4a
+    .word from_4b
+
+    .word from_5a
+    .word from_5b
+    .word from_5c
+    .word from_5d
+
+    .word from_6a
+    .word from_6b
+    .word from_6c
+    ; there is no from_7
+
+from_1:
+    .word trace_1_2a
+    .word trace_1_2b
+
+from_2a:
+    .word trace_2a_3a
+    .word trace_2a_3b
+
+from_2b:
+    .word trace_2b_3b
+    .word trace_2b_3c
+
+from_3a:
+    .word trace_3a_5a
+    .word trace_3a_4a
+
+from_3b:
+    .word trace_3b_4a
+    .word trace_3b_4b
+
+from_3c:
+    .word trace_3c_4b
+
+from_4a:
+    .word trace_4a_5b
+    .word trace_4a_5c
+
+from_4b:
+    .word trace_4b_5b
+    .word trace_4b_5c
+    .word trace_4b_5d
+
+from_5a:
+    .word trace_5a_7
+
+from_5b:
+    .word trace_5b_6a
+    .word trace_5b_6b
+
+from_5c:
+    .word trace_5c_6a
+    .word trace_5c_6b
+
+from_5d:
+    .word trace_5d_6b
+    .word trace_5d_6c
+
+from_6a:
+    .word trace_6a_7
+
+from_6b:
+    .word trace_6b_7
+
+from_6c:
+    .word trace_6c_7
+
+trace_1_2a:
+    .word $23C9
+    .byte %0101_0000
+    .word $23CA
+    .byte %0101_0101
+    .word $23CB
+    .byte %0000_0001
+    .word $0000 ; word cuz we need the high byte zero
+
+trace_1_2b:
+    .word $23D1
+    .byte %0100_0000
+    .word $23D9
+    .byte %0000_0100
+    .word $23DA
+    .byte %0101_0101
+    .word $23DB
+    .byte %0000_0001
+    .word $0000
+
+trace_2a_3a:
+    .word $23C3
+    .byte %0001_0001
+    .word $23C4
+    .byte %0101_0101
+    .word $23C5
+    .byte %0101_0000
+    .word $23CD
+    .byte %0000_0001
+    .word $23C6
+    .byte %0101_0000
+    .word $23CE
+    .byte %0000_0101
+    .word $23C7
+    .byte %0100_0000
+    .byte $00
+
+trace_2a_3b:
+    .word $23CB
+    .byte %0100_0000
+    .word $23D3
+    .byte %0000_0101
+    .word $23D4
+    .byte %0000_0101
+    .word $23D5
+    .byte %0000_0100
+    .word $23CC
+    .byte %0001_0000
+    .word $23CD
+    .byte %0101_0000
+    .byte $00
+
+trace_2b_3b:
+    .byte $00
+
+trace_2b_3c:
+    .byte $00
+
+trace_3a_5a:
+trace_3a_4a:
+trace_3b_4a:
+trace_3b_4b:
+trace_3c_4b:
+trace_4a_5b:
+trace_4a_5c:
+trace_4b_5b:
+trace_4b_5c:
+trace_4b_5d:
+trace_5a_7:
+trace_5b_6a:
+trace_5b_6b:
+trace_5c_6a:
+trace_5c_6b:
+trace_5d_6b:
+trace_5d_6c:
+trace_6a_7:
+trace_6b_7:
+trace_6c_7:
+    .byte $00
 
 ; This table is indexed with menu_PrevLevel
 data_Level_Progression_Idx:

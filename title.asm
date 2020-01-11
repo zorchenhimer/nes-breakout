@@ -6,7 +6,7 @@ TITLE_SpriteTop = 79    ; topmost Y coordinate of cursor
 ;TITLE_MenuLength = 3
 
 Pal_Title:
-    .byte $19, $00, $10, $09
+    .byte $19, $0F, $10, $09
 
 Init_Title:
     .NMI_Disable
@@ -17,6 +17,13 @@ Init_Title:
     lda Pal_Title+i
     sta PaletteBuffer+i
     sta PaletteBufferSprites+i
+.endrepeat
+
+    ; Unused palettes.  Make them red.
+    lda #$16
+.repeat 8, i
+    sta PaletteBuffer+8+i
+    sta PaletteBufferSprites+8+i
 .endrepeat
 
     jsr Clear_NonGlobalRam
