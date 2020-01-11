@@ -400,11 +400,13 @@ NMI_LevelSelect:
     .Update_PpuControl PPU_CTRL_NMI
 
     lda ls_AttrUpdate
+    ora ls_AttrUpdate_Clr
     beq :+
     jsr ls_WriteTraceAttr
 :
 
     ;.SetScroll_Var 0
+    ; TODO: nametable
     bit $2000
     lda menu_ScrollValue
     sta $2005
@@ -1061,29 +1063,13 @@ ls_WriteTraceAttr:
     ; Backup stack pointer, and point it to $0100
     tsx
     stx IdxA    ; store stack pointer
-    ldx #$FF
-    txs
-    tay ; number of updates
-
-    ; light new trace
-:
-    pla
-    sta $2006
-    pla
-    sta $2006
-    pla
-    sta $2007
-    dey
-    bne :-
-
-    lda #0
-    sta ls_AttrUpdate
 
     ; point stack to clear addresses
     ldx #$2F
     txs
 
     ldy ls_AttrUpdate_Clr
+    beq @noClear
     ; Clear prev trace
     ldx #0
 :
@@ -1097,6 +1083,26 @@ ls_WriteTraceAttr:
     lda #0
     sta ls_AttrUpdate_Clr
 
+@noClear:
+    ; light new trace
+    ldx #$FF
+    txs
+    ldy ls_AttrUpdate
+    beq @noLight
+:
+    pla
+    sta $2006
+    pla
+    sta $2006
+    pla
+    sta $2007
+    dey
+    bne :-
+
+    lda #0
+    sta ls_AttrUpdate
+
+@noLight:
     ; Restore stack pointer
     ldx IdxA
     txs
@@ -1313,7 +1319,7 @@ data_LevelSelect_Cursor:
     .byte 105, 111, 14, 16
 
     ; 3
-    .byte 119, 14,  10, 10
+    .byte 175, 14,  10, 10
     .byte 119, 62,  10, 10
     .byte 119, 110, 10, 10
 
@@ -1345,7 +1351,7 @@ data_LevelSelect_CursorScroll:
     .byte 0
 
     ; 3
-    .byte 120
+    .byte 64
     .byte 64
     .byte 48
 
@@ -1468,40 +1474,54 @@ trace_1_2b:
 
 trace_2a_3a:
     .word $23C3
-    .byte %0001_0001
+    .byte %0100_0100
     .word $23C4
     .byte %0101_0101
     .word $23C5
     .byte %0101_0000
     .word $23CD
-    .byte %0000_0001
+    .byte %0000_0100
     .word $23C6
     .byte %0101_0000
     .word $23CE
     .byte %0000_0101
     .word $23C7
-    .byte %0100_0000
+    .byte %0001_0000
     .byte $00
 
 trace_2a_3b:
     .word $23CB
-    .byte %0100_0000
+    .byte %0001_0000
     .word $23D3
     .byte %0000_0101
     .word $23D4
     .byte %0000_0101
     .word $23D5
-    .byte %0000_0100
+    .byte %0000_0001
     .word $23CC
-    .byte %0001_0000
+    .byte %0100_0000
     .word $23CD
     .byte %0101_0000
     .byte $00
 
 trace_2b_3b:
+    .word $23DB
+    .byte %0000_0100
+    .word $23D3
+    .byte %0100_0000
+    .word $23D4
+    .byte %0101_0000
+    .word $23D5
+    .byte %0101_0000
     .byte $00
 
 trace_2b_3c:
+    .word $23DC
+    .byte %0101_0000
+    .word $23E4
+    .byte %0000_0100
+    .word $23E5
+    .byte %0000_0001
     .byte $00
 
 trace_3a_5a:
