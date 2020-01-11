@@ -126,13 +126,13 @@ Frame_Title:
     lda #BUTTON_START
     jsr ButtonPressedP1
     beq :+
-    jsr title_SelectMenuOption
+    jmp title_SelectMenuOption
     jmp @button_done
 
 :   lda #BUTTON_A
     jsr ButtonPressedP1
     beq :+
-    jsr title_SelectMenuOption
+    jmp title_SelectMenuOption
     jmp @button_done
 
 :   lda #BUTTON_UP
