@@ -5,89 +5,89 @@
 ; Background tile data
 ; Everything is encoded with RLE Inc.
 ; Start PPU address, data length, data (tile ID) start
-data_LevelIcons:
-    ; bricks
-    .word $2104
-        .byte 3, $00
-    .word $2124
-        .byte 3, $10
-
-    ; top stack
-    .word $208A
-        .byte 3, $03
-    .word $20AA
-        .byte 3, $13
-    .word $20CA
-        .byte 3, $23
-
-    ; bottom stack
-    .word $218A
-        .byte 3, $03
-    .word $21AA
-        .byte 3, $13
-    .word $21CA
-        .byte 3, $23
-
-    ; modem A
-    .word $2052
-        .byte 1, $0C
-    .word $2071
-        .byte 2, $1B
-
-    ; modem B
-    .word $2111
-        .byte 1, $0C
-    .word $2130
-        .byte 2, $1B
-
-    ; modem B
-    .word $2211
-        .byte 1, $0C
-    .word $2230
-        .byte 2, $1B
-
-    ; top sat
-    .word $20B5
-        .byte 3, $0D
-    .word $20D5
-        .byte 3, $1D
-    .word $20F6
-        .byte 2, $2E
-
-    ; bot sat
-    .word $2195
-        .byte 3, $0D
-    .word $21B5
-        .byte 3, $1D
-    .word $21D6
-        .byte 2, $2E
-
-    ; server 1
-    .word $205C
-        .byte 2, $06
-    .word $207C
-        .byte 2, $16
-
-    ; server 2
-    .word $20FC
-        .byte 2, $06
-    .word $211C
-        .byte 2, $16
-
-    ; server 3
-    .word $219C
-        .byte 2, $06
-    .word $21BC
-        .byte 2, $16
-
-    ; server 4
-    .word $221C
-        .byte 2, $06
-    .word $223C
-        .byte 2, $16
-
-    ; Null terminated
-    .byte $00
+;data_LevelIcons:
+;    ; bricks
+;    .word $2104
+;        .byte 3, $00
+;    .word $2124
+;        .byte 3, $10
+;
+;    ; top stack
+;    .word $208A
+;        .byte 3, $03
+;    .word $20AA
+;        .byte 3, $13
+;    .word $20CA
+;        .byte 3, $23
+;
+;    ; bottom stack
+;    .word $218A
+;        .byte 3, $03
+;    .word $21AA
+;        .byte 3, $13
+;    .word $21CA
+;        .byte 3, $23
+;
+;    ; modem A
+;    .word $2052
+;        .byte 1, $0C
+;    .word $2071
+;        .byte 2, $1B
+;
+;    ; modem B
+;    .word $2111
+;        .byte 1, $0C
+;    .word $2130
+;        .byte 2, $1B
+;
+;    ; modem B
+;    .word $2211
+;        .byte 1, $0C
+;    .word $2230
+;        .byte 2, $1B
+;
+;    ; top sat
+;    .word $20B5
+;        .byte 3, $0D
+;    .word $20D5
+;        .byte 3, $1D
+;    .word $20F6
+;        .byte 2, $2E
+;
+;    ; bot sat
+;    .word $2195
+;        .byte 3, $0D
+;    .word $21B5
+;        .byte 3, $1D
+;    .word $21D6
+;        .byte 2, $2E
+;
+;    ; server 1
+;    .word $205C
+;        .byte 2, $06
+;    .word $207C
+;        .byte 2, $16
+;
+;    ; server 2
+;    .word $20FC
+;        .byte 2, $06
+;    .word $211C
+;        .byte 2, $16
+;
+;    ; server 3
+;    .word $219C
+;        .byte 2, $06
+;    .word $21BC
+;        .byte 2, $16
+;
+;    ; server 4
+;    .word $221C
+;        .byte 2, $06
+;    .word $223C
+;        .byte 2, $16
+;
+;    ; Null terminated
+;    .byte $00
 
 data_PaletteAnim_List:
     .word data_PaletteAnim_Def00
@@ -122,7 +122,7 @@ data_SpriteObject_List:
 
     ; TODO: 2nd screen
     .word data_SpriteObj_Def_Sat
-        .byte 255, 71
+        .byte 248, 63
     .word data_SpriteObj_Def_Sat
         .byte 232, 127
 
@@ -218,22 +218,22 @@ data_LevelSelect_Cursor:
     .byte 119, 110, 10, 10
 
     ; 4
-    .byte 146, 37, 20, 20
-    .byte 146, 93, 20, 20
+    .byte 116, 45, 20, 20
+    .byte 100, 109, 20, 20
 
     ; 5
-    .byte 202, 13, 12, 12
-    .byte 202, 53, 12, 12
-    .byte 202, 93, 12, 12
-    .byte 202, 125, 12, 12
+    .byte 188, 29, 12, 12
+    .byte 164, 61, 12, 12
+    .byte 180, 93, 12, 12
+    .byte 148, 125, 12, 12
 
     ; 6
-    .byte 202, 30, 24, 24
-    .byte 202, 30, 24, 24
-    .byte 202, 30, 24, 24
+    .byte 159, 37, 12, 12
+    .byte 167, 77, 12, 12
+    .byte 143, 109, 12, 12
 
     ; 7
-    .byte 200, 30, 24, 24
+    .byte 207, 61, 20, 20
 
 ; Scroll of screen for each cursor value
 data_LevelSelect_CursorScroll:
@@ -250,22 +250,23 @@ data_LevelSelect_CursorScroll:
     .byte 48
 
     ; 4
-    .byte 50
-    .byte 50
+    .byte 130
+    .byte 130
 
     ; 5
-    .byte 50
-    .byte 50
-    .byte 20
-    .byte 50
+    .byte 130
+    .byte 170
+    .byte 170
+    .byte 170
 
+    ; TODO: nametable?
     ; 6
-    .byte 40
-    .byte 40
-    .byte 40
+    .byte 255
+    .byte 255
+    .byte 255
 
     ; 7
-    .byte 80
+    .byte 255
 
 ; First list of pointers for traces.  Indexed with menu_PrevLevel
 from_idx:
@@ -348,99 +349,281 @@ from_6b:
 from_6c:
     .word trace_6c_7
 
+; Quadrants of the attribute data for better readability
+TR_BOTL = %0001_0000
+TR_BOTR = %0100_0000
+TR_TOPL = %0000_0001
+TR_TOPR = %0000_0100
+
 trace_1_2a:
     .word $23C9
-    .byte %0101_0000
+    .byte TR_BOTL | TR_BOTR
     .word $23CA
-    .byte %0101_0101
+    .byte TR_BOTL | TR_BOTR | TR_TOPL | TR_TOPR
     .word $23CB
-    .byte %0000_0001
+    .byte TR_TOPL
     .word $0000 ; word cuz we need the high byte zero
 
 trace_1_2b:
     .word $23D1
-    .byte %0100_0000
+    .byte TR_BOTR
     .word $23D9
-    .byte %0000_0100
+    .byte TR_TOPR
     .word $23DA
-    .byte %0101_0101
+    .byte TR_BOTL | TR_BOTR | TR_TOPL | TR_TOPR
     .word $23DB
-    .byte %0000_0001
+    .byte TR_TOPL
     .word $0000
 
 trace_2a_3a:
     .word $23C3
-    .byte %0100_0100
+    .byte TR_BOTR | TR_TOPR
     .word $23C4
-    .byte %0101_0101
+    .byte TR_BOTL | TR_BOTR | TR_TOPL | TR_TOPR
     .word $23C5
-    .byte %0101_0000
+    .byte TR_BOTL | TR_BOTR
     .word $23CD
-    .byte %0000_0100
+    .byte TR_TOPR
     .word $23C6
-    .byte %0101_0000
+    .byte TR_BOTL | TR_BOTR
     .word $23CE
-    .byte %0000_0101
+    .byte TR_TOPL | TR_TOPR
     .word $23C7
-    .byte %0001_0000
-    .byte $00
+    .byte TR_BOTL
+    .word $0000
 
 trace_2a_3b:
     .word $23CB
-    .byte %0001_0000
+    .byte TR_BOTL
     .word $23D3
-    .byte %0000_0101
+    .byte TR_TOPL | TR_TOPR
     .word $23D4
-    .byte %0000_0101
+    .byte TR_TOPL | TR_TOPR
     .word $23D5
-    .byte %0000_0001
+    .byte TR_TOPL
     .word $23CC
-    .byte %0100_0000
+    .byte TR_BOTR
     .word $23CD
-    .byte %0101_0000
-    .byte $00
+    .byte TR_BOTL | TR_BOTR
+    .word $0000
 
 trace_2b_3b:
     .word $23DB
-    .byte %0000_0100
+    .byte TR_TOPR
     .word $23D3
-    .byte %0100_0000
+    .byte TR_BOTR
     .word $23D4
-    .byte %0101_0000
+    .byte TR_BOTL | TR_BOTR
     .word $23D5
-    .byte %0101_0000
-    .byte $00
+    .byte TR_BOTL | TR_BOTR
+    .word $0000
 
 trace_2b_3c:
     .word $23DC
-    .byte %0101_0000
+    .byte TR_BOTL | TR_BOTR
     .word $23E4
-    .byte %0000_0100
+    .byte TR_TOPR
     .word $23E5
-    .byte %0000_0001
-    .byte $00
+    .byte TR_TOPL
+    .word $0000
 
 trace_3a_5a:
+    .word $27C0
+    .byte TR_BOTL | TR_BOTR
+    .word $27C1
+    .byte TR_BOTL | TR_BOTR
+    .word $27C2
+    .byte TR_BOTL
+    .word $0000
+
 trace_3a_4a:
+    .word $23CF
+    .byte TR_TOPR
+    .word $27C8
+    .byte TR_TOPL
+    .word $0000
+
 trace_3b_4a:
+    .word $23CE
+    .byte TR_BOTL | TR_BOTR
+    .word $23CF
+    .byte TR_BOTL
+    .word $23D7
+    .byte TR_TOPL | TR_TOPR
+    .word $0000
+
 trace_3b_4b:
+    .word $23D6
+    .byte TR_BOTL | TR_BOTR
+    .word $23DE
+    .byte TR_TOPR
+    .word $23DF
+    .byte TR_TOPL
+    .word $0000
+
 trace_3c_4b:
+    .word $23DD
+    .byte TR_TOPR
+    .word $23DE
+    .byte TR_TOPL | TR_BOTL
+    .word $23E6
+    .byte TR_TOPL | TR_TOPR
+    .word $23E7
+    .byte TR_TOPL
+    .word $0000
+
 trace_4a_5b:
+    .word $27C8
+    .byte TR_BOTR
+    .word $27C9
+    .byte TR_BOTL
+    .word $27D1
+    .byte TR_TOPL | TR_TOPR
+    .word $27D2
+    .byte TR_TOPL
+    .word $0000
+
 trace_4a_5c:
+    .word $27D0
+    .byte TR_TOPR | TR_BOTR
+    .word $27D8
+    .byte TR_TOPR | TR_BOTR
+    .word $27D9
+    .byte TR_BOTL | TR_BOTR
+    .word $27DA
+    .byte TR_BOTL | TR_BOTR
+    .word $27DB
+    .byte TR_BOTL
+    .word $0000
+
 trace_4b_5b:
+    .word $23DF
+    .byte TR_TOPR
+    .word $23D7
+    .byte TR_BOTR
+    .word $27D0
+    .byte TR_BOTL
+    .word $27D1
+    .byte TR_BOTL | TR_BOTR
+    .word $27D2
+    .byte TR_BOTL | TR_BOTR
+    .word $0000
+
 trace_4b_5c:
+    .word $27D8
+    .byte TR_TOPL | TR_BOTL
+    .word $27D9
+    .byte TR_TOPL | TR_TOPR
+    .word $27DA
+    .byte TR_TOPL | TR_TOPR
+    .word $0000
+
 trace_4b_5d:
+    .word $27E0
+    .byte TR_TOPL | TR_TOPR
+    .word $27E1
+    .byte TR_TOPL | TR_TOPR
+    .word $0000
+
 trace_5a_7:
+    .word $27CA
+    .byte TR_TOPR
+    .word $27C2
+    .byte TR_BOTR
+    .word $27C3
+    .byte TR_BOTL | TR_BOTR
+    .word $27C4
+    .byte TR_BOTL | TR_BOTR
+    .word $27C5
+    .byte TR_BOTL | TR_BOTR
+    .word $27C6
+    .byte TR_BOTL | TR_BOTR
+    .word $27C7
+    .byte TR_BOTL
+    .word $27CF
+    .byte TR_BOTL | TR_TOPL
+    .word $0000
+
 trace_5b_6a:
+    .word $27CA
+    .byte TR_BOTR
+    .word $27CB
+    .byte TR_TOPL | TR_TOPR | TR_BOTL
+    .word $27CC
+    .byte TR_TOPL | TR_TOPR
+    .word $0000
+
 trace_5b_6b:
+    .word $27D3
+    .byte TR_TOPL
+    .word $27D4
+    .byte TR_TOPL | TR_TOPR
+    .word $27D5
+    .byte TR_TOPL
+    .word $0000
+
 trace_5c_6a:
+    .word $27D3
+    .byte TR_TOPR | TR_BOTL | TR_BOTR
+    .word $27CB
+    .byte TR_BOTR
+    .word $27CC
+    .byte TR_BOTR | TR_BOTL
+    .word $0000
+
 trace_5c_6b:
+    .word $27DB
+    .byte TR_TOPR
+    .word $27DC
+    .byte TR_TOPR | TR_TOPL
+    .word $27DD
+    .byte TR_TOPL
+    .word $0000
+
 trace_5d_6b:
+    .word $27E2
+    .byte TR_BOTL | TR_BOTR
+    .word $27E3
+    .byte TR_BOTL | TR_BOTR
+    .word $27E4
+    .byte TR_BOTL | TR_BOTR
+    .word $27E5
+    .byte TR_BOTL | TR_BOTR | TR_TOPR
+    .word $27DD
+    .byte TR_TOPR
+    .word $0000
+
 trace_5d_6c:
+    .word $27E2
+    .byte TR_TOPR
+    .word $27E3
+    .byte TR_TOPR | TR_TOPL
+    .word $27E4
+    .byte TR_TOPR | TR_TOPL
+    .word $0000
+
 trace_6a_7:
+    .word $27CD
+    .byte TR_TOPR
+    .word $27CE
+    .byte TR_TOPR | TR_TOPL | TR_BOTR
+    .word $0000
+
 trace_6b_7:
+    .word $27D5
+    .byte TR_TOPR
+    .word $27D6
+    .byte TR_TOPL
+    .word $0000
+
 trace_6c_7:
-    .byte $00
+    .word $27DD
+    .byte TR_BOTL | TR_BOTR
+    .word $27DE
+    .byte TR_BOTL | TR_TOPL
+    .word $27D6
+    .byte TR_BOTL
+    .word $0000
 
 ; This table is indexed with menu_PrevLevel
 data_Level_Progression_Idx:
