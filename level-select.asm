@@ -5,7 +5,7 @@ ls_PalStack:
 
 data_ls_BGPalettes:
     .byte $0F, $19, $10, $09
-    .byte $0F, $39, $0F, $19
+    .byte $0F, $39, $0F, $09
 
     nop
     nop
@@ -41,6 +41,8 @@ ls_LoadPalettes:
 Init_LevelSelect:
     .NMI_Disable
     .Disable_Drawing
+
+    jsr MMC1_Select_Vert
 
     jsr Clear_NonGlobalZp
     jsr ClearSprites
@@ -207,10 +209,9 @@ Init_LevelSelect:
     lda #LS_CURSOR_COLOR_START
     sta ls_cursorColorBuff
 
-    ; this is borked, somehow
-    ;lda #0
-    ;sta ls_SelectedLevel
-    ;jsr ls_LightTrace
+    lda #0
+    sta ls_SelectedLevel
+    jsr ls_LightTrace
 
     .NMI_Set NMI_LevelSelect
     jsr WaitForNMI
@@ -276,6 +277,14 @@ Frame_LevelSelect:
     sta ls_SelectedLevel
 :
 
+    ; Don't inc/dec selection for first level
+    lda menu_PrevLevel
+    cmp #$0F
+    bne :+
+    lda #0
+    sta ls_SelectedLevel
+:
+
     ; Go back to the main menu on SELECT
     lda #BUTTON_SELECT
     jsr ButtonPressedP1
@@ -294,10 +303,10 @@ Frame_LevelSelect:
     jsr ls_LoadCursor
     jsr ls_DoAnimations
 
-    ;jsr WaitForSpriteZero
-    ;lda #0
-    ;sta $2005
-    ;sta $2005
+    jsr WaitForSpriteZero
+    lda #0
+    sta $2005
+    sta $2005
 
     jsr WaitForNMI
     jmp Frame_LevelSelect
@@ -396,14 +405,15 @@ NMI_LevelSelect:
     jsr WritePalettes
 
     .WriteSprites
-    .Update_PpuMask PPU_MASK_ON
-    .Update_PpuControl PPU_CTRL_NMI
 
     lda ls_AttrUpdate
     ora ls_AttrUpdate_Clr
     beq :+
     jsr ls_WriteTraceAttr
 :
+
+    .Update_PpuMask PPU_MASK_ON
+    .Update_PpuControl PPU_CTRL_NMI
 
     ;.SetScroll_Var 0
     ; TODO: nametable
@@ -955,6 +965,10 @@ TheClear = $0130
 
 ls_ResetTrace:
     lda menu_PrevLevel
+    cmp #$0F
+    bne :+
+    rts
+:
     asl a
     tax
 
@@ -1007,6 +1021,10 @@ ls_ResetTrace:
 ; menu_PrevLevel and ls_SelectedLevel
 ls_LightTrace:
     lda menu_PrevLevel
+    cmp #$0F
+    bne :+
+    rts
+:
     asl a
     tax
 
@@ -1109,4 +1127,6 @@ ls_WriteTraceAttr:
     rts
 
 .include "level-select-data.asm"
+
+; auto-generated from maps/lsbg-wang.tmx
 .include "lsbg.i"
