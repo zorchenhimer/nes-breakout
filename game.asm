@@ -423,7 +423,7 @@ NMI_Game:
     sta $2005
     sta $2005
 
-    .Update_PpuMask PPU_MASK_ON
+    .Update_PpuMask PPU_MASK_ON | PPU_MASK_LEFTSPRITES | PPU_MASK_LEFTBACKGROUND
 
     lda PpuControl
     sta $2000
