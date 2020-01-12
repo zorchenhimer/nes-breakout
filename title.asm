@@ -49,7 +49,7 @@ Init_Title:
     lda #$80
     sta Sprites+5 ; tile
 
-    lda #0
+    lda #$0F
     sta CurrentBoard
 
     ;jsr WriteSprites
@@ -103,9 +103,6 @@ Init_Title:
     jmp @menuLoop
 @menuDone:
 
-    lda #$FF
-    sta menu_PrevLevel
-
     jsr WaitForNMI
 
     lda #0
@@ -114,6 +111,9 @@ Init_Title:
 
     ; Currently selected item
     sta IdxA
+
+    lda #$0F
+    sta menu_PrevLevel
 
     ;lda #TITLE_MenuLength
     ;sta IdxB

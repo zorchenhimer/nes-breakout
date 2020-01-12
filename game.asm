@@ -281,7 +281,6 @@ Frame_Game:
     jsr ResetBall
 :
 
-
     lda BallDirection
     and #BALL_STATE_INIT
     bne @Init
@@ -309,6 +308,17 @@ Frame_Game:
 
     ;jsr waves_PrepChrWrite
     jsr waves_CacheRow
+
+    lda #BUTTON_START
+    jsr ButtonPressedP1
+    beq :+
+    ; complete the level, lol
+    lda CurrentBoard
+    sta menu_PrevLevel
+    jsr WaitForNMI
+    lda #3
+    jmp JumpToInit
+:
 
     jsr WaitForNMI
     jmp Frame_Game

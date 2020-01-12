@@ -308,9 +308,28 @@ Frame_LevelSelect:
     sta $2005
     sta $2005
 
+    lda #BUTTON_A
+    jsr ButtonPressedP1
+    beq :+
+    jmp ls_StartLevel
+:
+
+    lda #BUTTON_START
+    jsr ButtonPressedP1
+    beq :+
+    jmp ls_StartLevel
+:
+
     jsr WaitForNMI
     jmp Frame_LevelSelect
 
+ls_StartLevel:
+    ldx ls_SelectedLevel
+    lda ls_ActiveLevels, x
+    sta CurrentBoard
+    jsr WaitForNMI
+    lda #1
+    jmp JumpToInit
 
 ls_DoAnimations:
     ; Cursor palette animation
