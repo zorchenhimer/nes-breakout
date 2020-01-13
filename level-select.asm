@@ -233,6 +233,14 @@ Init_LevelSelect:
     dec IdxB
     bne @prevTraceLoop
 
+    lda AddressPointer2
+    sta ls_PrevTraceAddr
+    lda AddressPointer2+1
+    sta ls_PrevTraceAddr+1
+
+    lda IdxD
+    sta ls_PrevTraceData
+
 @noPrevTraces:
     lda #0
     sta ls_SelectedLevel
@@ -1165,15 +1173,33 @@ ls_LightGivenTrace:
 
     ; store the address
     sta TheStack, x
+    sta AddressPointer2+1
 
     lda TmpX    ; high stored first
     inx
     sta TheStack, x ;low byte second
+    sta AddressPointer2
 
     iny
     inx
     lda (AddressPointer1), y
+    sta IdxC
+
+    lda AddressPointer2
+    cmp ls_PrevTraceAddr
+    bne :+
+    lda AddressPointer2+1
+    cmp ls_PrevTraceAddr+1
+    bne :+
+    lda IdxC
+    ora ls_PrevTraceData
+    sta IdxC
+:
+
+    lda IdxC
     sta TheStack, x
+    sta IdxD
+    ;sta ls_PrevTraceData
 
     inc TmpZ
     iny
@@ -1201,11 +1227,25 @@ ls_WriteTraceAttr:
 :
     pla
     sta $2006
+    sta AddressPointer0+1
     pla
     sta $2006
+    sta AddressPointer0
+
+    lda AddressPointer0
+    cmp ls_PrevTraceAddr
+    bne :+
+    lda AddressPointer0+1
+    cmp ls_PrevTraceAddr+1
+    bne :+
+    lda ls_PrevTraceData
+    sta $2007
+    jmp :++
+:
     stx $2007
+:
     dey
-    bne :-
+    bne :---
     lda #0
     sta ls_AttrUpdate_Clr
 

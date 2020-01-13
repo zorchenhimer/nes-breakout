@@ -71,6 +71,7 @@ TmpZ:   .res 1
 IdxA:   .res 1
 IdxB:   .res 1
 IdxC:   .res 1
+IdxD:   .res 1
 
 PpuControl: .res 1
 

@@ -39,6 +39,9 @@ ls_AttrUpdate_Clr: .res 1
 
 ls_TmpTracePointer: .res 2
 
+ls_PrevTraceAddr: .res 2
+ls_PrevTraceData: .res 1
+
 .segment "RAMMENU"
 title_MenuLength: .res 1
 title_MenuItems: .res 10
