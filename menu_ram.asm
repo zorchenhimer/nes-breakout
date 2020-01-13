@@ -37,6 +37,8 @@ ls_cursorAnim: .res 1   ; Cursor color animation thing
 ls_AttrUpdate: .res 1
 ls_AttrUpdate_Clr: .res 1
 
+ls_TmpTracePointer: .res 2
+
 .segment "RAMMENU"
 title_MenuLength: .res 1
 title_MenuItems: .res 10
@@ -74,5 +76,9 @@ ls_NumActiveLevels: .res 1  ; number of options available
 ls_ActiveLevels: .res 8     ; list of indexes for active level icons
 ls_SelectedLevel: .res 1
 ls_SelectedLevel_Prev: .res 1
+
+.segment "RAMGLOBAL"
+ls_PrevTraceCount: .res 1
+ls_PrevTraces: .res 10
 
 .popseg

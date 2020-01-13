@@ -209,6 +209,31 @@ Init_LevelSelect:
     lda #LS_CURSOR_COLOR_START
     sta ls_cursorColorBuff
 
+    ; Light up previous traces
+    lda #0
+    sta TmpW
+    lda ls_PrevTraceCount
+    beq @noPrevTraces
+    sta IdxB
+@prevTraceLoop:
+    lda TmpW
+    asl a
+    tax
+
+    inc TmpW
+
+    lda ls_PrevTraces, x
+    sta AddressPointer1
+    lda ls_PrevTraces+1, x
+    sta AddressPointer1+1
+
+    jsr ls_LightGivenTrace
+    jsr ls_WriteTraceAttr
+
+    dec IdxB
+    bne @prevTraceLoop
+
+@noPrevTraces:
     lda #0
     sta ls_SelectedLevel
     jsr ls_LightTrace
@@ -285,14 +310,6 @@ Frame_LevelSelect:
     sta ls_SelectedLevel
 :
 
-    ; Go back to the main menu on SELECT
-    lda #BUTTON_SELECT
-    jsr ButtonPressedP1
-    beq :+
-    jsr WaitForNMI
-    jmp Init_Title
-:
-
     ; Write trace attributes if selection changed
     lda TmpZ
     beq :+
@@ -320,10 +337,82 @@ Frame_LevelSelect:
     jmp ls_StartLevel
 :
 
+    ; On select, got to a "Map View" mode
+    lda #BUTTON_SELECT
+    jsr ButtonPressedP1
+    beq :+
+    jsr WaitForNMI
+    jmp Frame_LevelSelect_ViewMap
+:
+
     jsr WaitForNMI
     jmp Frame_LevelSelect
 
+Frame_LevelSelect_ViewMap:
+    jsr ReadControllers
+
+    ldx #11
+    ldy #10
+    lda #228
+    sta TmpX
+    lda #139
+    sta TmpY
+
+    jsr ls_DrawCursorXY
+    jsr ls_DoAnimations
+
+    jsr WaitForSpriteZero
+    lda #0
+    sta $2005
+    sta $2005
+
+    lda controller1
+    and #BUTTON_LEFT
+    beq :+
+    lda menu_ScrollValue
+    beq :+
+    dec menu_ScrollValue
+:
+
+    lda controller1
+    and #BUTTON_RIGHT
+    beq :+
+    lda menu_ScrollValue
+    cmp #$FF
+    beq :+
+    inc menu_ScrollValue
+:
+
+    ; Go back to the main menu on SELECT
+    lda #BUTTON_SELECT
+    jsr ButtonPressedP1
+    beq :+
+    jsr WaitForNMI
+    jmp Frame_LevelSelect
+:
+
+    jsr WaitForNMI
+    jmp Frame_LevelSelect_ViewMap
+
 ls_StartLevel:
+    ; Skip previous traces if previous level is $0F or $00
+    lda menu_PrevLevel
+    cmp #$0F
+    beq :+
+
+    ; Save the selected trace's data pointer
+    ; so we can relight it later
+    lda ls_PrevTraceCount
+    asl a
+    tax
+
+    lda ls_TmpTracePointer
+    sta ls_PrevTraces, x
+    lda ls_TmpTracePointer+1
+    sta ls_PrevTraces+1, x
+    inc ls_PrevTraceCount
+:
+
     ldx ls_SelectedLevel
     lda ls_ActiveLevels, x
     sta CurrentBoard
@@ -899,10 +988,13 @@ LS_CURSOR_PAL = $03
 ; Load cursor values given the currently selected level.
 ls_LoadCursor:
     ldx ls_SelectedLevel
-    lda ls_ActiveLevels, x
-    ; index into data_LevelSelect_Cursor is in A
+    ldy ls_ActiveLevels, x
+    ; Scroll screen
+    lda data_LevelSelect_CursorScroll, y
+    sta menu_ScrollValue
 
     ; index -> offset
+    tya
     asl a
     asl a
     tay
@@ -971,12 +1063,6 @@ ls_DrawCursorXY:
     ; bottom right
     lda #LS_CURSOR_PAL | $C0
     sta LS_CURSOR_4 + 2
-
-    ;; Scroll screen
-    ldx ls_SelectedLevel
-    ldy ls_ActiveLevels, x
-    lda data_LevelSelect_CursorScroll, y
-    sta menu_ScrollValue
     rts
 
 TheStack = $0100
@@ -1058,11 +1144,14 @@ ls_LightTrace:
 
     lda (AddressPointer0), y
     sta AddressPointer1
+    sta ls_TmpTracePointer
 
     iny
     lda (AddressPointer0), y
     sta AddressPointer1+1
+    sta ls_TmpTracePointer+1
 
+ls_LightGivenTrace:
     ; load the data
     ldy #0
     ldx #0
