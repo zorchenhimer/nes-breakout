@@ -87,6 +87,7 @@ Pal_Game:
 
 Pal_GameSprites:
     .byte $0F, $00, $10, $20
+    .byte $0F, $16, $16, $2A
 
 Init_Game:
     .NMI_Disable
@@ -112,7 +113,7 @@ Init_Game:
     sta $2006
 
     ; Load up another palette
-.repeat 4, i
+.repeat 8, i
     lda Pal_GameSprites+i
     sta $2007
 .endrepeat
@@ -149,6 +150,13 @@ Init_Game:
     lda #SPRITE_ID_BALL
     sta Sprites+5
 
+    lda #16
+    sta Sprites+(4*6)
+    sta Sprites+(4*6)+3
+
+    lda #1
+    sta Sprites+(4*6)+2
+
     ; Attributes
     lda #0
     sta Sprites+6
@@ -170,6 +178,7 @@ Init_Game:
 
     lda #16
     sta Sprites+(4*5)+0
+    lda #24
     sta Sprites+(4*5)+3
 
     lda #$0D
@@ -274,6 +283,11 @@ Init_Game:
 Frame_Game:
     .NMI_Set NMI_Game
     jsr ReadControllers
+
+    lda LivesCount
+    clc
+    adc #$0A    ; offset to sprite
+    sta Sprites+(4*6)+1
 
     lda #BUTTON_SELECT
     jsr ButtonPressedP1

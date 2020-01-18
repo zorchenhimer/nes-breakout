@@ -102,7 +102,7 @@ Init_Title:
     lda #$0F
     sta menu_PrevLevel
 
-    lda #1
+    lda #3
     sta LivesCount
 
     .NMI_Set NMI_Title
