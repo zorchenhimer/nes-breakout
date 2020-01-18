@@ -986,7 +986,15 @@ CheckWallCollide:
 
 @onMainBoard:
     ; TODO: kill wall
+    dec LivesCount
+    beq @ded
     jmp ResetBall
+
+@ded:
+    jsr WaitForNMI
+    lda #4
+    jmp JumpToInit
+    jmp @ded
 
 @bounceVert:
     jsr BounceVert

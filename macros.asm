@@ -51,6 +51,11 @@ PPU_CTRL_NAMETABLE = %0000_0011
     sta $2000
 .endmacro
 
+.macro .Update_PpuControl_Var args
+    lda args
+    sta $2000
+.endmacro
+
 .macro .SetScroll _ScrollX, _ScrollY
     .ifblank _ScrollY
         lda #_ScrollX

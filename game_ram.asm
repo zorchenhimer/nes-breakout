@@ -124,4 +124,8 @@ NextChildOffset:    .res 1
 ; Gravity setting for the currently loaded main map.
 Gravity_MainMap: .res 1
 
+.segment "RAMGLOBAL"
+
+LivesCount: .res 1
+
 .popseg

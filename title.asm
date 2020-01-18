@@ -115,6 +115,9 @@ Init_Title:
     lda #$0F
     sta menu_PrevLevel
 
+    lda #1
+    sta LivesCount
+
     ;lda #TITLE_MenuLength
     ;sta IdxB
 
@@ -270,3 +273,7 @@ data_TitleMenu:
 
 title_PalBackground:
     .byte $0F, $11, $14, $1B
+
+    nop
+    nop
+

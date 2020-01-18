@@ -130,6 +130,7 @@ Sprites: .res 256
 
 .include "title.asm"
 .include "level-select.asm"
+.include "gameover.asm"
 
 .segment "PAGE03"
     .byte 3
@@ -755,6 +756,9 @@ data_Inits:
         .word Init_Credits
     .byte $00, 0, 2
         .word Init_LevelSelect
+    .byte $00, 0, 2
+        .word Init_GameOver
+
 
 ; TODO: find a way to auto-generate this table
 Index_ChrData:
