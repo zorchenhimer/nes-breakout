@@ -230,9 +230,6 @@ Init_LevelSelect:
     jsr ls_LightGivenTrace
     jsr ls_WriteTraceAttr
 
-    dec IdxB
-    bne @prevTraceLoop
-
     lda AddressPointer2
     sta ls_PrevTraceAddr
     lda AddressPointer2+1
@@ -240,6 +237,9 @@ Init_LevelSelect:
 
     lda IdxD
     sta ls_PrevTraceData
+
+    dec IdxB
+    bne @prevTraceLoop
 
 @noPrevTraces:
     lda #0
