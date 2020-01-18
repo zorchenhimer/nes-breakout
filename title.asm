@@ -96,6 +96,8 @@ Init_Title:
     sta $2005
     sta $2005
 
+    sta ls_PrevTraceCount
+
     ; Currently selected item
     sta IdxA
 
