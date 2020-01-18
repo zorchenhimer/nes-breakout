@@ -592,6 +592,13 @@ BoostTheBall:
     rts
 
 UpdateBoostSprite:
+    lda game_currentGravity
+    bne :+
+    lda #$FF
+    sta Sprites+(4*5)
+    sta Sprites+(4*5)+3
+    rts
+:
     lda BoostPool
     beq @empty
 
