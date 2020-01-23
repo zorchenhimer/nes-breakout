@@ -378,6 +378,11 @@ WritePaletteData:
 ; Swap to the bank in A, and jump to the pointer.
 LongJump:
     jsr MMC1_Select_Page
+
+    ; Reset stack
+    ldx #$FF
+    txs
+
     jmp (AddressPointer0)
 
 ; Writes CHR data directly to RAM from ROM space
