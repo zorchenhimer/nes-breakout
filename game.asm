@@ -104,7 +104,7 @@ Init_Game:
     ; Load up a palette
 .repeat 4, i
     lda Pal_Game+i
-    sta $2007
+    sta PaletteBuffer+i
 .endrepeat
 
     lda #$3F
@@ -115,7 +115,7 @@ Init_Game:
     ; Load up another palette
 .repeat 8, i
     lda Pal_GameSprites+i
-    sta $2007
+    sta PaletteBufferSprites+i
 .endrepeat
 
     lda #0
@@ -378,6 +378,7 @@ NMI_Game:
     pha
 
     jsr WriteSprites
+    jsr WritePalettes
 
     dec z:waves_AnimWait
     bne @noAnim
@@ -1053,20 +1054,11 @@ CheckWallCollide:
     jmp game_ReturnToMain
 
 @onMainBoard:
-    ; TODO: kill wall
-    dec LivesCount
-    beq @ded
-
     jsr game_SubtractLife
     jsr ResetBall
 
     lda #1
     rts
-
-@ded:
-    jsr WaitForNMI
-    lda #4
-    jmp JumpToInit
 
 @bounceVert:
     jsr BounceVert
@@ -1118,18 +1110,54 @@ CheckWallCollide:
     lda #0
     rts
 
-; Screen shake "frames"
-data_ScreenShake_X:
-    .byte .N 1, 1, 0, 0
-    .byte .N 1, 1, 0, 0
-    .byte .N 1, 1, 0, 0
-data_ScreenShake_Y:
-    .byte .N 1, 0, 1, 0
-    .byte .N 1, 0, 1, 0
-    .byte .N 1, 0, 1, 0
+GAMEOVER_FRAME_RATE = 12
 
-SHAKE_FRAMES = * - data_ScreenShake_Y
-SHAKE_FRAME_RATE = 1   ; framerate of shake
+game_GameOver:
+    lda #0
+    sta game_ShakeCooldown
+
+@dedLoop:
+    lda game_ShakeCooldown
+    beq :+
+    dec game_ShakeCooldown
+    jsr WaitForNMI
+    jmp @dedLoop
+:
+
+    lda #GAMEOVER_FRAME_RATE
+    sta game_ShakeCooldown
+
+    ldy #0
+    ldx #32
+@palLoop:
+    lda PaletteBuffer, x
+    cmp #$0F
+    beq @next
+
+    iny
+
+    sec
+    sbc #$10
+    bpl :+
+    lda #$0F
+:
+    sta PaletteBuffer, x
+
+@next:
+    dex
+    bpl @palLoop
+
+    tya
+    beq @done
+
+    jsr WaitForNMI
+    jmp @dedLoop
+
+@done:
+
+    jsr WaitForNMI
+    lda #4
+    jmp JumpToInit
 
 game_SubtractLife:
     ldx #SHAKE_FRAMES
@@ -1168,9 +1196,24 @@ game_SubtractLife:
     dex
     bne @loop
 
-    ; TODO: subtract the life, lol
+    dec LivesCount
+    beq game_GameOver
 
     rts
+
+; Screen shake "frames"
+data_ScreenShake_X:
+    .byte .N 1, 1, 0, 0
+    .byte .N 1, 1, 0, 0
+    .byte .N 1, 1, 0, 0
+
+data_ScreenShake_Y:
+    .byte .N 1, 0, 1, 0
+    .byte .N 1, 0, 1, 0
+    .byte .N 1, 0, 1, 0
+
+SHAKE_FRAMES = * - data_ScreenShake_Y
+SHAKE_FRAME_RATE = 1   ; framerate of shake
 
 CheckPaddleCollide:
     bit BallDirection
