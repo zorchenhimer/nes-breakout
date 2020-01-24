@@ -84,6 +84,11 @@ ChildBrickCount: .res 1
 ; Pointer to spawn brick
 EnteredRam:   .res 2
 
+game_ScrollX: .res 1
+game_ScrollY: .res 1
+game_Nametable: .res 1
+game_ShakeCooldown: .res 1
+
 .segment "RAMGAME"
 ; Overworld map
 CurrentMap: .res (BOARD_WIDTH * BOARD_HEIGHT)

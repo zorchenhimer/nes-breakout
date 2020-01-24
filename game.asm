@@ -270,6 +270,34 @@ Init_Game:
     jsr LoadMap
     jsr DrawCurrentMap
 
+    .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_VERTICAL
+
+    lda #$24
+    sta $2006
+    lda #$00
+    sta $2006
+
+    ldx #30
+    lda #$01
+:
+    sta $2007
+    dex
+    bne :-
+
+    lda #$24
+    sta $2006
+    lda #$1F
+    sta $2006
+
+    ldx #30
+    lda #$01
+:
+    sta $2007
+    dex
+    bne :-
+
+    .Update_PpuControl PPU_CTRL_NMI
+
     lda Gravity_MainMap
     sta game_currentGravity
 
@@ -284,6 +312,7 @@ Frame_Game:
     .NMI_Set NMI_Game
     jsr ReadControllers
 
+    ; TODO: put this in a routine
     lda LivesCount
     clc
     adc #$0A    ; offset to sprite
@@ -309,6 +338,10 @@ Frame_Game:
     jsr UpdatePaddleCoords
 
     jsr CheckWallCollide
+    beq :+
+    jmp Frame_Game
+:
+
     jsr CheckBrickCollide
     beq :+
     jmp Frame_Game
@@ -338,6 +371,12 @@ Frame_Game:
     jmp Frame_Game
 
 NMI_Game:
+    pha
+    txa
+    pha
+    tya
+    pha
+
     jsr WriteSprites
 
     dec z:waves_AnimWait
@@ -433,16 +472,25 @@ NMI_Game:
     ;jsr waves_WriteRow
     jsr waves_WriteCachedRow
 
-    lda #0
+    bit $2002
+    lda game_ScrollX
     sta $2005
+    lda game_ScrollY
     sta $2005
 
     .Update_PpuMask PPU_MASK_ON | PPU_MASK_LEFTSPRITES | PPU_MASK_LEFTBACKGROUND
 
     lda PpuControl
+    ora game_Nametable
     sta $2000
 
     dec Sleeping
+
+    pla
+    tay
+    pla
+    tax
+    pla
     rti
 
 game_DrawWalls:
@@ -973,7 +1021,6 @@ PointToTile:
     tay
     rts
 
-; TODO: remove constants from this
 CheckWallCollide:
     bit BallDirection
     bpl @goingDown
@@ -1009,13 +1056,17 @@ CheckWallCollide:
     ; TODO: kill wall
     dec LivesCount
     beq @ded
-    jmp ResetBall
+
+    jsr game_SubtractLife
+    jsr ResetBall
+
+    lda #1
+    rts
 
 @ded:
     jsr WaitForNMI
     lda #4
     jmp JumpToInit
-    jmp @ded
 
 @bounceVert:
     jsr BounceVert
@@ -1028,12 +1079,14 @@ CheckWallCollide:
     cmp game_WallLeft
     beq @bounceHorizLeft
     bcc @bounceHorizLeft
+    lda #0
     rts ; return early
 
 @goingRight:
     lda BallX+1
     cmp game_WallRight
     bcs @bounceHorizRight
+    lda #0
     rts ; return early
 
 @bounceHorizLeft:
@@ -1061,7 +1114,63 @@ CheckWallCollide:
     sta BallX+1
 
 @bounceHoriz:
-    jmp BounceHoriz
+    jsr BounceHoriz
+    lda #0
+    rts
+
+; Screen shake "frames"
+data_ScreenShake_X:
+    .byte .N 1, 1, 0, 0
+    .byte .N 1, 1, 0, 0
+    .byte .N 1, 1, 0, 0
+data_ScreenShake_Y:
+    .byte .N 1, 0, 1, 0
+    .byte .N 1, 0, 1, 0
+    .byte .N 1, 0, 1, 0
+
+SHAKE_FRAMES = * - data_ScreenShake_Y
+SHAKE_FRAME_RATE = 1   ; framerate of shake
+
+game_SubtractLife:
+    ldx #SHAKE_FRAMES
+    ldy #0
+    sty game_ShakeCooldown
+@loop:
+    lda game_ShakeCooldown
+    beq :+
+    dec game_ShakeCooldown
+    jsr WaitForNMI
+    jmp @loop
+
+:
+    lda #SHAKE_FRAME_RATE
+    sta game_ShakeCooldown
+
+    lda #0
+    sta game_Nametable    ; current nametable
+
+    bit $2002
+    lda data_ScreenShake_X, y
+    bpl :+
+    inc game_Nametable
+:
+    sta game_ScrollX
+
+    lda data_ScreenShake_Y, y
+    bpl :+
+    inc game_Nametable
+    inc game_Nametable
+:
+    sta game_ScrollY
+
+    jsr WaitForNMI
+    iny
+    dex
+    bne @loop
+
+    ; TODO: subtract the life, lol
+
+    rts
 
 CheckPaddleCollide:
     bit BallDirection

@@ -91,3 +91,6 @@ PPU_CTRL_NAMETABLE = %0000_0011
     lda #$02
     sta $4014
 .endmacro
+
+; Define a literal negative number in 2's complement
+.define .N(n) (n - 1) ^ $FF
