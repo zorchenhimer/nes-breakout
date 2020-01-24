@@ -186,19 +186,33 @@ am_Waves_TileLayout_b:
 
 CreditsChrData:
     .incbin "credits.chr"
+CreditsChrData_Count = 0    ; Zero so it wraps around
+
 GameChrData:
     ; FIXME: generate the tile count for this stuff
     ; (and the lookup table below)
-    .incbin "game.chr", 0, (16 * 16)
+    .incbin "game.chr", 0, (16 * 19)
+
+GameChrData_Count = (* - GameChrData) / 16
+
 TitleData:
     ; 128 tiles. includes a character set
     .incbin "title.chr", 0, 2048
+TitleData_Count = (* - TitleData) / 16
 
 HexTileData:
     .incbin "hex.chr", 0, (16 * 16)
+HexTileData_Count = (* - HexTileData) / 16
 
 LevelSelectTileData:
     .incbin "level-select.chr"
+LevelSelectTileData_Count = 0
+
+.out .sprintf("CreditsChrData_Count: %d", CreditsChrData_Count)
+.out .sprintf("GameChrData_Count: %d", GameChrData_Count)
+.out .sprintf("TitleData_Count: %d", TitleData_Count)
+.out .sprintf("HexTileData_Count: %d", HexTileData_Count)
+.out .sprintf("LevelSelectTileData_Count: %d", LevelSelectTileData_Count)
 
 .segment "PAGE_FIXED"
     .byte 15
@@ -772,27 +786,27 @@ Index_ChrData:
     ; Dest table in bit 7, bank in bits 6-0
 
     .word CreditsChrData    ; Source address
-    .byte $00   ; Tile count
+    .byte CreditsChrData_Count
     .byte $FE   ; Destination pattern table & PRG bank
 
     .word GameChrData   ; Source address
-    .byte 16    ; Tile count
+    .byte GameChrData_Count    ; Tile count
     .byte $FE   ; Destination pattern table & PRG bank
 
     .word TitleData
-    .byte 144   ; Tile Count
+    .byte TitleData_Count
     .byte $FE   ; Destination pattern table & PRG bank
 
     .word HexTileData
-    .byte 16
+    .byte HexTileData_Count
     .byte $7E
 
     .word GameChrData   ; Source address
-    .byte 16    ; Tile count
+    .byte GameChrData_Count    ; Tile count
     .byte $7E   ; Destination pattern table & PRG bank
 
     .word LevelSelectTileData
-    .byte 0
+    .byte LevelSelectTileData_Count
     .byte $7E
 
 data_Mult5:
