@@ -130,10 +130,6 @@ Init_Game:
 
     lda #$00
     jsr Waves_LoadFrame
-
-    lda #$80
-    jsr Waves_LoadFrame
-
     jsr Wave_DrawBackground
 
     lda #8
