@@ -1236,16 +1236,23 @@ powerup_Animate:
     ; increment read index on all elements, but only increment write
     ; on elements that still exist
 
+    ; clear powerups from sprite RAM
+    ldx #28
+    lda #$FF
+:
+    sta Sprites, X
+    inx
+    sta Sprites, X
+    inx
+    sta Sprites, X
+    inx
+    sta Sprites, X
+    inx
+    cpx #96
+    bne :-
+
     lda PowerupCount
     bne @hasPowerups
-
-    ; clear list and return
-    lda #0
-    ldx #24
-:
-    sta PowerupList, x
-    dex
-    bpl :-
     rts
 
 @hasPowerups:
@@ -1290,8 +1297,22 @@ powerup_Animate:
     bne @cleanLoop
 
 @cleanDone:
+    lda #0
 
+; Zero remaining elements
+@clearLoop:
+    cpy #24
+    beq @clearDone
+    sta PowerupList, y
+    iny
+    jmp @clearLoop
+
+@clearDone:
+    ; Animate active powerups
     lda PowerupCount
+    bne :+
+    rts ; no powerups
+:
     sta TmpW
     ldx #0
     stx TmpZ    ; Loaded count
@@ -1305,14 +1326,6 @@ powerup_Animate:
 
     inx
     lda PowerupList, x
-    cmp #$EF
-    bcc :+
-    inx
-    inx
-    dec TmpW
-    beq @loop
-    jmp @end
-:
     sta TmpY
 
     ; Move it down the screen
