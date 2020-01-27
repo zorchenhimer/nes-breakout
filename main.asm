@@ -750,8 +750,8 @@ JumpToInit:
     jmp LongJump
 
 WritePalettes:
-    ;lda #PPU_CTRL_HORIZ
-    ;sta $2000
+    lda #PPU_CTRL_NMI
+    sta $2000
 
     bit $2002
     lda #$3F
