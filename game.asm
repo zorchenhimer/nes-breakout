@@ -348,10 +348,14 @@ Frame_Game:
 :
     jsr CheckPaddleCollide
 
+    jsr powerup_CollideCheck
+
     jsr UpdateBallSprite
     jsr UpdatePaddleSprite
 
     jsr UpdateBoostSprite
+
+    jsr powerup_Animate
 
     ;jsr waves_PrepChrWrite
     jsr waves_CacheRow
@@ -1201,6 +1205,170 @@ game_SubtractLife:
 
     rts
 
+; Load a powerup into memory
+; Powerup ID in A
+powerup_Load:
+    ldx PowerupCount
+    inc PowerupCount
+    ldy data_Mult3, x   ; Offset in PowerupList
+
+    ; Store powerup ID (not offset)
+    sta PowerupList, y
+
+    ; X coord
+    iny
+    lda BallX+1
+    sta PowerupList, y
+
+    ; Y coord
+    iny
+    lda BallY+1
+    sta PowerupList, y
+
+    rts
+
+; Move the powerups and write them to sprite RAM.
+; Also, remove powerups that are no longer
+; on screen.
+powerup_Animate:
+
+    ; loop through all powerups using two indexes: Read and Write
+    ; increment read index on all elements, but only increment write
+    ; on elements that still exist
+
+    lda PowerupCount
+    bne @hasPowerups
+
+    ; clear list and return
+    lda #0
+    ldx #24
+:
+    sta PowerupList, x
+    dex
+    bpl :-
+    rts
+
+@hasPowerups:
+
+    sta TmpW
+    ; Clean powerup list
+    ldx #0  ; read
+    ldy #0  ; write
+    sty PowerupCount
+@cleanLoop:
+    lda PowerupList+2, x    ; inspect Y
+    cmp #$EF
+    bcs @skip
+
+    ; move ID
+    lda PowerupList, x
+    sta PowerupList, y
+
+    ; move X
+    lda PowerupList+1, x
+    sta PowerupList+1, y
+
+    ; move Y
+    lda PowerupList+2, x
+    sta PowerupList+2, y
+
+    ; increment to next write slot
+    iny
+    iny
+    iny
+
+    inc PowerupCount
+@skip:
+    ; increment to next read slot
+    inx
+    inx
+    inx
+    cpx #24
+    beq @cleanDone
+
+    dec TmpW
+    bne @cleanLoop
+
+@cleanDone:
+
+    lda PowerupCount
+    sta TmpW
+    ldx #0
+    stx TmpZ    ; Loaded count
+@loop:
+    lda PowerupList, x
+    sta IdxA
+
+    inx
+    lda PowerupList, x
+    sta TmpX
+
+    inx
+    lda PowerupList, x
+    cmp #$EF
+    bcc :+
+    inx
+    inx
+    dec TmpW
+    beq @loop
+    jmp @end
+:
+    sta TmpY
+
+    ; Move it down the screen
+    clc
+    adc #2
+    sta PowerupList, x
+    inx
+
+    ; Get offset into Powerup_Index
+    lda IdxA
+    asl a
+    asl a
+    tay
+
+    lda Powerup_Index, y
+    sta IdxA    ; Tile ID
+
+    lda Powerup_Index+1, y
+    sta IdxB    ; Attribute
+
+    ; Get offset in Sprite RAM
+    lda TmpZ
+    clc
+    adc #7
+    asl a
+    asl a
+    tay
+
+    lda TmpY
+    sta Sprites, y
+
+    iny
+    lda IdxA
+    sta Sprites, y
+
+    iny
+    lda IdxB
+    sta Sprites, y
+
+    iny
+    lda TmpX
+    sta Sprites, y
+
+    inc TmpZ
+
+    dec TmpW
+    bne @loop
+
+@end:
+    rts
+
+; Check for collisions with the paddle and call
+; the correct _Action routine if needed
+powerup_CollideCheck:
+    rts
+
 ; Screen shake "frames"
 data_ScreenShake_X:
     .byte .N 1, 1, 0, 0
@@ -1214,6 +1382,15 @@ data_ScreenShake_Y:
 
 SHAKE_FRAMES = * - data_ScreenShake_Y
 SHAKE_FRAME_RATE = 1   ; framerate of shake
+
+pu_RefillLife_Action:
+    lda #3
+    sta LivesCount
+    rts
+
+pu_LoseLife_Action:
+    jsr game_SubtractLife
+    rts
 
 CheckPaddleCollide:
     bit BallDirection
@@ -2548,6 +2725,22 @@ game_ActionSpawn:
 
 game_ActionItemDrop:
     ; TODO: item drops
+    lda BrickAddress+1
+    sta AddressPointer0+1
+
+    lda BrickAddress
+    clc
+    adc #1
+    sta AddressPointer0
+    bcc :+
+    inc AddressPointer0+1
+:
+
+    ldy #0
+    lda (AddressPointer0), y
+    and #$7F    ; Mask off the upper bit
+    jsr powerup_Load
+
     jmp game_RemoveBrick
 
 game_RemoveBrick:
@@ -2665,3 +2858,12 @@ Bounce_Speed:
     .word BOUNCE_STEP * i
     .word ($0200 - (BOUNCE_STEP * i))
 .endrepeat
+
+Powerup_Index:
+    .byte $10 ; tile ID
+    .byte $02 ; Attribute
+    .word pu_RefillLife_Action
+
+    .byte $11 ; tile ID
+    .byte $02 ; Attribute
+    .word pu_LoseLife_Action

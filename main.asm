@@ -809,6 +809,11 @@ Index_ChrData:
     .byte LevelSelectTileData_Count
     .byte $7E
 
+data_Mult3:
+.repeat 10, i
+    .byte (i * 3)
+.endrepeat
+
 data_Mult5:
 .repeat 10, i
     .byte (i * 5)

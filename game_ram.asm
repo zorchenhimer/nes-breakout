@@ -129,6 +129,9 @@ NextChildOffset:    .res 1
 ; Gravity setting for the currently loaded main map.
 Gravity_MainMap: .res 1
 
+PowerupCount: .res 1
+PowerupList: .res (8 * 3) ; Three byte elements
+
 .segment "RAMGLOBAL"
 
 LivesCount: .res 1
