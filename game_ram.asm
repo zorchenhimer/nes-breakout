@@ -68,6 +68,7 @@ game_currentGravity: .res 1
 ;         If 0, we're in the main board
 ; Bits 6-0: board ID in RAM
 CurrentBoard: .res 1
+ParentBoard: .res 1
 
 Address_RowCoordTop:    .res 2
 Address_RowCoordBot:    .res 2

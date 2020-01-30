@@ -268,6 +268,8 @@ Init_Game:
 
     .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_VERTICAL
 
+    ; Draw two columns of wall on the second nametable
+    ; to scroll onto with a the screen shake
     lda #$24
     sta $2006
     lda #$00
@@ -1326,7 +1328,7 @@ powerup_Animate:
 
     ; Move it down the screen
     clc
-    adc #2
+    adc #1
     sta PowerupList, x
     inx
 
@@ -1376,7 +1378,96 @@ powerup_Animate:
 ; Check for collisions with the paddle and call
 ; the correct _Action routine if needed
 powerup_CollideCheck:
+    ; bounding box: X+1,Y+1 and X+7,Y+7
+    ; check vertical position first
+    lda PowerupCount
+    bne :+
+    rts ; return early if there's no powerups
+:
+
+    sta TmpW    ; powerup count
+    ldx #0
+@loop:
+    ; check bottom of powerup is above top
+    ; of paddle
+    lda PowerupList+2, x
+    clc
+    adc #7
+    sta TmpY    ; collision plane on powerup
+
+    lda PaddleY+1
+    sec
+    sbc #PADDLE_VERT_OFFSET
+    cmp TmpY
+    bcs @next   ; too far up
+
+    ; make sure top of powerup isn't below bottom
+    ; of the paddle
+
+    lda PowerupList+2, x
+    clc
+    adc #1
+    sta TmpY
+
+    lda PaddleY+1
+    adc #PADDLE_VERT_OFFSET
+    cmp TmpY
+    bcc @next   ; too far down
+
+    ; Left side
+    lda PowerupList+1, x
+    clc
+    adc #1
+    sta TmpX
+
+    lda PaddleX+1
+    sec
+    sbc #PADDLE_CENTER_WIDTH
+    cmp TmpX
+    bcs @next   ; too far left
+
+    ; Right side
+    lda PowerupList+1, x
+    clc
+    adc #7
+    sta TmpX
+
+    lda PaddleX+1
+    adc #PADDLE_CENTER_WIDTH
+    cmp TmpX
+    bcc @next   ; too far right
+
+    ; collided
+    lda #$F0
+    sta PowerupList+2, x
+    txa
+    pha
+
+    lda PowerupList, x  ; load ID
+    jsr powerup_DoAction
+
+    pla
+    tax
+
+    inx
+    inx
+    inx
+@next:
+    dec TmpW
+    bne @loop
     rts
+
+powerup_DoAction:
+    asl a
+    asl a
+    tax
+
+    lda Powerup_Index+2, x
+    sta AddressPointer0+0
+    lda Powerup_Index+3, x
+    sta AddressPointer0+1
+    jmp (AddressPointer0)
+
 
 ; Screen shake "frames"
 data_ScreenShake_X:
@@ -2256,7 +2347,7 @@ game_ReturnToMain:
     lda #PADDLE_WALL_RIGHT
     sta game_PaddleWallRight
 
-    lda #0
+    lda ParentBoard
     sta CurrentBoard
 
     lda ChildBrickCount
@@ -2586,6 +2677,8 @@ game_ActionSpawn:
     sta (BrickAddress), y
 
     ; load map
+    lda CurrentBoard
+    sta ParentBoard
     lda ChildId
     jsr LoadChildMap
 
