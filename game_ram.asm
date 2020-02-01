@@ -90,6 +90,11 @@ game_ScrollY: .res 1
 game_Nametable: .res 1
 game_ShakeCooldown: .res 1
 
+powerup_FrameAction_Pointer: .res 2
+powerup_FrameAction_Value: .res 2
+
+powerup_NoClip_Active: .res 1
+
 .segment "RAMGAME"
 ; Overworld map
 CurrentMap: .res (BOARD_WIDTH * BOARD_HEIGHT)

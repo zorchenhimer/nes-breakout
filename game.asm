@@ -316,6 +316,10 @@ Frame_Game:
     adc #$0A    ; offset to sprite
     sta Sprites+(4*6)+1
 
+    lda powerup_NoClip_Active
+    and #$80
+    sta Sprites+(4*6)+1
+
     lda #BUTTON_SELECT
     jsr ButtonPressedP1
     beq :+
@@ -345,14 +349,13 @@ Frame_Game:
     jmp Frame_Game
 :
     jsr CheckPaddleCollide
-
     jsr powerup_CollideCheck
 
     jsr UpdateBallSprite
     jsr UpdatePaddleSprite
-
     jsr UpdateBoostSprite
 
+    jsr powerup_DoFrameAction
     jsr powerup_Animate
 
     ;jsr waves_PrepChrWrite
@@ -1332,16 +1335,15 @@ powerup_Animate:
     sta PowerupList, x
     inx
 
-    ; Get offset into Powerup_Index
+    ; Get offset into Powerup_* tables
     lda IdxA
-    asl a
     asl a
     tay
 
-    lda Powerup_Index, y
+    lda Powerup_TileAttr, y
     sta IdxA    ; Tile ID
 
-    lda Powerup_Index+1, y
+    lda Powerup_TileAttr+1, y
     sta IdxB    ; Attribute
 
     ; Get offset in Sprite RAM
@@ -1459,15 +1461,13 @@ powerup_CollideCheck:
 
 powerup_DoAction:
     asl a
-    asl a
     tax
 
-    lda Powerup_Index+2, x
+    lda Powerup_Actions+0, x
     sta AddressPointer0+0
-    lda Powerup_Index+3, x
+    lda Powerup_Actions+1, x
     sta AddressPointer0+1
     jmp (AddressPointer0)
-
 
 ; Screen shake "frames"
 data_ScreenShake_X:
@@ -1491,6 +1491,52 @@ pu_RefillLife_Action:
 pu_LoseLife_Action:
     jsr game_SubtractLife
     rts
+
+pu_NoClip_Action:
+    lda #<pu_NoClip_FrameAction
+    sta powerup_FrameAction_Pointer+0
+    lda #>pu_NoClip_FrameAction
+    sta powerup_FrameAction_Pointer+1
+
+    lda #0
+    sta powerup_FrameAction_Value+0
+    lda #1
+    sta powerup_FrameAction_Value+1
+
+    lda #$FF
+    sta powerup_NoClip_Active
+    rts
+
+pu_NoClip_FrameAction:
+    lda powerup_FrameAction_Value+1
+    bne @hasValue
+    lda powerup_FrameAction_Value+0
+    bne @hasValue
+
+    ; reset powerup
+    lda #0
+    sta powerup_FrameAction_Pointer+0
+    sta powerup_FrameAction_Pointer+1
+    sta powerup_NoClip_Active
+    rts
+
+@hasValue:
+    lda powerup_FrameAction_Value+0
+    sec
+    sbc #1
+    sta powerup_FrameAction_Value+0
+
+    lda powerup_FrameAction_Value+1
+    sbc #0
+    sta powerup_FrameAction_Value+1
+    rts
+
+powerup_DoFrameAction:
+    lda powerup_FrameAction_Pointer+1
+    bne :+
+    rts
+:
+    jmp (powerup_FrameAction_Pointer)
 
 CheckPaddleCollide:
     bit BallDirection
@@ -1958,7 +2004,7 @@ game_GetAddressForChildBrick:
 ; Both the address in RAM and the address in the PPU
 ; are calculated here.
 ;
-; Input: BrickRow, Brickcol
+; Input: BrickRow, BrickCol
 ; Output: BrickAddress, BrickPpuAddress
 GetAddressesForBrick:
     bit CurrentBoard
@@ -1973,10 +2019,14 @@ GetAddressesForBrick:
 
     ; Correct for brick's second byte
     ; (needs to be pointing to the first byte)
-    ; FIXME: will break if BrickAddress is $0500
     ldy BrickCol
-    lda (BrickAddress), y
-    bpl :+
+    lda (BrickAddress), y   ; BrickAddress is the start of the row
+    bpl :++
+    lda BrickCol
+    bne :+
+    brk ; Brick column 0, but second brick byte
+:
+    ; On second byte, subtract one to get first byte
     dec BrickCol
 :
 
@@ -2055,9 +2105,16 @@ DoVerticalBrickCollide:
     lda BrickColIndex_Vert
     sta BrickCol
 
+    bit powerup_NoClip_Active
+    bpl @noNoClip
+    pla  ; clear a value off the stack
+    jmp game_RemoveBrick
+
+@noNoClip:
+
     jsr DoBrickAction
     beq :+
-    pla
+    pla ; does this PLA break anything? why is it here?
     rts ; DoBrickAction returns 1 if
         ; everything else should be skipped.
 :       ; "everything" is to be determined.
@@ -2114,6 +2171,11 @@ DoHorizontalBrickCollide:
     sta BrickRow
     lda BrickColIndex_Horiz
     sta BrickCol
+
+    bit powerup_NoClip_Active
+    bpl @noNoClip
+    jmp game_RemoveBrick
+@noNoClip:
 
     jsr DoBrickAction
     beq :+
@@ -2848,6 +2910,7 @@ game_ActionItemDrop:
 game_RemoveBrick:
     bit CurrentBoard
     bpl :+
+    ; Check if this brick is the last one.
     dec ChildBrickCount
     bne :+
     ; Board is empty, draw parent board
@@ -2855,7 +2918,6 @@ game_RemoveBrick:
     lda #1
     rts
 :
-    ; Check if this brick is the last one.
     ; Remove from screen
     lda BrickDestroyA
     bne :+
@@ -2961,11 +3023,20 @@ Bounce_Speed:
     .word ($0200 - (BOUNCE_STEP * i))
 .endrepeat
 
-Powerup_Index:
-    .byte $10 ; tile ID
-    .byte $02 ; Attribute
-    .word pu_RefillLife_Action
+Powerup_TileAttr:
+    ; Refill Life
+    .byte $10
+    .byte $02
 
-    .byte $11 ; tile ID
-    .byte $02 ; Attribute
+    ; Lose Life
+    .byte $11
+    .byte $02
+
+    ; No Clip
+    .byte $12
+    .byte $02
+
+Powerup_Actions:
+    .word pu_RefillLife_Action
     .word pu_LoseLife_Action
+    .word pu_NoClip_Action

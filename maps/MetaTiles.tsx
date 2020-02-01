@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.2" tiledversion="1.2.4" name="MetaTiles" tilewidth="16" tileheight="8" tilecount="23" columns="0">
+<tileset version="1.2" tiledversion="1.3.1" name="MetaTiles" tilewidth="16" tileheight="8" tilecount="25" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="2">
   <properties>
@@ -161,5 +161,19 @@
    <property name="value" type="int" value="16"/>
   </properties>
   <image width="16" height="8" source="img/brick_portal_16.png"/>
+ </tile>
+ <tile id="28">
+  <properties>
+   <property name="type" value="powerup"/>
+   <property name="value" type="int" value="5"/>
+  </properties>
+  <image width="16" height="8" source="img/brick_powerup_05.png"/>
+ </tile>
+ <tile id="29">
+  <properties>
+   <property name="type" value="powerup"/>
+   <property name="value" type="int" value="6"/>
+  </properties>
+  <image width="16" height="8" source="img/brick_powerup_06.png"/>
  </tile>
 </tileset>
