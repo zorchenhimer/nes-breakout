@@ -3,6 +3,9 @@
 .feature leading_dot_in_identifiers
 .feature underline_in_numbers
 
+; Remove this line to disable debug code
+DEBUG = 1
+
 .importzp main_BOARD_DATA_WIDTH, main_BOARD_DATA_HEIGHT
 
 .include "macros.asm"
@@ -81,6 +84,8 @@ IgnoreInput: .res 1
 
 PaletteBuffer: .res 4*4
 PaletteBufferSprites: .res 4*4
+
+zp_BrickAddress: .res 2
 
 .segment "RAMGLOBAL"
 
@@ -191,7 +196,10 @@ CreditsChrData_Count = 0    ; Zero so it wraps around
 GameChrData:
     ; FIXME: generate the tile count for this stuff
     ; (and the lookup table below)
-    .incbin "game.chr", 0, (16 * 19)
+    .incbin "game.chr", 0, (16 * 16)
+.ifdef DEBUG
+    .incbin "hex.chr", 0, (16 * 16)
+.endif
 
 GameChrData_Count = (* - GameChrData) / 16
 

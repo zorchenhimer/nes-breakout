@@ -294,7 +294,51 @@ Init_Game:
     dex
     bne :-
 
+.ifdef DEBUG
+    jmp @afterRowCol ; skip but keep code, lol
+
+    ; Add row numbers
+    lda #$20
+    sta $2006
+    lda #$82
+    sta $2006
+    ldx #12
+    ldy #$10
+:
+    sty $2007
+    iny
+    dex
+    bne :-
+.endif
+
     .Update_PpuControl PPU_CTRL_NMI
+
+.ifdef DEBUG
+    lda #1
+    sta TmpX
+    ; add column numbers
+    lda #$20
+    sta $2006
+    lda #$44
+    sta $2006
+    ldx #16
+    ldy #$10
+:
+    sty $2007
+    iny
+    dex
+    bne :-
+
+    ldx #8
+    ldy #$10
+:
+    sty $2007
+    iny
+    dex
+    bne :-
+
+@afterRowCol:
+.endif
 
     lda Gravity_MainMap
     sta game_currentGravity
@@ -316,6 +360,7 @@ Frame_Game:
     adc #$0A    ; offset to sprite
     sta Sprites+(4*6)+1
 
+    ; TODO: Make this a proper sprite / UI element
     lda powerup_NoClip_Active
     and #$80
     sta Sprites+(4*6)+1
@@ -1716,7 +1761,7 @@ CheckPaddleHorizCollide:
 ; Main entry point for ball to brick collisions.
 ; First, the vertical collisions are checked (brick top
 ; or brick bottom, depending on ball travel direction),
-; the the horizontal collisions are check (brick left
+; the the horizontal collisions are checked (brick left
 ; or right).
 ;
 ; The collision detection uses two points per side of the
@@ -1795,11 +1840,24 @@ CheckBrickCollide:
     beq @vertDoCollide
 :
 
-    stx BrickRow
-    sty BrickCol
-    jsr GetAddressesForBrick
+.ifdef DEBUG
+    ; sanity check
+    cpx #16
+    bcc :+
+    brk ; X is too large
+:
 
-    ldy #0
+    cpy #24
+    bcc :+
+    brk ; Y is too large
+:
+.endif
+
+    lda Row_Addresses_Low, x
+    sta BrickAddress
+    lda Row_Addresses_High, x
+    sta BrickAddress+1
+
     lda (BrickAddress), y
     ; There is an adjacent brick, do
     ; not collide with that brick.
@@ -1809,8 +1867,17 @@ CheckBrickCollide:
     ; Something collided, store it
     lda CollisionRow_Ret
     sta BrickRowIndex_Vert
+    and #$7F
+    tax
+
     lda CollisionCol_Ret
     sta BrickColIndex_Vert
+    tay
+
+    stx BrickRow
+    sty BrickCol
+    jsr GetAddressesForBrick
+
     jmp @checkHoriz
 
 @noVertCollide:
@@ -1874,10 +1941,6 @@ CheckBrickCollide:
     beq @horizDoCollide
 :
 
-    stx BrickRow
-    sty BrickCol
-    jsr GetAddressesForBrick
-
     ldy #0
     lda (BrickAddress), y
     bne @noHorizCollide ; there is a brick, do not collide
@@ -1886,8 +1949,17 @@ CheckBrickCollide:
     ; Something collided, store it
     lda CollisionRow_Ret
     sta BrickRowIndex_Horiz
+    and #$7F
+    tax
+
     lda CollisionCol_Ret
     sta BrickColIndex_Horiz
+    tay
+
+    stx BrickRow
+    sty BrickCol
+    jsr GetAddressesForBrick
+
     jmp @doCollisions
 
 @noHorizCollide:
@@ -2004,6 +2076,9 @@ game_GetAddressForChildBrick:
 ; Both the address in RAM and the address in the PPU
 ; are calculated here.
 ;
+; A brick address should always be returned.  Empty tiles
+; SHOULD NOT be returned.
+;
 ; Input: BrickRow, BrickCol
 ; Output: BrickAddress, BrickPpuAddress
 GetAddressesForBrick:
@@ -2021,14 +2096,47 @@ GetAddressesForBrick:
     ; (needs to be pointing to the first byte)
     ldy BrickCol
     lda (BrickAddress), y   ; BrickAddress is the start of the row
+.ifdef DEBUG
+    beq @failA
+.endif
     bpl :++
     lda BrickCol
     bne :+
+.ifdef DEBUG
+    lda BrickAddress
+    sta zp_BrickAddress
+    lda BrickAddress+1
+    sta zp_BrickAddress+1
     brk ; Brick column 0, but second brick byte
+@failA:
+    lda BrickAddress
+    sta zp_BrickAddress
+    lda BrickAddress+1
+    sta zp_BrickAddress+1
+    brk ; Not a brick!
+.endif
 :
     ; On second byte, subtract one to get first byte
     dec BrickCol
 :
+
+.ifdef DEBUG
+    ;
+    ; Sanity check B
+    ldy BrickCol
+    lda (BrickAddress), y
+    bmi @failB  ; it's the second byte
+    and #%0100_0000
+    beq @failB  ; it's not the first byte
+    jmp @passB
+@failB:
+    lda BrickAddress
+    sta zp_BrickAddress
+    lda BrickAddress+1
+    sta zp_BrickAddress+1
+    brk ; Failed sanity check
+@passB:
+.endif
 
     lda game_BoardOffsetY
     lsr a   ; offset is in pixels
@@ -2075,6 +2183,28 @@ GetAddressesForBrick:
     adc #0
     sta BrickPpuAddress+1
 
+.ifdef DEBUG
+    ;
+    ; Sanity check C
+    ldy #0
+    lda (BrickAddress), y
+    bmi @fail
+    and #%0100_0000
+    beq @fail
+
+    lda BrickAddress
+    sta zp_BrickAddress
+    lda BrickAddress+1
+    sta zp_BrickAddress+1
+    rts
+
+@fail:
+    lda BrickAddress
+    sta zp_BrickAddress
+    lda BrickAddress+1
+    sta zp_BrickAddress+1
+    brk ; Failed sanity check
+.endif
     rts
 
 ; Perform the vertical collision on a brick.
@@ -2540,6 +2670,7 @@ Index_BgAnimRows:
 ; Check two point's collision and return
 ; the proper brick it collided with.
 ; Return values in CollisionRow_Ret and CollisionCol_Ret
+; TODO: fix this.  There's at least one off-by-one in here (column)
 CheckTwoPointCollision:
     lda PointA_X
     sta TmpX
@@ -2919,6 +3050,9 @@ game_RemoveBrick:
     rts
 :
     ; Remove from screen
+
+    ; First check if we already have to remove a brick.
+    ; If so, use the second variable
     lda BrickDestroyA
     bne :+
     lda BrickPpuAddress
