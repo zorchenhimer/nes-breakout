@@ -43,7 +43,7 @@ Child_Paddle_Y = 184
 WALL_RIGHT = $F5
 WALL_LEFT = $0A
 WALL_TOP = $11
-WALL_BOTTOM = $DD
+WALL_BOTTOM = $EA
 
 CHILD_WALL_RIGHT = WALL_RIGHT - (8 * 5)
 CHILD_WALL_LEFT = WALL_LEFT + (8 * 5)
@@ -1213,7 +1213,11 @@ game_SubtractLife:
     ldx #SHAKE_FRAMES
     ldy #0
     sty game_ShakeCooldown
+    sty game_FlameFrame    ; flame frame
+    sty game_FlameCooldown
 @loop:
+    jsr game_AnimateFlame
+
     lda game_ShakeCooldown
     beq :+
     dec game_ShakeCooldown
@@ -1221,6 +1225,25 @@ game_SubtractLife:
     jmp @loop
 
 :
+    jsr game_AnimateShake
+    jsr WaitForNMI
+    iny
+    dex
+    bne @loop
+
+    lda #$FF
+    ldx #96
+:
+    sta Sprites, x
+    inx
+    bne :-
+
+    dec LivesCount
+    beq game_GameOver
+
+    rts
+
+game_AnimateShake:
     lda #SHAKE_FRAME_RATE
     sta game_ShakeCooldown
 
@@ -1240,16 +1263,58 @@ game_SubtractLife:
     inc game_Nametable
 :
     sta game_ScrollY
-
-    jsr WaitForNMI
-    iny
-    dex
-    bne @loop
-
-    dec LivesCount
-    beq game_GameOver
-
     rts
+
+FLAME_SPRITES = Sprites+96
+
+game_AnimateFlame:
+    lda game_FlameFrame
+    cmp #4
+    bne :+
+    rts
+:
+    lda game_FlameCooldown
+    bpl :+
+    lda #4
+    sta game_FlameCooldown
+    ldy game_FlameFrame
+    inc game_FlameFrame
+
+    lda DeathAnim_Tiles, y
+    sta FLAME_SPRITES + 0 + 1
+    sta FLAME_SPRITES + 4 + 1
+    sta FLAME_SPRITES + 8 + 1
+    sta FLAME_SPRITES + 16 + 1
+
+    lda BallX+1
+    sec
+    sbc #Death_Offset
+    sta FLAME_SPRITES + 0 + 3
+    sta FLAME_SPRITES + 4 + 3
+    sta FLAME_SPRITES + 8 + 3
+    sta FLAME_SPRITES + 16 + 3
+
+    lda #Death_Height
+    sta FLAME_SPRITES + 0 + 0
+    lda #Death_Height + 8
+    sta FLAME_SPRITES + 4 + 0
+    lda #Death_Height + 16
+    sta FLAME_SPRITES + 8 + 0
+    lda #Death_Height + 24
+    sta FLAME_SPRITES + 16 + 0
+
+    lda #0
+    sta FLAME_SPRITES + 0 + 2
+    sta FLAME_SPRITES + 4 + 2
+    sta FLAME_SPRITES + 8 + 2
+    sta FLAME_SPRITES + 16 + 2
+
+    lda #$FF
+    sta Sprites+4
+:
+    dec game_FlameCooldown
+    rts
+
 
 ; Load a powerup into memory
 ; Powerup ID in A
@@ -3174,3 +3239,19 @@ Powerup_Actions:
     .word pu_RefillLife_Action
     .word pu_LoseLife_Action
     .word pu_NoClip_Action
+
+DeathAnim_Tiles:
+;    ; Frame 1
+;    .byte $22, $32, $42
+;    ; Frame 2
+;    .byte $21, $31, $41
+;    ; Frame 3
+;    .byte $20, $30, $40
+
+    .byte $23
+    .byte $24
+    .byte $25
+    .byte $26
+
+Death_Height = 200
+Death_Offset = 4    ; negative offset from ball center

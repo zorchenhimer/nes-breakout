@@ -89,6 +89,8 @@ game_ScrollX: .res 1
 game_ScrollY: .res 1
 game_Nametable: .res 1
 game_ShakeCooldown: .res 1
+game_FlameCooldown: .res 1
+game_FlameFrame: .res 1
 
 powerup_FrameAction_Pointer: .res 2
 powerup_FrameAction_Value: .res 2

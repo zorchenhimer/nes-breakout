@@ -196,10 +196,7 @@ CreditsChrData_Count = 0    ; Zero so it wraps around
 GameChrData:
     ; FIXME: generate the tile count for this stuff
     ; (and the lookup table below)
-    .incbin "game.chr", 0, (16 * 16)
-.ifdef DEBUG
-    .incbin "hex.chr", 0, (16 * 16)
-.endif
+    .incbin "game.chr", 0, (16 * 16 * 5) ; bytes/tile * tiles/row * rows
 
 GameChrData_Count = (* - GameChrData) / 16
 
@@ -542,6 +539,7 @@ ClearSprites:
     bne :-
     rts
 
+; TODO: Add an offset parameter?
 LoadChrData:
     ldx $8000   ; Load the bank ID
 
