@@ -13,6 +13,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/zorchenhimer/go-tiled"
 )
 
 func usage() {
@@ -38,7 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	mapData, err := LoadMap(os.Args[1])
+	mapData, err := tiled.LoadMap(os.Args[1])
 	if err != nil {
 		fmt.Printf("Unable to load main map %q: %v\n", os.Args[1], err)
 		os.Exit(1)
@@ -205,7 +207,7 @@ func doLevelSelectInstead() error {
 		return fmt.Errorf("Missing output file")
 	}
 
-	xml, err := LoadMap(inputName)
+	xml, err := tiled.LoadMap(inputName)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+
+	"github.com/zorchenhimer/go-tiled"
 )
 
 type GameMap struct {
@@ -89,7 +91,7 @@ func (t Tile) String() string {
 	return fmt.Sprintf("<Tile Id:%d Type:%s Value:%d>", t.Id, t.Type.String(), t.Value)
 }
 
-func LoadGameMap(layer XmlLayer, tileset Tileset) (*GameMap, error) {
+func LoadGameMap(layer tiled.XmlLayer, tileset Tileset) (*GameMap, error) {
 	gm := &GameMap{
 		TileValues: []int{},
 	}
@@ -176,7 +178,7 @@ func (tl *Tileset) Add(filename string, firstId int) error {
 		return fmt.Errorf("Error opening tileset xml: %v", err)
 	}
 
-	var tsxml TilesetXml
+	var tsxml tiled.TilesetXml
 	if err = xml.Unmarshal(raw, &tsxml); err != nil {
 		return fmt.Errorf("Error unmarshaling xml: %v", err)
 	}
