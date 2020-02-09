@@ -70,7 +70,7 @@ func main() {
 
 	layerSizes := [][]int{}
 
-	for _, m := range mapData.Boards {
+	for _, m := range mapData.Layers {
 		if m.GetId() < 0 {
 			fmt.Printf("Skipping layer %q\n", m.Name)
 			continue
@@ -212,13 +212,13 @@ func doLevelSelectInstead() error {
 		return err
 	}
 
-	if len(xml.Boards) < 3 {
+	if len(xml.Layers) < 3 {
 		return fmt.Errorf("not enough layers")
 	}
 
 	one, two := []string{}, []string{}
 
-	data := strings.Split(strings.ReplaceAll(xml.Boards[2].Data, "\n", ""), ",")
+	data := strings.Split(strings.ReplaceAll(xml.Layers[2].Data, "\n", ""), ",")
 	for i := 0; i < len(data); i++ {
 		num, err := strconv.ParseInt(data[i], 10, 32)
 		if err != nil {
