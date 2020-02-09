@@ -25,6 +25,8 @@ CONVMAP = bin/convert-map$(EXT)
 # Tool that generates CHR data from Bitmap images
 CHRUTIL = go-nes/bin/chrutil$(EXT)
 
+TITLECONV = bin/convert-title$(EXT)
+
 # Name of the main source file, minus the extension
 NAME = breakout
 
@@ -37,7 +39,8 @@ SOURCES := main.asm nes2header.inc \
 		  credits.asm credits_ram.asm \
 		  title.asm menu_ram.asm level-select.asm \
 		  macros.asm bg_anim.asm \
-		  lsbg.i level-select-data.asm gameover.asm
+		  lsbg.i level-select-data.asm gameover.asm \
+		  screen-decode.asm screen-data.i
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
@@ -145,17 +148,31 @@ matrix14.chr: $(MATRIX14_BMP)
 matrix7.chr: $(MATRIX7_BMP)
 	$(CHRUTIL) --first-plane -o $@ $^
 
+title.chr: images/title.bmp images/hooded.bmp
+	$(CHRUTIL) -o $@ images/title.bmp images/hooded.bmp --remove-duplicates --remove-empty
+
+maps/title.png: title.chr
+	$(CHRUTIL) -o $@ --palette 003973,000,797979,b2b2b2 $^
+
 $(GENCRED): generate-credits.go
 	go build -o $(GENCRED) generate-credits.go
 
 $(CONVMAP): convert-map/*.go
-	cd convert-map && go build -o ../$(CONVMAP)
+	cd convert-map && go build -o ../$@
+
+$(TITLECONV): convert-title/*.go
+	cd convert-title && go build -o ../$@
 
 bin/main.o: $(SOURCES) $(CHR)
 	$(CA) $(CAFLAGS) -o $@ main.asm
 
 bin/%.o: %.i
 	$(CA) $(CAFLAGS) -o $@ $^
+
+# maps/title.png isn't actually needed here, but putting it here
+# removes the need to manually regenerate it.
+screen-data.i: maps/title.tmx maps/title.png $(TITLECONV)
+	$(TITLECONV) -b 255 $< $@
 
 bin/map_data.o: map_data.asm main_map_data.i child_map_data.i
 	$(CA) $(CAFLAGS) -o $@ map_data.asm

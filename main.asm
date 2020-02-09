@@ -136,6 +136,8 @@ Sprites: .res 256
 .include "title.asm"
 .include "level-select.asm"
 .include "gameover.asm"
+.include "screen-decode.asm"
+.include "screen-data.i"
 
 .segment "PAGE03"
     .byte 3
@@ -201,8 +203,7 @@ GameChrData:
 GameChrData_Count = (* - GameChrData) / 16
 
 TitleData:
-    ; 128 tiles. includes a character set
-    .incbin "title.chr", 0, 2048
+    .incbin "title.chr", 0, (16 * 160) + (16 * 12) ; (bytes/tile * tile count)
 TitleData_Count = (* - TitleData) / 16
 
 HexTileData:
@@ -783,6 +784,8 @@ data_Inits:
         .word Init_LevelSelect
     .byte $00, 0, 2
         .word Init_GameOver
+    .byte $00, 0, 2
+        .word Init_ScreenTest
 
 
 ; TODO: find a way to auto-generate this table

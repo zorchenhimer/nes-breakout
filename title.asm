@@ -223,9 +223,11 @@ title_SelectMenuOption:
     lda title_MenuItems, x
     jmp JumpToInit
 
+; Text is null terminated
 data_TitleMenu:
     .byte "Level Select", $00, 3
     .byte "Credits", $00, 2
+    .byte "Screen Test", $00, 5
     .byte $00
 
 title_PalBackground:
