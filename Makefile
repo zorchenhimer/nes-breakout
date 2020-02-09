@@ -106,7 +106,7 @@ all: tools chr bin/$(NAME).nes
 names: tools chr clrNames credits_data.i bin/$(NAME).nes
 maps: tools chr map_data.i map_child_data.i lsbg.i
 tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
-travis: tools sample_credits trav chr bin/$(NAME).nes
+travis: trav tools sample_credits chr bin/$(NAME).nes
 chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR) $(MATRIX14_CHR) $(MATRIX7_CHR)
 waves: $(WAVE_CHR)
 newwaves: clean rmwaves waves all
@@ -114,6 +114,7 @@ newwaves: clean rmwaves waves all
 matrix: $(MATRIX14_CHR) $(MATRIX7_CHR)
 
 trav:
+	cd convert-map && go get github.com/zorchenhimer/go-tiled
 	touch images/*.bmp
 
 sample_credits:
