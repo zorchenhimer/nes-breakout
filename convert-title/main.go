@@ -47,6 +47,7 @@ func main() {
 	// first pass, convert hood
 	hoodCsv := []string{}
 	tvCsv := []string{}
+	spriteCsv := []string{}
 	for _, l := range data.Layers {
 		csv := strings.Split(
 				strings.ReplaceAll(
@@ -54,15 +55,18 @@ func main() {
 					"\n", ""),
 				",")
 
-		if l.Name == "Hood" {
+		switch l.Name {
+		case "Hood":
 			hoodCsv = csv
-		} else if l.Name == "TV" {
+		case "TV":
 			tvCsv = csv
+		case "Sprites":
+			spriteCsv = csv
 		}
 	}
 
 	if len(hoodCsv) != len(tvCsv) {
-		fmt.Println("layers have different lengths: %d vs %d", len(hoodCsv), len(tvCsv))
+		fmt.Printf("layers have different lengths: %d vs %d\n", len(hoodCsv), len(tvCsv))
 		os.Exit(1)
 	}
 
@@ -109,6 +113,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	spriteData := []uint{}
+	for _, val := range spriteCsv {
+		i64, err := strconv.ParseUint(val, 10, 32)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		spriteData = append(spriteData, uint(i64))
+	}
+
+	sprites := convertSprites(spriteData)
+
+	fmt.Printf("Sprite count: %d\n", len(sprites))
+	for len(sprites) < 64 {
+		sprites = append(sprites, Sprite{X:0xFF,Y:0xFF,Tile:0xFF})
+	}
+
 	file, err := os.Create(args[1])
 	if err != nil {
 		fmt.Println(err)
@@ -116,9 +137,10 @@ func main() {
 	}
 	defer file.Close()
 
-
 	fmt.Fprintln(file, "CHUNK_RLE = $00\nCHUNK_RAW = $80\n")
 	fmt.Fprintf(file, "screen_Hood:\n%v\n\n", hoodChunks.ToAsm(bgTile))
+
+	fmt.Fprintf(file, "screen_Sprites:\n%v\n\n", sprites.ToAsm())
 
 	// Write to asm file
 	//for key, val := range screens {
@@ -337,3 +359,41 @@ func convertLayer(data []uint) (*ChunkList, error) {
 	return chunks, nil
 }
 
+type Sprite struct {
+	X uint8
+	Y uint8
+	Tile uint8
+}
+
+func (s Sprite) ToAsm() string {
+	return fmt.Sprintf(".byte %d, $%02X, $00, %d", s.Y, s.Tile, s.X)
+}
+
+type SpriteList []Sprite
+
+func (sl SpriteList) ToAsm() string {
+	lst := []string{}
+	for _, s := range sl {
+		lst = append(lst, s.ToAsm())
+	}
+	return strings.Join(lst, "\n")
+}
+
+func convertSprites(data []uint) SpriteList {
+	sprites := SpriteList{}
+	for i, val := range data {
+		if val == 0 {
+			continue
+		}
+
+		sprite := Sprite {
+			X: uint8((i % 32) * 8),
+			Y: uint8((i / 32) * 8) - 1, // subtract one for vertical sprite offset
+			Tile: uint8(val) - 1, // subtract one to get base-zero ID
+		}
+
+		sprites = append(sprites, sprite)
+	}
+
+	return sprites
+}

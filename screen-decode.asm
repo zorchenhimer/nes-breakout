@@ -17,6 +17,14 @@ Init_ScreenTest:
 
     jsr LoadScreen
 
+    ; Copy sprites from ROM to RAM
+    ldx #0
+:
+    lda screen_Sprites, x
+    sta Sprites, x
+    inx
+    bne :-
+
     .Update_PpuControl PPU_CTRL_NMI
     .Update_PpuMask 0
 
@@ -26,7 +34,9 @@ Frame_ScreenTest:
     jmp Frame_ScreenTest
 
 NMI_ScreenTest:
-    .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN
+    jsr WriteSprites
+
+    .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN
     .Update_PpuMask PPU_MASK_ON | PPU_MASK_LEFTSPRITES | PPU_MASK_LEFTBACKGROUND
 
     lda #0
