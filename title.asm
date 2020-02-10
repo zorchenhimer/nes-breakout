@@ -3,7 +3,7 @@
 .importzp main_NUMBER_OF_MAPS
 
 TITLE_SpriteTop = 79    ; topmost Y coordinate of cursor
-
+TitleCursorTile = '"'
 Pal_Title:
     .byte $19, $0F, $10, $09
 
@@ -33,7 +33,7 @@ Init_Title:
     lda #100
     sta Sprites+3
 
-    lda #$01    ; tile
+    lda #TitleCursorTile    ; tile
     sta Sprites+1
     lda #$00    ; attr
     sta Sprites+2
@@ -48,7 +48,7 @@ Init_Title:
     jsr LoadChrData
 
     jsr ClearAttrTable0
-    lda #$00
+    lda #$0F
     jsr FillNametable0
 
     ; Draw a menu
