@@ -5,37 +5,46 @@
 TITLE_SpriteTop = 79    ; topmost Y coordinate of cursor
 TitleCursorTile = '"'
 Pal_Title:
-    .byte $19, $0F, $10, $09
+    .byte $0F, $0F, $00, $10
+    .byte $0F, $2A, $20, $3A
 
 Init_Title:
     .NMI_Disable
     .Disable_Drawing
 
     ; Load up a palette
-.repeat 4, i
+.repeat 8, i
     lda Pal_Title+i
     sta PaletteBuffer+i
     sta PaletteBufferSprites+i
 .endrepeat
 
     ; Unused palettes.  Make them red.
-    lda #$16
-.repeat 8, i
-    sta PaletteBuffer+8+i
-    sta PaletteBufferSprites+8+i
-.endrepeat
+;    lda #$16
+;.repeat 4, i
+;    sta PaletteBuffer+8+i
+;    sta PaletteBufferSprites+8+i
+;.endrepeat
 
     jsr Clear_NonGlobalRam
     jsr ClearSprites
 
+    ; Copy sprites from ROM to RAM
+    ldx #0
+:
+    lda screen_Sprites, x
+    sta Sprites, x
+    inx
+    bne :-
+
     lda #79
     sta Sprites
-    lda #100
+    lda #70
     sta Sprites+3
 
     lda #TitleCursorTile    ; tile
     sta Sprites+1
-    lda #$00    ; attr
+    lda #$01    ; attr
     sta Sprites+2
 
     lda #$0F
@@ -48,13 +57,21 @@ Init_Title:
     jsr LoadChrData
 
     jsr ClearAttrTable0
-    lda #$0F
-    jsr FillNametable0
+    ;lda #$0F
+    ;jsr FillNametable0
+
+    jsr WriteTvAttr
+
+    lda #<screen_Tv
+    sta AddressPointer0
+    lda #>screen_Tv
+    sta AddressPointer0+1
+    jsr LoadScreen
 
     ; Draw a menu
     lda #$21
     sta AddressPointer0+1
-    lda #$4E
+    lda #$4A
     sta AddressPointer0+0
 
     ldx #0
@@ -89,7 +106,6 @@ Init_Title:
     beq @menuDone
     jmp @menuLoop
 @menuDone:
-
     jsr WaitForNMI
 
     lda #0
