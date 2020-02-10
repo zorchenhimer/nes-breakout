@@ -80,18 +80,33 @@ func main() {
 		mergedHood = append(mergedHood, uint(i64))
 	}
 
+	justTv := []uint{}
 	for i, val := range tvCsv {
 		i64, err := strconv.ParseUint(val, 10, 32)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+		justTv = append(justTv, uint(i64))
 		if i64 == 0 {
 			continue
 		}
 
 		mergedHood[i] = uint(i64)
 	}
+
+	//for i, val := range spriteCsv {
+	//	i64, err := strconv.ParseUint(val, 10, 32)
+	//	if err != nil {
+	//		fmt.Println(err)
+	//		os.Exit(1)
+	//	}
+	//	if i64 == 0 {
+	//		continue
+	//	}
+
+	//	justTv[i] = uint(i64)
+	//}
 
 	//screens := map[string]*ChunkList{}
 	//for _, layer := range data.Layers {
@@ -124,10 +139,17 @@ func main() {
 	}
 
 	sprites := convertSprites(spriteData)
+	sprites = append([]Sprite{Sprite{X:0xFF,Y:0xFF,Tile:0xFF}} , sprites...)
 
 	fmt.Printf("Sprite count: %d\n", len(sprites))
 	for len(sprites) < 64 {
 		sprites = append(sprites, Sprite{X:0xFF,Y:0xFF,Tile:0xFF})
+	}
+
+	tv, err := convertLayer(justTv)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	file, err := os.Create(args[1])
@@ -141,6 +163,7 @@ func main() {
 	fmt.Fprintf(file, "screen_Hood:\n%v\n\n", hoodChunks.ToAsm(bgTile))
 
 	fmt.Fprintf(file, "screen_Sprites:\n%v\n\n", sprites.ToAsm())
+	fmt.Fprintf(file, "screen_Tv:\n%v\n\n", tv.ToAsm(bgTile))
 
 	// Write to asm file
 	//for key, val := range screens {
@@ -182,6 +205,10 @@ func (c Chunk) ToAsm(bgTile int) string {
 	strVals := []string{}
 	if c.Type == CHUNK_RAW {
 		for _, v := range c.Data {
+			if v != 0x00 {
+				v -= 1
+			}
+
 			if v == 0x00 {
 				v = byte(bgTile)
 			}
@@ -189,6 +216,10 @@ func (c Chunk) ToAsm(bgTile int) string {
 		}
 	} else {
 		v := c.Data[0]
+		if v != 0x00 {
+			v -= 1
+		}
+
 		if v == 0x00 {
 			v = byte(bgTile)
 		}
@@ -242,10 +273,6 @@ func (cl ChunkList) TileCount() int {
 }
 
 func (cl *ChunkList) Add(b byte) {
-	if b != 0x00 {
-		b -= 1
-	}
-
 	if cl.past == nil {
 		cl.past = []Chunk{}
 	}

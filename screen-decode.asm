@@ -2,6 +2,16 @@
 
 ; Load screen data to the PPU
 
+ScreenTest_Palette:
+    .byte $0F, $0F, $00, $10
+    .byte $0F, $00, $20, $10
+
+; Quadrants of the attribute data for better readability
+ST_BOTL = %0001_0000
+ST_BOTR = %0100_0000
+ST_TOPL = %0000_0001
+ST_TOPR = %0000_0100
+
 Init_ScreenTest:
     .NMI_Disable
     .Disable_Drawing
@@ -17,6 +27,17 @@ Init_ScreenTest:
 
     jsr LoadScreen
 
+    ldx #0
+:
+    lda ScreenTest_Palette, x
+    sta PaletteBuffer, x
+    sta PaletteBufferSprites, x
+    inx
+    cpx #8
+    bne :-
+
+    jsr WritePalettes
+
     ; Copy sprites from ROM to RAM
     ldx #0
 :
@@ -24,6 +45,8 @@ Init_ScreenTest:
     sta Sprites, x
     inx
     bne :-
+
+    jsr WriteTvAttr
 
     .Update_PpuControl PPU_CTRL_NMI
     .Update_PpuMask 0
@@ -45,6 +68,52 @@ NMI_ScreenTest:
     rti
 
 
+WriteTvAttr:
+    ; 23CA
+    lda #$23
+    sta $2006
+    lda #$CA
+    sta $2006
+
+    lda #ST_BOTL | ST_BOTR
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+
+    lda #$23
+    sta $2006
+    lda #$D2
+    sta $2006
+
+    lda #ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+
+    lda #$23
+    sta $2006
+    lda #$DA
+    sta $2006
+
+    lda #ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+
+    lda #$23
+    sta $2006
+    lda #$E2
+    sta $2006
+
+    lda #ST_TOPL | ST_TOPR
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+    rts
 
 ; Expects pointer to screen data in AddressPointer0
 LoadScreen:
