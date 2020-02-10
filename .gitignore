@@ -1,4 +1,5 @@
 bin/
+ignore-this/
 
 credit-names/*.csv
 !credit-names/sample-credit-names.csv
