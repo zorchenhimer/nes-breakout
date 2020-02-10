@@ -6,6 +6,10 @@ Init_ScreenTest:
     .NMI_Disable
     .Disable_Drawing
 
+    jsr ClearSprites
+    jsr WriteSprites
+    jsr ClearAttrTable0
+
     lda #<screen_Hood
     sta AddressPointer0
     lda #>screen_Hood
@@ -24,7 +28,13 @@ Frame_ScreenTest:
 NMI_ScreenTest:
     .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN
     .Update_PpuMask PPU_MASK_ON | PPU_MASK_LEFTSPRITES | PPU_MASK_LEFTBACKGROUND
+
+    lda #0
+    sta $2005
+    sta $2005
     rti
+
+
 
 ; Expects pointer to screen data in AddressPointer0
 LoadScreen:
@@ -89,7 +99,7 @@ screen_DecodeRLE:
     iny
 
     and #$01
-    bne @even
+    beq @even
     ; odd
     lda (AddressPointer0), y
     sta $2007
@@ -101,6 +111,7 @@ screen_DecodeRLE:
 @loop:
     sta $2007
     sta $2007
+    dex
     dex
     bne @loop
     rts

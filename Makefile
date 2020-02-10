@@ -173,7 +173,7 @@ bin/%.o: %.i
 # maps/title.png isn't actually needed here, but putting it here
 # removes the need to manually regenerate it.
 screen-data.i: maps/title.tmx maps/title.png $(TITLECONV)
-	$(TITLECONV) -b 255 $< $@
+	$(TITLECONV) -b 15 $< $@
 
 bin/map_data.o: map_data.asm main_map_data.i child_map_data.i
 	$(CA) $(CAFLAGS) -o $@ map_data.asm

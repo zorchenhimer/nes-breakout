@@ -55,6 +55,7 @@ func main() {
 		}
 
 		screens[layer.Name] = encoded
+		fmt.Printf("%s: %d\n", layer.Name, encoded.TileCount())
 	}
 
 	file, err := os.Create(args[1])
@@ -64,8 +65,7 @@ func main() {
 	}
 	defer file.Close()
 
-	fmt.Fprintln(file, "CHUNK_RLE = $00")
-	fmt.Fprintln(file, "CHUNK_RAW = $80")
+	fmt.Fprintln(file, "CHUNK_RLE = $00\nCHUNK_RAW = $80\n")
 
 	// Write to asm file
 	for key, val := range screens {
@@ -107,10 +107,17 @@ func (c Chunk) ToAsm(bgTile int) string {
 	strVals := []string{}
 	if c.Type == CHUNK_RAW {
 		for _, v := range c.Data {
+			if v == 0x00 {
+				v = byte(bgTile)
+			}
 			strVals = append(strVals, fmt.Sprintf("$%02X", v))
 		}
 	} else {
-		strVals = append(strVals, fmt.Sprintf("$%02X", c.Data[0]))
+		v := c.Data[0]
+		if v == 0x00 {
+			v = byte(bgTile)
+		}
+		strVals = append(strVals, fmt.Sprintf("$%02X", v))
 	}
 
 	return fmt.Sprintf(".byte %s | %d, %s", t, len(c.Data), strings.Join(strVals, ", "))
@@ -127,7 +134,43 @@ type ChunkList struct {
 	prevByte *byte
 }
 
+func (cl *ChunkList) Chunks() []Chunk {
+	if cl.prevByte != nil {
+		cl.Add(*cl.prevByte)
+		cl.prevByte = nil
+	}
+
+	if cl.current != nil {
+		cl.past = append(cl.past, *cl.current)
+		cl.current = nil
+	}
+
+	return cl.past
+}
+
+func (cl ChunkList) TileCount() int {
+	count := 0
+	for _, c := range cl.past {
+		count += c.Length()
+	}
+
+	if cl.current != nil {
+		count += cl.current.Length()
+	}
+
+	if cl.prevByte != nil {
+		//fmt.Println("prevByte is non-nil")
+		count += 1
+	}
+
+	return count
+}
+
 func (cl *ChunkList) Add(b byte) {
+	if b != 0x00 {
+		b -= 1
+	}
+
 	if cl.past == nil {
 		cl.past = []Chunk{}
 	}
@@ -171,6 +214,11 @@ func (cl *ChunkList) Add(b byte) {
 		} else if (*cl.prevByte == b && cl.current.Type == CHUNK_RAW) ||
 				  (*cl.prevByte != b && cl.current.Type == CHUNK_RLE) {
 			//cl.current.Data = append(cl.current.Data, *cl.prevByte)
+
+			//if cl.current.Type == CHUNK_RLE {
+			//	cl.current.Data = append(cl.current.Data, *cl.prevByte)
+			//}
+
 			cl.past = append(cl.past, *cl.current)
 
 			cl.current = &Chunk{
@@ -180,6 +228,7 @@ func (cl *ChunkList) Add(b byte) {
 			if *cl.prevByte == b {
 				cl.current.Type = CHUNK_RLE
 			} else {
+				cl.prevByte = nil
 				cl.current.Type = CHUNK_RAW
 			}
 			cl.prevByte = &b
@@ -207,6 +256,10 @@ func (cl ChunkList) ToBytes() []byte {
 }
 
 func (cl ChunkList) ToAsm(bgTile int) string {
+	if cl.prevByte != nil {
+		cl.Add(*cl.prevByte)
+	}
+
 	if cl.current != nil {
 		cl.past = append(cl.past, *cl.current)
 	}
