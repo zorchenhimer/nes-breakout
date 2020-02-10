@@ -4,19 +4,29 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
+	//"strconv"
 	"strings"
 
 	"github.com/zorchenhimer/go-tiled"
 )
 
 /*
-	Intro sequence and menu screen data conversion.
+	The data format used for the screens is a combination of run-length and
+	raw data, with a length count in the first byte.
 
-	RLE based.
-	First byte:
-	- RLE + Length
-	- Raw bytes + Length
+	The data is split up into chunks.  Each chunk is either run-length or
+	raw data.  The first byte of a chunk holds both the type and the length
+	of data.
+
+	The first bit determines the chunk type.  If bit 7 is set, the chunk is
+	a raw data chunk.  It is a run-length chunk otherwise.  Bits 6-0 hold
+	the length of the data.
+
+	A run-length chunk will always be two bytes long.  The first byte is the
+	chunk type and length, while the second byte is the data to be repeated.
+
+	A raw data chunk is N + 1 bytes long.  The first byte is the chunk type
+	and length (just like the RLE byte), and it is followed by a list of data.
 
 	TLLL LLLL
 	T: Type
@@ -33,7 +43,9 @@ func main() {
 	args := flag.Args()
 	if len(args) != 2 {
 		// TODO: print usage
-		fmt.Println("Incorrect number of arguments:", len(args))
+		//fmt.Println("Incorrect number of arguments:", len(args))
+		fmt.Printf("Usage: %s [options] input.xml output.i\n\n", os.Args[0])
+		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
@@ -43,102 +55,40 @@ func main() {
 		os.Exit(1)
 	}
 
-	mergedHood := []uint{}
-	// first pass, convert hood
-	hoodCsv := []string{}
-	tvCsv := []string{}
-	spriteCsv := []string{}
-	for _, l := range data.Layers {
-		csv := strings.Split(
-				strings.ReplaceAll(
-					strings.ReplaceAll(l.Data, "\r", ""),
-					"\n", ""),
-				",")
-
-		switch l.Name {
-		case "Hood":
-			hoodCsv = csv
-		case "TV":
-			tvCsv = csv
-		case "Sprites":
-			spriteCsv = csv
-		}
+	layersHood := data.GetLayerByName("Hood")
+	if len(layersHood) == 0 {
+		fmt.Println("Hood layer to found")
 	}
 
-	if len(hoodCsv) != len(tvCsv) {
-		fmt.Printf("layers have different lengths: %d vs %d\n", len(hoodCsv), len(tvCsv))
-		os.Exit(1)
+	layersTv := data.GetLayerByName("TV")
+	if len(layersTv) == 0 {
+		fmt.Println("TV layer to found")
 	}
 
-	for _, val := range hoodCsv {
-		i64, err := strconv.ParseUint(val, 10, 32)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		mergedHood = append(mergedHood, uint(i64))
-	}
-
-	justTv := []uint{}
-	for i, val := range tvCsv {
-		i64, err := strconv.ParseUint(val, 10, 32)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		justTv = append(justTv, uint(i64))
-		if i64 == 0 {
-			continue
-		}
-
-		mergedHood[i] = uint(i64)
-	}
-
-	//for i, val := range spriteCsv {
-	//	i64, err := strconv.ParseUint(val, 10, 32)
-	//	if err != nil {
-	//		fmt.Println(err)
-	//		os.Exit(1)
-	//	}
-	//	if i64 == 0 {
-	//		continue
-	//	}
-
-	//	justTv[i] = uint(i64)
-	//}
-
-	//screens := map[string]*ChunkList{}
-	//for _, layer := range data.Layers {
-	//	// do a thing
-
-	//	encoded, err := convertLayer(layer)
-	//	if err != nil {
-	//		fmt.Printf("[%s] %v", layer.Name, err)
-	//		os.Exit(1)
-	//	}
-
-	//	screens[layer.Name] = encoded
-	//	fmt.Printf("%s: %d\n", layer.Name, encoded.TileCount())
-	//}
-
-	hoodChunks, err := convertLayer(mergedHood)
+	mergedHood, err := layersHood[0].Merge(layersTv[0])
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	spriteData := []uint{}
-	for _, val := range spriteCsv {
-		i64, err := strconv.ParseUint(val, 10, 32)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		spriteData = append(spriteData, uint(i64))
+	layersSprite := data.GetLayerByName("Sprites")
+	if len(layersTv) == 0 {
+		fmt.Println("Sprites layer to found")
 	}
 
-	sprites := convertSprites(spriteData)
+	justTv, err := layersTv[0].Merge(layersSprite[0])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	hoodChunks, err := convertLayer(mergedHood.Data)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	sprites := convertSprites(layersSprite[0].Data)
 	sprites = append([]Sprite{Sprite{X:0xFF,Y:0xFF,Tile:0xFF}} , sprites...)
 
 	fmt.Printf("Sprite count: %d\n", len(sprites))
@@ -146,7 +96,7 @@ func main() {
 		sprites = append(sprites, Sprite{X:0xFF,Y:0xFF,Tile:0xFF})
 	}
 
-	tv, err := convertLayer(justTv)
+	tv, err := convertLayer(justTv.Data)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -161,220 +111,11 @@ func main() {
 
 	fmt.Fprintln(file, "CHUNK_RLE = $00\nCHUNK_RAW = $80\n")
 	fmt.Fprintf(file, "screen_Hood:\n%v\n\n", hoodChunks.ToAsm(bgTile))
-
 	fmt.Fprintf(file, "screen_Sprites:\n%v\n\n", sprites.ToAsm())
 	fmt.Fprintf(file, "screen_Tv:\n%v\n\n", tv.ToAsm(bgTile))
-
-	// Write to asm file
-	//for key, val := range screens {
-	//	//fmt.Printf("screen: %s\n%v\n\n", key, val.ToAsm())
-	//	fmt.Fprintf(file, "screen_%s:\n%v\n\n", key, val.ToAsm(bgTile))
-	//}
 }
 
-type ChunkType uint8
-
-const (
-	CHUNK_RLE ChunkType = 0x00
-	CHUNK_RAW ChunkType = 0x80
-)
-
-type Chunk struct {
-	Type ChunkType
-	Data []byte
-}
-
-func (c Chunk) ToBytes() []byte {
-	ret := []byte{
-		uint8(c.Type) | uint8(len(c.Data)),
-	}
-
-	if c.Type == CHUNK_RAW {
-		return append(ret, c.Data...)
-	}
-
-	return append(ret, c.Data[0])
-}
-
-func (c Chunk) ToAsm(bgTile int) string {
-	t := "CHUNK_RLE"
-	if c.Type == CHUNK_RAW {
-		t = "CHUNK_RAW"
-	}
-
-	strVals := []string{}
-	if c.Type == CHUNK_RAW {
-		for _, v := range c.Data {
-			if v != 0x00 {
-				v -= 1
-			}
-
-			if v == 0x00 {
-				v = byte(bgTile)
-			}
-			strVals = append(strVals, fmt.Sprintf("$%02X", v))
-		}
-	} else {
-		v := c.Data[0]
-		if v != 0x00 {
-			v -= 1
-		}
-
-		if v == 0x00 {
-			v = byte(bgTile)
-		}
-		strVals = append(strVals, fmt.Sprintf("$%02X", v))
-	}
-
-	return fmt.Sprintf(".byte %s | %d, %s", t, len(c.Data), strings.Join(strVals, ", "))
-}
-
-func (c Chunk) Length() int {
-	return len(c.Data)
-}
-
-type ChunkList struct {
-	current *Chunk
-	past []Chunk
-
-	prevByte *byte
-}
-
-func (cl *ChunkList) Chunks() []Chunk {
-	if cl.prevByte != nil {
-		cl.Add(*cl.prevByte)
-		cl.prevByte = nil
-	}
-
-	if cl.current != nil {
-		cl.past = append(cl.past, *cl.current)
-		cl.current = nil
-	}
-
-	return cl.past
-}
-
-func (cl ChunkList) TileCount() int {
-	count := 0
-	for _, c := range cl.past {
-		count += c.Length()
-	}
-
-	if cl.current != nil {
-		count += cl.current.Length()
-	}
-
-	if cl.prevByte != nil {
-		//fmt.Println("prevByte is non-nil")
-		count += 1
-	}
-
-	return count
-}
-
-func (cl *ChunkList) Add(b byte) {
-	if cl.past == nil {
-		cl.past = []Chunk{}
-	}
-
-	if cl.current == nil {
-		// initial state
-		if cl.prevByte == nil {
-			cl.prevByte = &b
-
-		// initial to RLE
-		} else if *cl.prevByte == b {
-			cl.current = &Chunk{
-				Type: CHUNK_RLE,
-				Data: []byte{b},
-			}
-
-		// initial to RAW
-		} else if *cl.prevByte != b {
-			cl.current = &Chunk{
-				Type: CHUNK_RAW,
-				Data: []byte{*cl.prevByte},
-			}
-
-			cl.prevByte = &b
-		}
-	} else {
-		if cl.prevByte == nil {
-			panic("Something went wrong.  prevByte is nil with non-nil current.")
-		}
-
-		// append RLE
-		if *cl.prevByte == b && cl.current.Type == CHUNK_RLE {
-			cl.current.Data = append(cl.current.Data, b)
-
-		// append RAW
-		} else if *cl.prevByte != b && cl.current.Type == CHUNK_RAW {
-			cl.current.Data = append(cl.current.Data, *cl.prevByte)
-			cl.prevByte = &b
-
-		// New chunk type
-		} else if (*cl.prevByte == b && cl.current.Type == CHUNK_RAW) ||
-				  (*cl.prevByte != b && cl.current.Type == CHUNK_RLE) {
-			//cl.current.Data = append(cl.current.Data, *cl.prevByte)
-
-			//if cl.current.Type == CHUNK_RLE {
-			//	cl.current.Data = append(cl.current.Data, *cl.prevByte)
-			//}
-
-			cl.past = append(cl.past, *cl.current)
-
-			cl.current = &Chunk{
-				Data: []byte{*cl.prevByte},
-			}
-
-			if *cl.prevByte == b {
-				cl.current.Type = CHUNK_RLE
-			} else {
-				cl.prevByte = nil
-				cl.current.Type = CHUNK_RAW
-			}
-			cl.prevByte = &b
-		}
-	}
-
-	// Length limit hit on current
-	if cl.current != nil && len(cl.current.Data) >= 127 {
-		cl.past = append(cl.past, *cl.current)
-		cl.current = nil
-	}
-}
-
-func (cl ChunkList) ToBytes() []byte {
-	if cl.current != nil {
-		cl.past = append(cl.past, *cl.current)
-	}
-
-	data := []byte{}
-	for _, c := range cl.past {
-		data = append(data, c.ToBytes()...)
-	}
-
-	return data
-}
-
-func (cl ChunkList) ToAsm(bgTile int) string {
-	if cl.prevByte != nil {
-		cl.Add(*cl.prevByte)
-	}
-
-	if cl.current != nil {
-		cl.past = append(cl.past, *cl.current)
-	}
-
-	data := []string{}
-	for _, c := range cl.past {
-		data = append(data, c.ToAsm(bgTile))
-	}
-
-	return strings.Join(data, "\n")
-}
-
-func convertLayer(data []uint) (*ChunkList, error) {
+func convertLayer(data []uint32) (*ChunkList, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("No data to convert!")
 	}
@@ -406,7 +147,7 @@ func (sl SpriteList) ToAsm() string {
 	return strings.Join(lst, "\n")
 }
 
-func convertSprites(data []uint) SpriteList {
+func convertSprites(data []uint32) SpriteList {
 	sprites := SpriteList{}
 	for i, val := range data {
 		if val == 0 {
