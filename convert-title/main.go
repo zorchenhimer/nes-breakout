@@ -43,19 +43,70 @@ func main() {
 		os.Exit(1)
 	}
 
-	screens := map[string]*ChunkList{}
+	mergedHood := []uint{}
+	// first pass, convert hood
+	hoodCsv := []string{}
+	tvCsv := []string{}
+	for _, l := range data.Layers {
+		csv := strings.Split(
+				strings.ReplaceAll(
+					strings.ReplaceAll(l.Data, "\r", ""),
+					"\n", ""),
+				",")
 
-	for _, layer := range data.Layers {
-		// do a thing
+		if l.Name == "Hood" {
+			hoodCsv = csv
+		} else if l.Name == "TV" {
+			tvCsv = csv
+		}
+	}
 
-		encoded, err := convertLayer(layer)
+	if len(hoodCsv) != len(tvCsv) {
+		fmt.Println("layers have different lengths: %d vs %d", len(hoodCsv), len(tvCsv))
+		os.Exit(1)
+	}
+
+	for _, val := range hoodCsv {
+		i64, err := strconv.ParseUint(val, 10, 32)
 		if err != nil {
-			fmt.Printf("[%s] %v", layer.Name, err)
+			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		screens[layer.Name] = encoded
-		fmt.Printf("%s: %d\n", layer.Name, encoded.TileCount())
+		mergedHood = append(mergedHood, uint(i64))
+	}
+
+	for i, val := range tvCsv {
+		i64, err := strconv.ParseUint(val, 10, 32)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		if i64 == 0 {
+			continue
+		}
+
+		mergedHood[i] = uint(i64)
+	}
+
+	//screens := map[string]*ChunkList{}
+	//for _, layer := range data.Layers {
+	//	// do a thing
+
+	//	encoded, err := convertLayer(layer)
+	//	if err != nil {
+	//		fmt.Printf("[%s] %v", layer.Name, err)
+	//		os.Exit(1)
+	//	}
+
+	//	screens[layer.Name] = encoded
+	//	fmt.Printf("%s: %d\n", layer.Name, encoded.TileCount())
+	//}
+
+	hoodChunks, err := convertLayer(mergedHood)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	file, err := os.Create(args[1])
@@ -65,13 +116,15 @@ func main() {
 	}
 	defer file.Close()
 
+
 	fmt.Fprintln(file, "CHUNK_RLE = $00\nCHUNK_RAW = $80\n")
+	fmt.Fprintf(file, "screen_Hood:\n%v\n\n", hoodChunks.ToAsm(bgTile))
 
 	// Write to asm file
-	for key, val := range screens {
-		//fmt.Printf("screen: %s\n%v\n\n", key, val.ToAsm())
-		fmt.Fprintf(file, "screen_%s:\n%v\n\n", key, val.ToAsm(bgTile))
-	}
+	//for key, val := range screens {
+	//	//fmt.Printf("screen: %s\n%v\n\n", key, val.ToAsm())
+	//	fmt.Fprintf(file, "screen_%s:\n%v\n\n", key, val.ToAsm(bgTile))
+	//}
 }
 
 type ChunkType uint8
@@ -272,32 +325,15 @@ func (cl ChunkList) ToAsm(bgTile int) string {
 	return strings.Join(data, "\n")
 }
 
-func convertLayer(layer tiled.XmlLayer) (*ChunkList, error) {
-	if len(layer.Data) == 0 {
-		return nil, fmt.Errorf("No data in layer!")
+func convertLayer(data []uint) (*ChunkList, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("No data to convert!")
 	}
-
-	csv := strings.Split(
-		strings.ReplaceAll(
-			strings.ReplaceAll(layer.Data, "\r", ""),
-			"\n", ""),
-		",")
-
-	// initial state
-	// RLE state
-	// Raw state
 
 	chunks := &ChunkList{}
-
-	for i, val := range csv {
-		i64, err := strconv.ParseUint(val, 10, 8)
-		if err != nil {
-			return nil, fmt.Errorf("{%d} %v", i, err)
-		}
-
-		chunks.Add(byte(i64))
+	for _, val := range data {
+		chunks.Add(byte(val))
 	}
-
 	return chunks, nil
 }
 
