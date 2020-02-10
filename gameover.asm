@@ -6,13 +6,14 @@ go_Start:
     .byte "Press Start", $00
 
 go_Palette:
-    .byte $0F, $0F, $0F, $2A
+    .byte $0F, $0F, $00, $10
+    .byte $0F, $2A, $20, $10
 
 Init_GameOver:
     .Disable_Drawing
     .NMI_Disable
 
-.repeat 4, i
+.repeat 8, i
     lda go_Palette+i
     sta PaletteBuffer+i
     sta PaletteBufferSprites+i
@@ -27,10 +28,26 @@ Init_GameOver:
     lda #2
     jsr LoadChrData
 
+    jsr WriteTvAttr
+
+    lda #<screen_Tv
+    sta AddressPointer0
+    lda #>screen_Tv
+    sta AddressPointer0+1
+    jsr LoadScreen
+
+    ; Copy sprites from ROM to RAM
+    ldx #0
+:
+    lda screen_Sprites, x
+    sta Sprites, x
+    inx
+    bne :-
+
     bit $2002
     lda #$21
     sta $2006
-    lda #$4C
+    lda #$4B
     sta $2006
 
     ldx #0
@@ -42,9 +59,9 @@ Init_GameOver:
     jmp :-
 :
 
-    lda #$23
+    lda #$21
     sta $2006
-    lda #$2B
+    lda #$EA
     sta $2006
 
     ldx #0
@@ -86,6 +103,6 @@ NMI_GameOver:
     sta $2005
     sta $2005
 
-    .Update_PpuControl_Var PpuControl
+    .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN 
     dec Sleeping
     rti
