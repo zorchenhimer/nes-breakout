@@ -1,7 +1,7 @@
 ; asmsyntax=ca65
 
 .pushseg
-.segment "ZPGAME" : zeropage
+.segment "ZEROPAGE" : zeropage
 
 ; number of frames to wait between
 ; animation frames
