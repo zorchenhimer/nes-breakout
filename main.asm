@@ -198,7 +198,7 @@ CreditsChrData_Count = 0    ; Zero so it wraps around
 GameChrData:
     ; FIXME: generate the tile count for this stuff
     ; (and the lookup table below)
-    .incbin "game.chr", 0, (16 * 16 * 5) ; bytes/tile * tiles/row * rows
+    .incbin "game.chr", 0, (16 * 16 * 6) ; bytes/tile * tiles/row * rows
 
 GameChrData_Count = (* - GameChrData) / 16
 
@@ -770,6 +770,28 @@ WritePalettes:
     lda PaletteBuffer+i
     sta $2007
 .endrepeat
+    rts
+
+; Binary value in A, ASCII Hex values output in TmpX and TmpY
+BinToHex:
+    sta TmpX
+    lda #0
+    sta TmpY
+
+@tens:
+    lda TmpX
+    cmp #$10
+    bcs @addtens
+    jmp @done
+
+@addtens:
+    inc TmpY
+    sec
+    sbc #$10
+    sta TmpX
+    jmp @tens
+
+@done:
     rts
 
 data_Inits:

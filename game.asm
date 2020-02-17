@@ -406,6 +406,8 @@ Frame_Game:
     ;jsr waves_PrepChrWrite
     jsr waves_CacheRow
 
+    jsr game_DebugData
+
     lda #BUTTON_START
     jsr ButtonPressedP1
     beq :+
@@ -419,6 +421,131 @@ Frame_Game:
 
     jsr WaitForNMI
     jmp Frame_Game
+
+; starting positions for sprites
+DEBUG_DATA_Y = 20
+DEBUG_DATA_X = 216
+DEBUG_SPRITES = Sprites + (4 * 8) ; 8th sprite
+DEBUG_HEX = $50 ; Tile row for hex values
+
+game_DebugData:
+    lda #DEBUG_DATA_Y
+    sta DEBUG_SPRITES + (4 * 0)
+    sta DEBUG_SPRITES + (4 * 1)
+
+    lda #DEBUG_DATA_Y + 8
+    sta DEBUG_SPRITES + (4 * 2)
+    sta DEBUG_SPRITES + (4 * 3)
+
+    lda #DEBUG_DATA_Y + 16
+    sta DEBUG_SPRITES + (4 * 4)
+    sta DEBUG_SPRITES + (4 * 5)
+    sta DEBUG_SPRITES + (4 * 6)
+    sta DEBUG_SPRITES + (4 * 7)
+
+    lda #DEBUG_DATA_Y + 24
+    sta DEBUG_SPRITES + (4 * 8)
+    sta DEBUG_SPRITES + (4 * 9)
+    sta DEBUG_SPRITES + (4 * 10)
+    sta DEBUG_SPRITES + (4 * 11)
+
+    lda #DEBUG_DATA_X
+    sta DEBUG_SPRITES + 3 + (4 * 0)
+    sta DEBUG_SPRITES + 3 + (4 * 2)
+    sta DEBUG_SPRITES + 3 + (4 * 4)
+    sta DEBUG_SPRITES + 3 + (4 * 8)
+
+    lda #DEBUG_DATA_X + 8
+    sta DEBUG_SPRITES + 3 + (4 * 1)
+    sta DEBUG_SPRITES + 3 + (4 * 3)
+    sta DEBUG_SPRITES + 3 + (4 * 5)
+    sta DEBUG_SPRITES + 3 + (4 * 9)
+
+    lda #DEBUG_DATA_X + 16
+    sta DEBUG_SPRITES + 3 + (4 * 6)
+    sta DEBUG_SPRITES + 3 + (4 * 10)
+
+    lda #DEBUG_DATA_X + 24
+    sta DEBUG_SPRITES + 3 + (4 * 7)
+    sta DEBUG_SPRITES + 3 + (4 * 11)
+
+    ; Attributes
+    lda #0
+    sta DEBUG_SPRITES + 2 + (4 * 0)
+    sta DEBUG_SPRITES + 2 + (4 * 1)
+    sta DEBUG_SPRITES + 2 + (4 * 2)
+    sta DEBUG_SPRITES + 2 + (4 * 3)
+
+    sta DEBUG_SPRITES + 2 + (4 * 4)
+    sta DEBUG_SPRITES + 2 + (4 * 5)
+    sta DEBUG_SPRITES + 2 + (4 * 6)
+    sta DEBUG_SPRITES + 2 + (4 * 7)
+
+    sta DEBUG_SPRITES + 2 + (4 * 8)
+    sta DEBUG_SPRITES + 2 + (4 * 9)
+    sta DEBUG_SPRITES + 2 + (4 * 10)
+    sta DEBUG_SPRITES + 2 + (4 * 11)
+
+    ; BallX+1
+    lda BallX+1
+    jsr BinToHex
+    lda TmpY
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 0)
+    lda TmpX
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 1)
+
+    ; BallY+1
+    lda BallY+1
+    jsr BinToHex
+    lda TmpY
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 2)
+    lda TmpX
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 3)
+
+    ; BallSeedX+1
+    lda BallSpeedX+1
+    jsr BinToHex
+    lda TmpY
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 4)
+    lda TmpX
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 5)
+
+    ; BallSeedX+0
+    lda BallSpeedX+0
+    jsr BinToHex
+    lda TmpY
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 6)
+    lda TmpX
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 7)
+
+    ; BallSeedY+1
+    lda BallSpeedY+1
+    jsr BinToHex
+    lda TmpY
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 8)
+    lda TmpX
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 9)
+
+    ; BallSeedY+0
+    lda BallSpeedY+0
+    jsr BinToHex
+    lda TmpY
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 10)
+    lda TmpX
+    ora #DEBUG_HEX
+    sta DEBUG_SPRITES + 1 + (4 * 11)
+    rts
 
 NMI_Game:
     pha
