@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.2" tiledversion="1.3.1" name="MetaTiles" tilewidth="16" tileheight="8" tilecount="25" columns="0">
+<tileset version="1.2" tiledversion="1.3.1" name="MetaTiles" tilewidth="16" tileheight="8" tilecount="33" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="2">
   <properties>
@@ -175,5 +175,61 @@
    <property name="value" type="int" value="6"/>
   </properties>
   <image width="16" height="8" source="img/brick_powerup_06.png"/>
+ </tile>
+ <tile id="30">
+  <properties>
+   <property name="type" value="spawn"/>
+   <property name="value" type="int" value="17"/>
+  </properties>
+  <image width="16" height="8" source="img/brick_portal_17.png"/>
+ </tile>
+ <tile id="31">
+  <properties>
+   <property name="type" value="spawn"/>
+   <property name="value" type="int" value="18"/>
+  </properties>
+  <image width="16" height="8" source="img/brick_portal_18.png"/>
+ </tile>
+ <tile id="32">
+  <properties>
+   <property name="type" value="spawn"/>
+   <property name="value" type="int" value="19"/>
+  </properties>
+  <image width="16" height="8" source="img/brick_portal_19.png"/>
+ </tile>
+ <tile id="33">
+  <properties>
+   <property name="type" value="spawn"/>
+   <property name="value" type="int" value="20"/>
+  </properties>
+  <image width="16" height="8" source="img/brick_portal_20.png"/>
+ </tile>
+ <tile id="34">
+  <properties>
+   <property name="type" value="spawn"/>
+   <property name="value" type="int" value="21"/>
+  </properties>
+  <image width="16" height="8" source="img/brick_portal_21.png"/>
+ </tile>
+ <tile id="35">
+  <properties>
+   <property name="type" value="spawn"/>
+   <property name="value" type="int" value="22"/>
+  </properties>
+  <image width="16" height="8" source="img/brick_portal_22.png"/>
+ </tile>
+ <tile id="36">
+  <properties>
+   <property name="type" value="spawn"/>
+   <property name="value" type="int" value="23"/>
+  </properties>
+  <image width="16" height="8" source="img/brick_portal_23.png"/>
+ </tile>
+ <tile id="37">
+  <properties>
+   <property name="type" value="half"/>
+   <property name="value" type="int" value="0"/>
+  </properties>
+  <image width="8" height="8" source="img/brick_half.png"/>
  </tile>
 </tileset>

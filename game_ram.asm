@@ -128,6 +128,7 @@ PointB_Y:   .res 1
 ; PPU Addresses to destroy bricks on the PPU
 BrickDestroyA:    .res 2
 BrickDestroyB:    .res 2
+BrickDestroyHalf: .res 1 ; bit 7 is A, bit 6 is B
 
 BoostPool:  .res 1
 ChildId:    .res 1 ; next child ID to load

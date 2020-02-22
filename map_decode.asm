@@ -25,7 +25,8 @@
 ;     %10       Standard brick (health)
 ;     %110      Child spawn
 ;     %1110     Powerup
-;     %11110    PowerDown
+;     %11110    PowerDown ;; nope
+;     %11110   Half brick
 
 .import main_Index_Maps
 .import child_Index_Maps
@@ -116,6 +117,11 @@ map_WriteData:
     cmp #1
     beq @healthBrick
 
+    cmp #4 ; check for half brick
+    ;beq @halfBrick
+    bne :+
+    rts
+:
     ldy IdxB    ; load index
     inc IdxB    ; increment for next read
     lda (AddressPointer2), y    ; load value
@@ -282,7 +288,7 @@ map_ReadTile:
 
 ; Last address for the main map
 Last_Map_Tile_Address:
-    .word (BOARD_WIDTH * BOARD_HEIGHT) + CurrentMap - 1
+    .word (BOARD_WIDTH * BOARD_HEIGHT) + CurrentMap
 
 Child_Map_Addresses:
     ; RAM will not fit any more than 102 decoded child maps

@@ -106,7 +106,8 @@ func main() {
 	// %10       Standard brick (health)
 	// %110      Child spawn
 	// %1110     Powerup
-	// %11110    PowerDown
+	// %11110    PowerDown  ;; nope
+	// %11110   Half brick
 	for _, m := range mainMaps {
 		//fmt.Println("Map:", m.Id)
 		data := []string{}

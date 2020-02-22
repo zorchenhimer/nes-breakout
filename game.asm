@@ -119,7 +119,7 @@ Init_Game:
 .endrepeat
 
     lda #0
-    jsr FillNametable0
+    ;jsr FillNametable1
     jsr ClearAttrTable0
 
     lda #1
@@ -604,6 +604,9 @@ NMI_Game:
     adc Index_BgAnimRows, x
     sta $2007
 
+    bit BrickDestroyHalf
+    bmi :+
+
     ; second tile
     lda game_PpuCol
     adc #1
@@ -631,6 +634,9 @@ NMI_Game:
     adc Index_BgAnimRows, x
     sta $2007
 
+    bit BrickDestroyHalf
+    bvs :+
+
     ; second tile
     lda game_PpuCol
     adc #1
@@ -645,6 +651,7 @@ NMI_Game:
     sta BrickDestroyA+1
     sta BrickDestroyB
     sta BrickDestroyB+1
+    sta BrickDestroyHalf
 
     lda z:waves_AnimOdd
     ;jsr waves_WriteRow
@@ -2313,21 +2320,22 @@ GetAddressesForBrick:
 :
 
 .ifdef DEBUG
+    ; This sanity check breaks on half-bricks
     ;
     ; Sanity check B
-    ldy BrickCol
-    lda (BrickAddress), y
-    bmi @failB  ; it's the second byte
-    and #%0100_0000
-    beq @failB  ; it's not the first byte
-    jmp @passB
-@failB:
-    lda BrickAddress
-    sta zp_BrickAddress
-    lda BrickAddress+1
-    sta zp_BrickAddress+1
-    brk ; Failed sanity check
-@passB:
+;    ldy BrickCol
+;    lda (BrickAddress), y
+;    bmi @failB  ; it's the second byte
+;    and #%0100_0000
+;    beq @failB  ; it's not the first byte
+;    jmp @passB
+;@failB:
+;    lda BrickAddress
+;    sta zp_BrickAddress
+;    lda BrickAddress+1
+;    sta zp_BrickAddress+1
+;    brk ; Failed sanity check
+;@passB:
 .endif
 
     lda game_BoardOffsetY
@@ -2376,26 +2384,27 @@ GetAddressesForBrick:
     sta BrickPpuAddress+1
 
 .ifdef DEBUG
+    ; This sanity check breaks on half-bricks
     ;
     ; Sanity check C
-    ldy #0
-    lda (BrickAddress), y
-    bmi @fail
-    and #%0100_0000
-    beq @fail
-
-    lda BrickAddress
-    sta zp_BrickAddress
-    lda BrickAddress+1
-    sta zp_BrickAddress+1
-    rts
-
-@fail:
-    lda BrickAddress
-    sta zp_BrickAddress
-    lda BrickAddress+1
-    sta zp_BrickAddress+1
-    brk ; Failed sanity check
+;    ldy #0
+;    lda (BrickAddress), y
+;    bmi @fail
+;    and #%0100_0000
+;    beq @fail
+;
+;    lda BrickAddress
+;    sta zp_BrickAddress
+;    lda BrickAddress+1
+;    sta zp_BrickAddress+1
+;    rts
+;
+;@fail:
+;    lda BrickAddress
+;    sta zp_BrickAddress
+;    lda BrickAddress+1
+;    sta zp_BrickAddress+1
+;    brk ; Failed sanity check
 .endif
     rts
 
@@ -2814,6 +2823,8 @@ game_DrawRow:
     and #$0F
     sec
     sbc #1  ; "health" is id 1, but index 0
+    cmp #3
+    beq @half
     asl a
     tax
 
@@ -2829,6 +2840,15 @@ game_DrawRow:
     inc TmpW
 
     iny
+    iny
+    cpy game_BoardWidth
+    bne @loop
+    rts
+
+@half:
+    inc game_PpuCol
+    lda #HalfBrickID
+    sta $2007
     iny
     cpy game_BoardWidth
     bne @loop
@@ -3038,9 +3058,13 @@ game_ActionHealth:
     lda #0
     rts
 
+; Spawn the child board
 game_ActionSpawn:
     ; Save the brick addresses for when we
     ; leave the child board.
+    ; TODO: make this a pointer to a pointer.
+    ;       The idea being it can be loacated after child map data
+    ;       for nested maps.
     lda BrickAddress
     sta EnteredRam
     lda BrickAddress+1
@@ -3269,7 +3293,36 @@ game_RemoveBrick:
     lda #0
     rts
 
+game_ActionHalf:
+    ldy #0
+    tya
+
+    sta (BrickAddress), y
+    lda BrickDestroyA
+    bne :+
+
+    lda BrickPpuAddress
+    sta BrickDestroyA
+    lda BrickPpuAddress+1
+    sta BrickDestroyA+1
+
+    lda #$80
+    sta BrickDestroyHalf
+    lda #0
+    rts
+:
+    lda BrickPpuAddress
+    sta BrickDestroyB
+    lda BrickPpuAddress+1
+    sta BrickDestroyB+1
+
+    lda #$C0
+    sta BrickDestroyHalf
+    lda #0
+    rts
+
 NoTileID = $00
+HalfBrickID = $0E
 Index_TileDefs:
     .byte $02, $03  ; Health
     .byte $04, $05  ; Spawn
@@ -3279,6 +3332,7 @@ BrickActions:
     .word game_ActionHealth
     .word game_ActionSpawn
     .word game_ActionItemDrop
+    .word game_ActionHalf
 
 Index_PpuBrickRows:
 .repeat BOARD_HEIGHT, i

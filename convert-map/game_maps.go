@@ -10,6 +10,8 @@ import (
 	"github.com/zorchenhimer/go-tiled"
 )
 
+const HalfBrickTiledId int64 = 38
+
 type GameMap struct {
 	// Map ID.  They will be sorted by this in the ROM.
 	Id int
@@ -38,6 +40,9 @@ type GameMap struct {
 	CountHealth    int
 	CountPowerUp   int
 	CountPowerDown int
+	CountHalf      int
+
+	TileCount int // total number of tiles used
 }
 
 type TileType int
@@ -47,7 +52,8 @@ const (
 	TILE_HEALTH
 	TILE_SPAWN
 	TILE_POWERUP
-	TILE_POWERDOWN
+	//TILE_POWERDOWN
+	TILE_HALF
 	//TILE_NOTHING
 )
 
@@ -59,8 +65,10 @@ func (tt TileType) String() string {
 		return "TILE_SPAWN"
 	case TILE_POWERUP:
 		return "TILE_POWERUP"
-	case TILE_POWERDOWN:
-		return "TILE_POWERDOWN"
+	//case TILE_POWERDOWN:
+	//	return "TILE_POWERDOWN"
+	case TILE_HALF:
+		return "TILE_HALF"
 	default:
 		return "TILE_UNKNOWN"
 	}
@@ -72,8 +80,10 @@ func ParseTileType(value string) TileType {
 		return TILE_SPAWN
 	case "powerup":
 		return TILE_POWERUP
-	case "powerdown":
-		return TILE_POWERDOWN
+	//case "powerdown":
+	//	return TILE_POWERDOWN
+	case "half":
+		return TILE_HALF
 	default:
 		return TILE_HEALTH
 	}
@@ -111,18 +121,27 @@ func LoadGameMap(layer tiled.XmlLayer, tileset Tileset) (*GameMap, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Error parsing tile data: %v", err)
 		}
-		if val != 0 && tileodd {
+		if val != 0 && val != HalfBrickTiledId && tileodd {
 			return nil, fmt.Errorf("Overlapping tile at offset %d in map %q", idx, layer.Name)
 		}
 
-		if !tileodd {
-			tile := tileset.GetTile(int(val))
+		if val == HalfBrickTiledId {
+			tileodd = false
+		}
+
+		tile := tileset.GetTile(int(val))
+		if !tileodd || val == HalfBrickTiledId {
+			if layer.Name == "board-14" {
+				fmt.Printf("[%d] %s\n", idx, tile)
+			}
+
 			if tile == nil {
 				return nil, fmt.Errorf("Tile not found in tileset: %d", val)
 			}
 			gm.Tiles = append(gm.Tiles, *tile)
 
-			if tile.Type > TILE_HEALTH {
+			if tile.Type > TILE_HEALTH && tile.Type != TILE_HALF {
+				// add powerup/down and child board values
 				gm.TileValues = append(gm.TileValues, tile.Value)
 			}
 
@@ -136,13 +155,21 @@ func LoadGameMap(layer tiled.XmlLayer, tileset Tileset) (*GameMap, error) {
 			case TILE_POWERUP:
 				gm.CountPowerUp += 1
 
-			case TILE_POWERDOWN:
-				gm.CountPowerDown += 1
+			//case TILE_POWERDOWN:
+			//	gm.CountPowerDown += 1
+
+			case TILE_HALF:
+				gm.CountHalf += 1
 			}
 
+			if tile.Type == TILE_UNKNOWN || tile.Type == TILE_HALF {
+				gm.TileCount++
+			} else {
+				gm.TileCount += 2
+			}
 		}
 
-		if val != 0 {
+		if val != 0 && val != HalfBrickTiledId {
 			tileodd = true
 			gm.BrickCount += 1
 		} else {
