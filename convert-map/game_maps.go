@@ -131,10 +131,6 @@ func LoadGameMap(layer tiled.XmlLayer, tileset Tileset) (*GameMap, error) {
 
 		tile := tileset.GetTile(int(val))
 		if !tileodd || val == HalfBrickTiledId {
-			if layer.Name == "board-14" {
-				fmt.Printf("[%d] %s\n", idx, tile)
-			}
-
 			if tile == nil {
 				return nil, fmt.Errorf("Tile not found in tileset: %d", val)
 			}
