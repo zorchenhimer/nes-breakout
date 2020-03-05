@@ -66,6 +66,7 @@ Init_Title:
     sta AddressPointer0
     lda #>screen_Tv
     sta AddressPointer0+1
+    ldx #$20
     jsr LoadScreen
 
     ; Draw a menu

@@ -19,12 +19,22 @@ Init_ScreenTest:
     jsr ClearSprites
     jsr WriteSprites
     jsr ClearAttrTable0
+    jsr ClearAttrTable1
 
     lda #<screen_Hood
     sta AddressPointer0
     lda #>screen_Hood
     sta AddressPointer0+1
 
+    ldx #$20
+    jsr LoadScreen
+
+    lda #<screen_TvStatic
+    sta AddressPointer0
+    lda #>screen_TvStatic
+    sta AddressPointer0+1
+
+    ldx #$24
     jsr LoadScreen
 
     ldx #0
@@ -54,6 +64,33 @@ Init_ScreenTest:
 Frame_ScreenTest:
     .NMI_Set NMI_ScreenTest
 
+    lda #10
+    ldx #0
+    ldy #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN | 1
+
+    jsr WaitForSpriteZero
+    ;sta $2005
+    ;stx $2005
+    sty $2000
+
+    ldy #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN | 0
+
+    ldx #0
+:
+    .repeat 18
+    nop
+    .endrepeat
+    dex
+    bne :-
+
+    ldx #70
+:
+    dex
+    bne :-
+
+    sty $2000
+
+    jsr WaitForNMI
     jmp Frame_ScreenTest
 
 NMI_ScreenTest:
@@ -65,8 +102,29 @@ NMI_ScreenTest:
     lda #0
     sta $2005
     sta $2005
+    dec Sleeping
     rti
 
+; Fill the second nametable with static
+FillStatic:
+    lda #$20
+    sta $2006
+    lda #$C8
+    sta $2006
+
+    .repeat 5
+    ldx #$1A
+    sta 2007
+    inx
+    sta 2007
+    inx
+    sta 2007
+    inx
+    sta 2007
+    inx
+    sta 2007
+    .endrepeat
+    rts
 
 WriteTvAttr:
     ; 23CA
@@ -115,7 +173,8 @@ WriteTvAttr:
     sta $2007
     rts
 
-; Expects pointer to screen data in AddressPointer0
+; Expects pointer to screen data in AddressPointer0 and
+; the high byte of the Nametable address in X
 LoadScreen:
     lda #0
     ; this is used as a two byte counter, not a pointer
@@ -124,8 +183,8 @@ LoadScreen:
     sta AddressPointer1+1
 
     bit $2002
-    lda #$20
-    sta $2006
+    ;lda #$20
+    stx $2006
     lda #$00
     sta $2006
 
@@ -183,7 +242,8 @@ screen_DecodeRLE:
     lda (AddressPointer0), y
     sta $2007
     dex
-    jmp @loop
+    bne @loop
+    rts ; there was only one byte of data.  just return
 
 @even:
     lda (AddressPointer0), y
