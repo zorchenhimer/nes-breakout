@@ -87,6 +87,8 @@ PaletteBufferSprites: .res 4*4
 
 zp_BrickAddress: .res 2
 
+FlipFlop: .res 1
+
 .segment "RAMGLOBAL"
 
 ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.

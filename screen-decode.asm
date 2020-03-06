@@ -58,40 +58,110 @@ Init_ScreenTest:
 
     jsr WriteTvAttr
 
+    lda #1
+    sta IdxB
+
+    lda #0
+    sta IdxC
+
+    lda #6
+    sta IdxD
+
     .Update_PpuControl PPU_CTRL_NMI
     .Update_PpuMask 0
 
+    jsr WaitForNMI
+
+    ; cycles per scanline: 113 1/3
 Frame_ScreenTest:
     .NMI_Set NMI_ScreenTest
 
-    lda #10
-    ldx #0
-    ldy #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN | 1
+;    ; This controller code moved the start point up and down
+;    jsr ReadControllers
+;    lda #BUTTON_UP
+;    jsr ButtonPressedP1
+;    beq :+
+;    dec IdxB
+;:
+;
+;    lda #BUTTON_DOWN
+;    jsr ButtonPressedP1
+;    beq :+
+;    inc IdxB
+;:
+
+    ; Turn static on and off on an interval of 6 frames
+    dec IdxD
+    bne :+
+    lda #6
+    sta IdxD
+
+    lda FlipFlop
+    eor #$FF
+    sta FlipFlop
+
+    ; reset the static start line
+    lda #$00
+    sta IdxB
+:
+
+    lda FlipFlop
+    beq @NoStatic
+
+    ; store the number of static blocks
+    lda #12
+    sta IdxA
+
+    ; increment the static start line
+    inc IdxB
+
+    lda #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN | 1
 
     jsr WaitForSpriteZero
     ;sta $2005
     ;stx $2005
-    sty $2000
 
     ldy #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN | 0
 
-    ldx #0
+    ; Wait an offset number of scanlines before starting static
+    ldx IdxB
 :
-    .repeat 18
-    nop
-    .endrepeat
+    jsr WaitScanline
     dex
     bne :-
+    sta $2000
 
-    ldx #70
-:
-    dex
-    bne :-
-
+; Turn static on and off every ~4 lines
+@static:
+    jsr WaitScanline
+    jsr WaitScanline
+    jsr WaitScanline
+    jsr WaitScanline
     sty $2000
+
+    jsr WaitScanline
+    jsr WaitScanline
+    jsr WaitScanline
+    jsr WaitScanline
+    sta $2000
+
+    dec IdxA
+    beq :+
+    jmp @static
+:
+    sty $2000
+
+@NoStatic:
 
     jsr WaitForNMI
     jmp Frame_ScreenTest
+
+WaitScanline:
+    ora IdxC
+    .repeat 46
+    nop
+    .endrepeat
+    rts
 
 NMI_ScreenTest:
     jsr WriteSprites
