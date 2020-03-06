@@ -2189,6 +2189,7 @@ CheckBrickCollide:
 ;
 ; Input: BrickRow, Brickcol
 ; Output: BrickAddress, BrickPpuAddress
+; TODO: verify that this still works
 game_GetAddressForChildBrick:
     lda CurrentBoard
     and #$7F
@@ -3215,17 +3216,60 @@ game_ActionSpawn:
 
     jsr game_DrawWalls
 
-    lda ChildId
-    asl a
-    tax
-    lda Child_Map_Addresses, x
-    sta AddressPointer2
-    lda Child_Map_Addresses+1, x
-    sta AddressPointer2+1
-
     ; Store brick count
     lda TmpW
     sta ChildBrickCount
+
+    lda PpuControl
+    sta $2000
+
+    ; Write board IDs to the background
+    ; First value is index in RAM
+    lda ChildId
+    jsr BinToHex
+
+    lda #$20
+    sta $2006
+    lda #$47
+    sta $2006
+
+    lda TmpY
+    ora #$50
+    sta $2007
+    lda TmpX
+    ora #$50
+    sta $2007
+
+    ; Draw an arrow surrounded my a space
+    lda #$01
+    sta $2007
+    lda #$1F
+    sta $2007
+    lda #$01
+    sta $2007
+
+    ; Second value is index in ROM
+    lda ChildId
+    asl a
+    tax
+
+    lda Child_Map_Addresses, x
+    sta AddressPointer0
+    lda Child_Map_Addresses+1, x
+    sta AddressPointer0+1
+
+    ldy #73
+    lda (AddressPointer0), y
+    jsr BinToHex
+
+    lda TmpY
+    ora #$50
+    sta $2007
+    lda TmpX
+    ora #$50
+    sta $2007
+
+    ;bit $2002
 
     jsr ResetBall
 

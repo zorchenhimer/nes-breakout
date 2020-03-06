@@ -35,6 +35,7 @@
 ; Input: A
 ; Output: $6000
 LoadChildMap:
+    sta IdxD ; Map ID in ROM
     asl a
     tax
 
@@ -96,6 +97,14 @@ LoadChildMap:
     jsr map_WriteData
     dec TmpW
     bne @loadLoop
+
+    ; Store the child map ID in RAM next to the map data.
+    lda IdxD
+    ldy #1
+    sta (AddressPointer0), y
+
+    ; TODO: put a return address pointer here too to
+    ;       allow nested child maps.
 
 @done:
     ; Swap back to last bank
