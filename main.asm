@@ -89,6 +89,9 @@ zp_BrickAddress: .res 2
 
 FlipFlop: .res 1
 
+btnX: .res 1
+btnY: .res 1
+
 .segment "RAMGLOBAL"
 
 ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
@@ -580,7 +583,7 @@ LoadChrData:
 
 ; Was a button pressed this frame?
 ButtonPressedP1:
-    sta TmpX
+    sta btnX
 
     lda IgnoreInput
     beq :+
@@ -589,21 +592,21 @@ ButtonPressedP1:
     rts
 :
 
-    lda TmpX
+    lda btnX
     and controller1
-    sta TmpY
+    sta btnY
 
     lda controller1_Old
-    and TmpX
+    and btnX
 
-    cmp TmpY
+    cmp btnY
     bne btnPress_stb
 
     ; no button change
     rts
 
 ButtonPressedP2:
-    sta TmpX
+    sta btnX
 
     lda IgnoreInput
     beq :+
@@ -612,14 +615,14 @@ ButtonPressedP2:
     rts
 :
 
-    lda TmpX
+    lda btnX
     and controller2
-    sta TmpY
+    sta btnY
 
     lda controller2_Old
-    and TmpX
+    and btnX
 
-    cmp TmpY
+    cmp btnY
     bne btnPress_stb
 
     ; no button change
@@ -627,7 +630,7 @@ ButtonPressedP2:
 
 btnPress_stb:
     ; button released
-    lda TmpY
+    lda btnY
     bne btnPress_stc
     rts
 

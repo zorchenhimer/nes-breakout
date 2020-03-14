@@ -6,11 +6,21 @@ ScreenTest_Palette:
     .byte $0F, $0F, $00, $10
     .byte $0F, $00, $20, $10
 
+StaticPalettes:
+    .byte $0F, $10, $00, $2D
+    .byte $0F, $2D, $10, $00
+    .byte $0F, $00, $2D, $10
+
 ; Quadrants of the attribute data for better readability
 ST_BOTL = %0001_0000
 ST_BOTR = %0100_0000
 ST_TOPL = %0000_0001
 ST_TOPR = %0000_0100
+
+STATIC_START_OFFSET = 1
+STATIC_ANIM_RATE = 3
+STATIC_TRAVEL_RATE = 4
+STATIC_ROW_COUNT = 4
 
 Init_ScreenTest:
     .NMI_Disable
@@ -37,6 +47,9 @@ Init_ScreenTest:
     ldx #$24
     jsr LoadScreen
 
+    lda #6
+    jsr LoadChrData
+
     ldx #0
 :
     lda ScreenTest_Palette, x
@@ -57,15 +70,25 @@ Init_ScreenTest:
     bne :-
 
     jsr WriteTvAttr
+    jsr WriteStaticAttributes
 
-    lda #1
+    lda #STATIC_START_OFFSET
     sta IdxB
 
     lda #0
     sta IdxC
+    sta TmpW ; Static palette animation frame
 
     lda #6
     sta IdxD
+
+    ; Static palette animation interval
+    lda #STATIC_ANIM_RATE
+    sta TmpX
+
+    ; Speed static bars travel down the screen
+    lda #STATIC_TRAVEL_RATE
+    sta TmpY
 
     .Update_PpuControl PPU_CTRL_NMI
     .Update_PpuMask 0
@@ -75,6 +98,21 @@ Init_ScreenTest:
     ; cycles per scanline: 113 1/3
 Frame_ScreenTest:
     .NMI_Set NMI_ScreenTest
+
+    dec TmpX
+    lda TmpX
+    bne :+
+
+    lda #STATIC_ANIM_RATE
+    sta TmpX
+
+    inc TmpW
+    lda TmpW
+    cmp #4
+    bcc :+
+    lda #0
+    sta TmpW
+:
 
 ;    ; This controller code moved the start point up and down
 ;    jsr ReadControllers
@@ -93,7 +131,7 @@ Frame_ScreenTest:
     ; Turn static on and off on an interval of 6 frames
     dec IdxD
     bne :+
-    lda #6
+    lda #30
     sta IdxD
 
     lda FlipFlop
@@ -101,7 +139,7 @@ Frame_ScreenTest:
     sta FlipFlop
 
     ; reset the static start line
-    lda #$00
+    lda #STATIC_START_OFFSET
     sta IdxB
 :
 
@@ -109,19 +147,26 @@ Frame_ScreenTest:
     beq @NoStatic
 
     ; store the number of static blocks
-    lda #12
+    lda #STATIC_ROW_COUNT
     sta IdxA
 
     ; increment the static start line
-    inc IdxB
 
-    lda #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN | 1
+    dec TmpY
+    bne :+
+    lda #STATIC_TRAVEL_RATE
+    sta TmpY
+
+    inc IdxB
+:
+
+    lda #PPU_CTRL_NMI | PPU_CTRL_SP_PATTERN | 1
 
     jsr WaitForSpriteZero
     ;sta $2005
     ;stx $2005
 
-    ldy #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN | 0
+    ldy #PPU_CTRL_NMI | PPU_CTRL_SP_PATTERN | 0
 
     ; Wait an offset number of scanlines before starting static
     ldx IdxB
@@ -133,22 +178,30 @@ Frame_ScreenTest:
 
 ; Turn static on and off every ~4 lines
 @static:
+
+    ldx #12
+; Turn on
+:
     jsr WaitScanline
-    jsr WaitScanline
-    jsr WaitScanline
-    jsr WaitScanline
+    dex
+    bne :-
     sty $2000
 
-    jsr WaitScanline
-    jsr WaitScanline
-    jsr WaitScanline
-    jsr WaitScanline
-    sta $2000
-
     dec IdxA
-    beq :+
-    jmp @static
+    bne :+
+    jmp @staticDone
 :
+
+    ldx #12
+; Turn off
+:
+    jsr WaitScanline
+    dex
+    bne :-
+    sta $2000
+    jmp @static
+
+@staticDone:
     sty $2000
 
 @NoStatic:
@@ -166,7 +219,26 @@ WaitScanline:
 NMI_ScreenTest:
     jsr WriteSprites
 
-    .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN
+    ; Write the appropriate static palette to the PPU
+    lda TmpW
+    asl a
+    asl a
+    tax
+
+    lda #$3F
+    sta $2006
+    lda #$0C
+    sta $2006
+
+    ldy #4
+:
+    lda StaticPalettes, x
+    sta $2007
+    inx
+    dey
+    bne :-
+
+    .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_SP_PATTERN
     .Update_PpuMask PPU_MASK_ON | PPU_MASK_LEFTSPRITES | PPU_MASK_LEFTBACKGROUND
 
     lda #0
@@ -241,6 +313,19 @@ WriteTvAttr:
     sta $2007
     sta $2007
     sta $2007
+    rts
+
+WriteStaticAttributes:
+    lda #$FF
+    ldx #$27
+    stx $2006
+    ldy #$C0
+    sty $2006
+
+:
+    sta $2007
+    iny
+    bne :-
     rts
 
 ; Expects pointer to screen data in AddressPointer0 and
