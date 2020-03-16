@@ -189,6 +189,11 @@ am_Waves_TileLayout_b:
     .byte 12
 ;; Overworld map Data
 
+TitleData:
+    .incbin "title.chr";, 0, (16 * 160) + (16 * 12) ; (bytes/tile * tile count)
+;TitleData_Count = (* - TitleData) / 16
+TitleData_Count = 0
+
 .segment "PAGE13"
     .byte 13
 ;; Occupied by credit data
@@ -207,10 +212,6 @@ GameChrData:
 
 GameChrData_Count = (* - GameChrData) / 16
 
-TitleData:
-    .incbin "title.chr", 0, (16 * 160) + (16 * 12) ; (bytes/tile * tile count)
-TitleData_Count = (* - TitleData) / 16
-
 HexTileData:
     .incbin "hex.chr", 0, (16 * 16)
 HexTileData_Count = (* - HexTileData) / 16
@@ -218,6 +219,16 @@ HexTileData_Count = (* - HexTileData) / 16
 LevelSelectTileData:
     .incbin "level-select.chr"
 LevelSelectTileData_Count = 0
+
+TvTileData:
+    ;.incbin "title.chr", 0, (16 * 32) ; (bytes/tile * tile count)
+    .incbin "tv.chr"
+;TvTileData_Count = (* - TvTileData) / 16
+TvTileData_Count = 0
+
+TvTileDataLower:
+    .incbin "tv-lower.chr"
+TvTileDataLower_Count = (* - TvTileDataLower) / 16
 
 .out .sprintf("CreditsChrData_Count: %d", CreditsChrData_Count)
 .out .sprintf("GameChrData_Count: %d", GameChrData_Count)
@@ -831,7 +842,7 @@ Index_ChrData:
 
     .word TitleData
     .byte TitleData_Count
-    .byte $FE   ; Destination pattern table & PRG bank
+    .byte $7C   ; Destination pattern table & PRG bank
 
     .word HexTileData
     .byte HexTileData_Count
@@ -844,6 +855,14 @@ Index_ChrData:
     .word LevelSelectTileData
     .byte LevelSelectTileData_Count
     .byte $7E
+
+    .word TvTileData
+    .byte TvTileData_Count
+    .byte $7E
+
+    .word TvTileDataLower
+    .byte TvTileDataLower_Count
+    .byte $FE
 
 data_Mult3:
 .repeat 10, i

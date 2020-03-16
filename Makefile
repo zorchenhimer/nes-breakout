@@ -149,11 +149,27 @@ matrix14.chr: $(MATRIX14_BMP)
 matrix7.chr: $(MATRIX7_BMP)
 	$(CHRUTIL) --first-plane -o $@ $^
 
-title.chr: images/title.bmp images/hooded.bmp
-	$(CHRUTIL) -o $@ images/title.bmp images/hooded.bmp --remove-duplicates --remove-empty
+title.chr: images/title.bmp images/tv.bmp
+	$(CHRUTIL) -o $@ --pad-tiles 256 images/tv.bmp --tile-offset 16 --tile-count 17 images/title.bmp --tile-offset 17
+
+tv.chr: images/tv.bmp images/hooded.bmp images/news-anchor.bmp
+	$(CHRUTIL) -o $@ --remove-duplicates --pad-tiles 256 \
+		images/tv.bmp --tile-offset 16 --tile-count 17 \
+		images/hooded.bmp --remove-empty \
+		images/news-anchor.bmp --remove-empty \
+		images/tv.bmp --tile-offset 48 --tile-count 5
+
+tv-lower.chr: images/tv.bmp
+	$(CHRUTIL) -o $@ images/tv.bmp --tile-count 12
 
 maps/title.png: title.chr
-	$(CHRUTIL) -o $@ --palette 003973,000,797979,b2b2b2 $^
+	$(CHRUTIL) -o $@ $^
+
+maps/tv.png: tv.chr
+	$(CHRUTIL) -o $@ $^
+
+maps/tv-lower.png: tv-lower.chr
+	$(CHRUTIL) -o $@ $^
 
 $(GENCRED): generate-credits.go
 	go build -o $(GENCRED) generate-credits.go
@@ -172,8 +188,8 @@ bin/%.o: %.i
 
 # maps/title.png isn't actually needed here, but putting it here
 # removes the need to manually regenerate it.
-screen-data.i: maps/title.tmx maps/title.png $(TITLECONV)
-	$(TITLECONV) -b 15 $< $@
+screen-data.i: maps/title.tmx maps/title.png maps/tv.png maps/tv-lower.png $(TITLECONV)
+	$(TITLECONV) -b 255 $< $@
 
 bin/map_data.o: map_data.asm main_map_data.i child_map_data.i
 	$(CA) $(CAFLAGS) -o $@ map_data.asm

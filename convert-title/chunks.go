@@ -51,9 +51,7 @@ func (c Chunk) ToAsm(bgTile int) string {
 		v := c.Data[0]
 		if v != 0x00 {
 			v -= 1
-		}
-
-		if v == 0x00 {
+		} else {
 			v = byte(bgTile)
 		}
 		strVals = append(strVals, fmt.Sprintf("$%02X", v))
@@ -148,22 +146,20 @@ func (cl *ChunkList) Add(b byte) {
 		// New chunk type
 		} else if (*cl.prevByte == b && cl.current.Type == CHUNK_RAW) ||
 				  (*cl.prevByte != b && cl.current.Type == CHUNK_RLE) {
-			//cl.current.Data = append(cl.current.Data, *cl.prevByte)
 
-			//if cl.current.Type == CHUNK_RLE {
-			//	cl.current.Data = append(cl.current.Data, *cl.prevByte)
-			//}
-
-			cl.past = append(cl.past, *cl.current)
-
-			cl.current = &Chunk{
-				Data: []byte{*cl.prevByte},
+			if cl.current.Type == CHUNK_RLE {
+				cl.current.Data = append(cl.current.Data, *cl.prevByte)
+				cl.past = append(cl.past, *cl.current)
+				cl.current = &Chunk{}
+			} else {
+				cl.past = append(cl.past, *cl.current)
+				cl.current = &Chunk{Data: []byte{*cl.prevByte}}
 			}
 
 			if *cl.prevByte == b {
 				cl.current.Type = CHUNK_RLE
 			} else {
-				cl.prevByte = nil
+				//cl.prevByte = nil
 				cl.current.Type = CHUNK_RAW
 			}
 			cl.prevByte = &b
@@ -184,6 +180,9 @@ func (cl ChunkList) ToBytes() []byte {
 
 	data := []byte{}
 	for _, c := range cl.past {
+		if len(c.Data) == 0 {
+			continue
+		}
 		data = append(data, c.ToBytes()...)
 	}
 
@@ -201,6 +200,9 @@ func (cl ChunkList) ToAsm(bgTile int) string {
 
 	data := []string{}
 	for _, c := range cl.past {
+		if len(c.Data) == 0 {
+			continue
+		}
 		data = append(data, c.ToAsm(bgTile))
 	}
 

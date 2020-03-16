@@ -1,6 +1,8 @@
 bin/
 ignore-this/
 
+maps/*.png
+
 credit-names/*.csv
 !credit-names/sample-credit-names.csv
 

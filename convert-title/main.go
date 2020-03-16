@@ -36,8 +36,11 @@ import (
 // cmd input.xml out.i
 func main() {
 	var bgTile int
+	var offset uint
+
 	flag.IntVar(&bgTile, "background-tile", 0, "Replace the background tile ID with a new tile ID")
 	flag.IntVar(&bgTile, "b", 0, "Replace the background tile ID with a new tile ID")
+	flag.UintVar(&offset, "id-offset", 0, "Add this offset to the input tile IDs")
 	flag.Parse()
 
 	args := flag.Args()
@@ -79,9 +82,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	layersNews := data.GetLayerByName("News")
+	if len(layersNews) == 0 {
+		fmt.Println("News layer to found")
+		os.Exit(1)
+	}
+
+	mergedNews, err := layersNews[0].Merge(layersTv[0])
+	if len(layersNews) == 0 {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	var spz Sprite
 	layersSpriteZero := data.GetLayerByName("SpriteZero")
-	if len(layersTv) == 0 {
+	if len(layersSpriteZero) == 0 {
 		fmt.Println("SpriteZero layer to found")
 	} else {
 		sp := convertSprites(layersSpriteZero[0].Data)
@@ -104,19 +119,38 @@ func main() {
 		os.Exit(1)
 	}
 
-	staticChunks, err := convertLayer(layersStatic[0].Data)
+
+	staticChunks, err := convertLayer(layersStatic[0].Data, offset)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	justTv, err := layersTv[0].Merge(layersSprite[0])
+	//justTv, err := layersTv[0].Merge(layersSprite[0])
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	hoodChunks, err := convertLayer(mergedHood.Data)
+	offsetHood := []uint32{}
+	for _, val := range mergedHood.Data {
+		if val == 0 {
+			offsetHood = append(offsetHood, 0)
+		} else {
+			offsetHood = append(offsetHood, val + uint32(offset))
+		}
+	}
+
+	//fmt.Println(mergedHood.Data)
+	//fmt.Println(offsetHood)
+
+	hoodChunks, err := convertLayer(offsetHood, offset)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	newsChunks, err := convertLayer(mergedNews.Data, offset)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -130,7 +164,7 @@ func main() {
 		sprites = append(sprites, Sprite{X:0xFF,Y:0xFF,Tile:0xFF})
 	}
 
-	tv, err := convertLayer(justTv.Data)
+	tv, err := convertLayer(layersTv[0].Data, offset)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -148,9 +182,10 @@ func main() {
 	fmt.Fprintf(file, "screen_Sprites:\n%v\n\n", sprites.ToAsm())
 	fmt.Fprintf(file, "screen_Tv:\n%v\n\n", tv.ToAsm(bgTile))
 	fmt.Fprintf(file, "screen_TvStatic:\n%v\n\n", staticChunks.ToAsm(bgTile))
+	fmt.Fprintf(file, "screen_News:\n%v\n\n", newsChunks.ToAsm(bgTile))
 }
 
-func convertLayer(data []uint32) (*ChunkList, error) {
+func convertLayer(data []uint32, offset uint) (*ChunkList, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("No data to convert!")
 	}

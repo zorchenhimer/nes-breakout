@@ -31,9 +31,9 @@ Init_ScreenTest:
     jsr ClearAttrTable0
     jsr ClearAttrTable1
 
-    lda #<screen_Hood
+    lda #<screen_News
     sta AddressPointer0
-    lda #>screen_Hood
+    lda #>screen_News
     sta AddressPointer0+1
 
     ldx #$20
@@ -48,6 +48,9 @@ Init_ScreenTest:
     jsr LoadScreen
 
     lda #6
+    jsr LoadChrData
+
+    lda #7
     jsr LoadChrData
 
     ldx #0

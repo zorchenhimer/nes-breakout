@@ -44,7 +44,7 @@ Init_Title:
 
     lda #TitleCursorTile    ; tile
     sta Sprites+1
-    lda #$01    ; attr
+    lda #$00    ; attr
     sta Sprites+2
 
     lda #$0F
@@ -53,7 +53,7 @@ Init_Title:
     lda #2
     jsr LoadChrData
 
-    lda #3
+    lda #7
     jsr LoadChrData
 
     jsr ClearAttrTable0
@@ -205,7 +205,7 @@ NMI_Title:
     jsr WritePalettes
     jsr WriteSprites
 
-    lda #%10011000
+    lda #%10001000
     sta $2000
 
     lda #%00011110
