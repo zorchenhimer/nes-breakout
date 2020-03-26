@@ -33,143 +33,109 @@ import (
 	L: Length
 */
 
+var bgTile int
+
+type Screen struct {
+	LayerNames []string
+	IsSprite   bool
+}
+
+var screens map[string]Screen = map[string]Screen{
+	"screen_Hood": Screen{
+		LayerNames: []string{"Hood", "TV"},
+	},
+	"screen_Tv":  Screen{
+		LayerNames: []string{"TV"},
+	},
+	"screen_TvStatic":  Screen{
+		LayerNames: []string{"TV", "Static"},
+	},
+	"screen_News":  Screen{
+		LayerNames: []string{"TV", "News"},
+	},
+
+	"screen_Sprites": Screen{
+		LayerNames: []string{"SpriteZero", "Sprites"},
+		IsSprite:   true,
+	},
+
+	// TODO: add a bounding box? or a start address?
+	"screen_TextBox": Screen{
+		LayerNames: []string{"Text"},
+	},
+}
+
+func getLayer(data *tiled.Map, name string) (tiled.Layer, error) {
+	layers := data.GetLayerByName(name)
+
+	if len(layers) > 0 {
+		return layers[0], nil
+	}
+
+	return tiled.Layer{}, fmt.Errorf("Layer not found")
+}
+
+func processScreen(data *tiled.Map, screenData Screen) (string, error) {
+	layers := []tiled.Layer{}
+
+	// Read in the layers needed
+	for _, name := range screenData.LayerNames {
+		layer, err := getLayer(data, name)
+		if err != nil {
+			return "", err
+		}
+
+		layers = append(layers, layer)
+	}
+
+	var err error
+	merged := layers[0]
+
+	// Merge layers if there's more than one
+	if len(layers) > 1 {
+		for _, layer := range layers[1:] {
+			merged, err = merged.Merge(layer)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+
+	// convert data to chunks
+	if screenData.IsSprite {
+		sprites := convertSprites(merged.Data)
+
+		for len(sprites) < 64 {
+			sprites = append(sprites, Sprite{X:0xFF,Y:0xFF,Tile:0xFF})
+		}
+
+		return sprites.ToAsm(), nil
+	}
+
+	chunks, err := convertLayer(merged.Data, 0)
+	if err != nil {
+		return "", err
+	}
+	return chunks.ToAsm(bgTile), nil
+}
+
 // cmd input.xml out.i
 func main() {
-	var bgTile int
-	var offset uint
+	//var offset uint = 0
 
 	flag.IntVar(&bgTile, "background-tile", 0, "Replace the background tile ID with a new tile ID")
 	flag.IntVar(&bgTile, "b", 0, "Replace the background tile ID with a new tile ID")
-	flag.UintVar(&offset, "id-offset", 0, "Add this offset to the input tile IDs")
+	//flag.UintVar(&offset, "id-offset", 0, "Add this offset to the input tile IDs")
 	flag.Parse()
 
 	args := flag.Args()
 	if len(args) != 2 {
-		// TODO: print usage
-		//fmt.Println("Incorrect number of arguments:", len(args))
 		fmt.Printf("Usage: %s [options] input.xml output.i\n\n", os.Args[0])
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
 	data, err := tiled.LoadMap(args[0])
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	layersHood := data.GetLayerByName("Hood")
-	if len(layersHood) == 0 {
-		fmt.Println("Hood layer to found")
-		os.Exit(1)
-	}
-
-	layersTv := data.GetLayerByName("TV")
-	if len(layersTv) == 0 {
-		fmt.Println("TV layer to found")
-		os.Exit(1)
-	}
-
-	mergedHood, err := layersHood[0].Merge(layersTv[0])
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	layersSprite := data.GetLayerByName("Sprites")
-	if len(layersTv) == 0 {
-		fmt.Println("Sprites layer to found")
-		os.Exit(1)
-	}
-
-	layersNews := data.GetLayerByName("News")
-	if len(layersNews) == 0 {
-		fmt.Println("News layer to found")
-		os.Exit(1)
-	}
-
-	mergedNews, err := layersNews[0].Merge(layersTv[0])
-	if len(layersNews) == 0 {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	var spz Sprite
-	layersSpriteZero := data.GetLayerByName("SpriteZero")
-	if len(layersSpriteZero) == 0 {
-		fmt.Println("SpriteZero layer to found")
-	} else {
-		sp := convertSprites(layersSpriteZero[0].Data)
-		for _, s := range sp {
-			fmt.Printf("SpriteZero: X: %d Y: %d ID: %d\n", s.X, s.Y, s.Tile)
-		}
-
-		if len(sp) == 1 {
-			spz = sp[0]
-		} else if len(sp) > 1 {
-			fmt.Println("Too many sprite zeros!")
-		} else {
-			spz = Sprite{X:0xFF,Y:0xFF,Tile:0xFF}
-		}
-	}
-
-	layersStatic := data.GetLayerByName("Static")
-	if len(layersStatic) == 0 {
-		fmt.Println("Missing static layer")
-		os.Exit(1)
-	}
-
-	mergedStatic, err := layersStatic[0].Merge(layersTv[0])
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	staticChunks, err := convertLayer(mergedStatic.Data, offset)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	//justTv, err := layersTv[0].Merge(layersSprite[0])
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	offsetHood := []uint32{}
-	for _, val := range mergedHood.Data {
-		if val == 0 {
-			offsetHood = append(offsetHood, 0)
-		} else {
-			offsetHood = append(offsetHood, val + uint32(offset))
-		}
-	}
-
-	//fmt.Println(mergedHood.Data)
-	//fmt.Println(offsetHood)
-
-	hoodChunks, err := convertLayer(offsetHood, offset)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	newsChunks, err := convertLayer(mergedNews.Data, offset)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	sprites := convertSprites(layersSprite[0].Data)
-	sprites = append([]Sprite{spz} , sprites...)
-
-	fmt.Printf("Sprite count: %d\n", len(sprites))
-	for len(sprites) < 64 {
-		sprites = append(sprites, Sprite{X:0xFF,Y:0xFF,Tile:0xFF})
-	}
-
-	tv, err := convertLayer(layersTv[0].Data, offset)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -183,11 +149,15 @@ func main() {
 	defer file.Close()
 
 	fmt.Fprintln(file, "CHUNK_RLE = $00\nCHUNK_RAW = $80\n")
-	fmt.Fprintf(file, "screen_Hood:\n%v\n\n", hoodChunks.ToAsm(bgTile))
-	fmt.Fprintf(file, "screen_Sprites:\n%v\n\n", sprites.ToAsm())
-	fmt.Fprintf(file, "screen_Tv:\n%v\n\n", tv.ToAsm(bgTile))
-	fmt.Fprintf(file, "screen_TvStatic:\n%v\n\n", staticChunks.ToAsm(bgTile))
-	fmt.Fprintf(file, "screen_News:\n%v\n\n", newsChunks.ToAsm(bgTile))
+	for label, screen := range screens {
+		asm, err := processScreen(data, screen)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(file, "%s:\n%v\n\n", label, asm)
+	}
+
 }
 
 func convertLayer(data []uint32, offset uint) (*ChunkList, error) {
