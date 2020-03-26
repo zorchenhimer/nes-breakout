@@ -149,15 +149,15 @@ matrix14.chr: $(MATRIX14_BMP)
 matrix7.chr: $(MATRIX7_BMP)
 	$(CHRUTIL) --first-plane -o $@ $^
 
-title.chr: images/title.bmp images/tv.bmp
-	$(CHRUTIL) -o $@ --pad-tiles 256 images/tv.bmp --tile-offset 16 --tile-count 17 images/title.bmp --tile-offset 17
+title.chr: images/tv.bmp images/ascii.bmp
+	$(CHRUTIL) -o $@ --pad-tiles 256 images/tv.bmp --tile-count 32 images/ascii.bmp --tile-offset 32
 
 tv.chr: images/tv.bmp images/hooded.bmp images/news-anchor.bmp
 	$(CHRUTIL) -o $@ --remove-duplicates --pad-tiles 256 \
-		images/tv.bmp --tile-offset 16 --tile-count 17 \
+		images/tv.bmp --tile-offset 0 --tile-count 32 \
 		images/hooded.bmp --remove-empty \
 		images/news-anchor.bmp --remove-empty \
-		images/tv.bmp --tile-offset 48 --tile-count 5
+		images/tv.bmp --tile-offset 32 --tile-count 5
 
 tv-lower.chr: images/tv.bmp
 	$(CHRUTIL) -o $@ images/tv.bmp --tile-count 12

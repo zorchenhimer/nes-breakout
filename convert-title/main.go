@@ -119,8 +119,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	mergedStatic, err := layersStatic[0].Merge(layersTv[0])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
-	staticChunks, err := convertLayer(layersStatic[0].Data, offset)
+	staticChunks, err := convertLayer(mergedStatic.Data, offset)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

@@ -10,12 +10,16 @@ StaticPalettes:
     .byte $0F, $10, $00, $2D
     .byte $0F, $2D, $10, $00
     .byte $0F, $00, $2D, $10
+    .byte $0F, $0F, $00, $2D
 
 ; Quadrants of the attribute data for better readability
-ST_BOTL = %0001_0000
-ST_BOTR = %0100_0000
-ST_TOPL = %0000_0001
-ST_TOPR = %0000_0100
+ST_BOTL = %0011_0000
+ST_BOTR = %1100_0000
+ST_TOPL = %0000_0011
+ST_TOPR = %0000_1100
+
+SCREEN_ATTR_TV = %0101_0101
+SCREEN_ATTR_ST = %1111_1111
 
 STATIC_START_OFFSET = 1
 STATIC_ANIM_RATE = 3
@@ -32,8 +36,10 @@ Init_ScreenTest:
     jsr ClearAttrTable1
 
     lda #<screen_News
+    ;lda #<screen_Hood
     sta AddressPointer0
     lda #>screen_News
+    ;lda #>screen_Hood
     sta AddressPointer0+1
 
     ldx #$20
@@ -278,7 +284,7 @@ WriteTvAttr:
     lda #$CA
     sta $2006
 
-    lda #ST_BOTL | ST_BOTR
+    lda #(ST_BOTL | ST_BOTR) & SCREEN_ATTR_TV
     sta $2007
     sta $2007
     sta $2007
@@ -289,7 +295,7 @@ WriteTvAttr:
     lda #$D2
     sta $2006
 
-    lda #ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR
+    lda #(ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR) & SCREEN_ATTR_TV
     sta $2007
     sta $2007
     sta $2007
@@ -300,7 +306,7 @@ WriteTvAttr:
     lda #$DA
     sta $2006
 
-    lda #ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR
+    lda #(ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR) & SCREEN_ATTR_TV
     sta $2007
     sta $2007
     sta $2007
@@ -311,7 +317,7 @@ WriteTvAttr:
     lda #$E2
     sta $2006
 
-    lda #ST_TOPL | ST_TOPR
+    lda #(ST_TOPL | ST_TOPR) & SCREEN_ATTR_TV
     sta $2007
     sta $2007
     sta $2007
@@ -319,17 +325,61 @@ WriteTvAttr:
     rts
 
 WriteStaticAttributes:
-    lda #$FF
-    ldx #$27
-    stx $2006
-    ldy #$C0
-    sty $2006
+    lda #$27
+    sta $2006
+    lda #$CA
+    sta $2006
 
-:
+    lda #ST_BOTL | ST_BOTR
     sta $2007
-    iny
-    bne :-
+    sta $2007
+    sta $2007
+    sta $2007
+
+    lda #$27
+    sta $2006
+    lda #$D2
+    sta $2006
+
+    lda #ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+
+    lda #$27
+    sta $2006
+    lda #$DA
+    sta $2006
+
+    lda #ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+
+    lda #$27
+    sta $2006
+    lda #$E2
+    sta $2006
+
+    lda #ST_TOPL | ST_TOPR
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
     rts
+;    lda #$FF
+;    ldx #$27
+;    stx $2006
+;    ldy #$C0
+;    sty $2006
+;
+;:
+;    sta $2007
+;    iny
+;    bne :-
+;    rts
 
 ; Expects pointer to screen data in AddressPointer0 and
 ; the high byte of the Nametable address in X

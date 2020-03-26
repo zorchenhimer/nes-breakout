@@ -205,7 +205,7 @@ NMI_Title:
     jsr WritePalettes
     jsr WriteSprites
 
-    lda #%10001000
+    lda #%10000000
     sta $2000
 
     lda #%00011110
