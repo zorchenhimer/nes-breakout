@@ -8,9 +8,13 @@ import (
 type ChunkType uint8
 
 const (
-	CHUNK_RLE ChunkType = 0x00
-	CHUNK_RAW ChunkType = 0x80
+	CHUNK_RLE  ChunkType = 1 << 5
+	CHUNK_RAW  ChunkType = 2 << 5
+	CHUNK_ADDR ChunkType = 3 << 5
+	CHUNK_DONE ChunkType = 0 // no more chunks
 )
+
+const ChunkMaxLength = 32
 
 type Chunk struct {
 	Type ChunkType
@@ -30,13 +34,25 @@ func (c Chunk) ToBytes() []byte {
 }
 
 func (c Chunk) ToAsm(bgTile int) string {
-	t := "CHUNK_RLE"
-	if c.Type == CHUNK_RAW {
-		t = "CHUNK_RAW"
-	}
-
 	strVals := []string{}
-	if c.Type == CHUNK_RAW {
+	var t string
+	var length int
+
+	switch c.Type {
+	case CHUNK_RLE:
+		t = "CHUNK_RLE"
+		v := c.Data[0]
+		if v != 0x00 {
+			v -= 1
+		} else {
+			v = byte(bgTile)
+		}
+		length = len(c.Data) - 1
+		strVals = append(strVals, fmt.Sprintf("$%02X", v))
+		return fmt.Sprintf(".byte %s | %d, %s", t, length, strings.Join(strVals, ", "))
+
+	case CHUNK_RAW:
+		t = "CHUNK_RAW"
 		for _, v := range c.Data {
 			if v != 0x00 {
 				v -= 1
@@ -47,17 +63,23 @@ func (c Chunk) ToAsm(bgTile int) string {
 			}
 			strVals = append(strVals, fmt.Sprintf("$%02X", v))
 		}
-	} else {
-		v := c.Data[0]
-		if v != 0x00 {
-			v -= 1
-		} else {
-			v = byte(bgTile)
-		}
-		strVals = append(strVals, fmt.Sprintf("$%02X", v))
-	}
+		length = len(c.Data) - 1
+		return fmt.Sprintf(".byte %s | %d, %s", t, length, strings.Join(strVals, ", "))
 
-	return fmt.Sprintf(".byte %s | %d, %s", t, len(c.Data), strings.Join(strVals, ", "))
+	case CHUNK_ADDR:
+		t = "CHUNK_ADDR"
+		for _, v := range c.Data {
+			strVals = append(strVals, fmt.Sprintf("$%02X", v))
+		}
+		return fmt.Sprintf(".byte %s, %s", t, strings.Join(strVals, ", "))
+
+	case CHUNK_DONE:
+		strVals = []string{"$FF"}
+		return ".byte CHUNK_DONE"
+	default:
+		panic(fmt.Sprintf("Invalid chunk type: %v", c.Type))
+	}
+	return "; something went wrong in chunk.ToAsm()"
 }
 
 func (c Chunk) Length() int {
@@ -69,6 +91,7 @@ type ChunkList struct {
 	past []Chunk
 
 	prevByte *byte
+	isOffset bool
 }
 
 func (cl *ChunkList) Chunks() []Chunk {
@@ -101,6 +124,26 @@ func (cl ChunkList) TileCount() int {
 	}
 
 	return count
+}
+
+func (cl *ChunkList) AddOffset(start, end uint16) error {
+	if cl.past != nil || cl.current != nil || cl.prevByte != nil {
+		return fmt.Errorf("Offset must be first chunk")
+	}
+
+	var address uint16 = 0x2000 + start
+	var high uint8 = uint8((address & 0xFF00) >> 8)
+	var low uint8 = uint8(address & 0x00FF)
+
+	cl.past = []Chunk{
+		Chunk{
+			Type: CHUNK_ADDR,
+			Data: []byte{high, low},
+		},
+	}
+	cl.isOffset = true
+
+	return nil
 }
 
 func (cl *ChunkList) Add(b byte) {
@@ -167,7 +210,7 @@ func (cl *ChunkList) Add(b byte) {
 	}
 
 	// Length limit hit on current
-	if cl.current != nil && len(cl.current.Data) >= 127 {
+	if cl.current != nil && len(cl.current.Data) >= ChunkMaxLength {
 		cl.past = append(cl.past, *cl.current)
 		cl.current = nil
 	}
@@ -179,6 +222,10 @@ func (cl ChunkList) ToBytes() []byte {
 	}
 
 	data := []byte{}
+	if cl.isOffset {
+		data = append(data, byte(CHUNK_DONE))
+	}
+
 	for _, c := range cl.past {
 		if len(c.Data) == 0 {
 			continue
@@ -204,6 +251,9 @@ func (cl ChunkList) ToAsm(bgTile int) string {
 			continue
 		}
 		data = append(data, c.ToAsm(bgTile))
+	}
+	if cl.isOffset {
+		data = append(data, ".byte CHUNK_DONE")
 	}
 
 	return strings.Join(data, "\n")

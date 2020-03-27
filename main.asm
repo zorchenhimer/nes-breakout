@@ -23,6 +23,12 @@ DEBUG = 1
     BOARD_OFFSET_X = 32
 .endif
 
+.ifdef PAL
+    FPS = 50
+.else
+    FPS = 60
+.endif
+
 CHILD_OFFSET_Y = 64 ; Is this a good spot for the child board?
 CHILD_OFFSET_X = 80
 CHILD_BOARD_HEIGHT = 6
@@ -37,6 +43,61 @@ BUTTON_UP       = 1 << 3
 BUTTON_DOWN     = 1 << 2
 BUTTON_LEFT     = 1 << 1
 BUTTON_RIGHT    = 1 << 0
+
+; Scene chunk types
+CHUNK_RLE = 1 << 5
+CHUNK_RAW = 2 << 5
+CHUNK_ADDR = 3 << 5
+CHUNK_DONE = 0 ; no more chunks
+
+; Each command might take more than one frame to
+; perform all its actions.  The commands should be
+; implemented in a way that they can be executed
+; across multiple frames in the NMI.  They should
+; also have the ability to run outside of the NMI
+; if the PPU has been turned off in a previous
+; command.
+.enum SceneCmd
+
+    EOD = 0
+
+    ; Turn off screen and draw a full screen Is
+    ; followed by the page ID that contains the data
+    ; and the address of the start data.
+    DrawFullScene
+
+    ; Wait a given number of seconds.
+    WaitSeconds
+
+    ; Wait a given number of frames.
+    WaitFrames
+
+    ; Takes no arguments.  If set, pressing START
+    ; will skip to the next scmd_GotoInit command.
+    SetSkippable
+
+    ; Draw null terminated text
+    ; Arguments: [start PPU address] [text] $00
+    DrawText
+
+    ; Turn off the PPU and enable commands to draw
+    ; to the screen outside of NMI
+    TurnOffPPU
+
+    ; Turn the PPU back on and disable drawing
+    ; outside of the NMI.  This command should
+    ; probably end in a WaitForNMI call.
+    TurnOnPPU
+
+    ; Fill the nametable with the next byte
+    FillNametable
+
+    ; End a scene execution and jump to the given
+    ; Init function.  Indexed with values from the
+    ; data_Inits table
+    GotoInit = $FF
+
+.endenum
 
 .include "nes2header.inc"
 nes2mapper 1

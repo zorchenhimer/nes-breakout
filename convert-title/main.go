@@ -38,6 +38,7 @@ var bgTile int
 type Screen struct {
 	LayerNames []string
 	IsSprite   bool
+	IsOffset   bool		// TODO: Rename this to "UseStrips".
 }
 
 var screens map[string]Screen = map[string]Screen{
@@ -62,6 +63,7 @@ var screens map[string]Screen = map[string]Screen{
 	// TODO: add a bounding box? or a start address?
 	"screen_TextBox": Screen{
 		LayerNames: []string{"Text"},
+		IsOffset:   true,
 	},
 }
 
@@ -112,10 +114,21 @@ func processScreen(data *tiled.Map, screenData Screen) (string, error) {
 		return sprites.ToAsm(), nil
 	}
 
-	chunks, err := convertLayer(merged.Data, 0)
-	if err != nil {
-		return "", err
+	var chunks *ChunkList
+
+	if screenData.IsOffset {
+		// Offset chunk
+		chunks, err = convertOffset(merged.Data)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		chunks, err = convertLayer(merged.Data, 0)
+		if err != nil {
+			return "", err
+		}
 	}
+
 	return chunks.ToAsm(bgTile), nil
 }
 
@@ -148,7 +161,7 @@ func main() {
 	}
 	defer file.Close()
 
-	fmt.Fprintln(file, "CHUNK_RLE = $00\nCHUNK_RAW = $80\n")
+	//fmt.Fprintln(file, "CHUNK_RLE = $00\nCHUNK_RAW = $80\nCHUNK_OFFSET = $40\nCHUNK_DONE = $FF\n")
 	for label, screen := range screens {
 		asm, err := processScreen(data, screen)
 		if err != nil {
@@ -158,6 +171,32 @@ func main() {
 		fmt.Fprintf(file, "%s:\n%v\n\n", label, asm)
 	}
 
+}
+
+func convertOffset(data []uint32) (*ChunkList, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("No data to convert!")
+	}
+
+	start := uint16(0)
+	end := uint16(0)
+	// find start and end of data
+	for i, val := range data {
+		if start == 0 && val != 0 {
+			start = uint16(i)
+		} else if start != 0 && val == 0 {
+			end = uint16(i - 1)
+		}
+	}
+
+	chunks := &ChunkList{}
+	chunks.AddOffset(start, end)
+
+	for _, val := range data[start:end] {
+		chunks.Add(byte(val))
+	}
+
+	return chunks, nil
 }
 
 func convertLayer(data []uint32, offset uint) (*ChunkList, error) {

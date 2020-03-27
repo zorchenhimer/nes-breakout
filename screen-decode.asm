@@ -1,6 +1,19 @@
 ; asmsyntax=ca65
 
 ; Load screen data to the PPU
+; TODO: make data lengths 5-bits instead of 7 (giving a chunk max length of $1F + 1)
+; TODO: add offset opcode ("start at PPU address")
+; TODO: add clear option to load screen? (ie, write $FF unitl the address given in offset opcode)
+; TODO: figure out including attribute data in scene data
+; TODO: add an index table for screens.  (maybe an ENUM for the IDs?)
+
+; This should handle all cutscene stuff
+; scene dirirection:
+;   - draw a scene on the background
+;   - update CHR
+;   - add/remove sprites
+;   - set timer for scene changes
+; this will all be encoded in some sort of binary format
 
 ScreenTest_Palette:
     .byte $0F, $0F, $00, $10
@@ -369,18 +382,8 @@ WriteStaticAttributes:
     sta $2007
     sta $2007
     rts
-;    lda #$FF
-;    ldx #$27
-;    stx $2006
-;    ldy #$C0
-;    sty $2006
-;
-;:
-;    sta $2007
-;    iny
-;    bne :-
-;    rts
 
+; TODO: This needs to be modified or rewritten.
 ; Expects pointer to screen data in AddressPointer0 and
 ; the high byte of the Nametable address in X
 LoadScreen:
@@ -401,12 +404,38 @@ LoadScreen:
     ; start of a chunk
     ldy #0
     lda (AddressPointer0), y
+    tax ; save a copy
+
+    ; get the length of data
+    and #$1F
+    clc
+    adc #1
     sta TmpZ
-    bpl :+
+
+    ; get the command from the copy
+    txa
+    and #$E0
+
+    bne @notDone
+    rts
+@notDone:
+
+    cmp #CHUNK_RLE
+    bne :+
+    jsr screen_DecodeRLE
+    jmp @next
+:
+    cmp #CHUNK_RAW
+    bne :+
     jsr screen_DecodeRAW
     jmp @next
 :
-    jsr screen_DecodeRLE
+    cmp #CHUNK_ADDR
+    bne :+
+    jsr screen_DecodeADDR
+    jmp @next
+:
+    brk ; Invailid command
 
 @next:
     iny
@@ -441,6 +470,7 @@ LoadScreen:
     rts
 
 screen_DecodeRLE:
+    lda TmpZ
     tax
     iny
 
@@ -464,9 +494,7 @@ screen_DecodeRLE:
     rts
 
 screen_DecodeRAW:
-    ; Remove top bit
-    and #$7F
-    tax
+    ldx TmpZ
 
 @loop:
     iny
@@ -474,4 +502,7 @@ screen_DecodeRAW:
     sta $2007
     dex
     bne @loop
+    rts
+
+screen_DecodeADDR:
     rts
