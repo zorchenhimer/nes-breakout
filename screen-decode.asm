@@ -66,7 +66,6 @@ Init_ScreenTest:
     cpx #8
     bne :-
 
-    jsr WritePalettes
 
     jsr WriteTvAttr
     jsr WriteStaticAttributes
@@ -90,7 +89,6 @@ Init_ScreenTest:
     sta TmpY
 
     .Update_PpuControl PPU_CTRL_NMI
-    .Update_PpuMask 0
 
     jsr WaitForNMI
 
@@ -217,6 +215,7 @@ WaitScanline:
 
 NMI_ScreenTest:
     jsr WriteSprites
+    jsr WritePalettes
 
     ; Write the appropriate static palette to the PPU
     lda TmpW

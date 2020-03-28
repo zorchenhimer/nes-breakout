@@ -246,6 +246,8 @@ Init_LevelSelect:
     sta ls_SelectedLevel
     jsr ls_LightTrace
 
+    jsr ls_LoadCursor
+
     .NMI_Set NMI_LevelSelect
     jsr WaitForNMI
 
@@ -724,9 +726,9 @@ ls_LoadSprites:
     lda data_SpriteObject_List+1, y
     sta AddressPointer0+1
 
-    ; frame rate
-    ldy #1
-    lda (AddressPointer0), y
+    ; frame rate.  Start at 1 so every sprite is
+    ; updated on the first call to ls_SpriteAnimate.
+    lda #1
     sta ls_SpriteFrameTimer, x
     inx
 
