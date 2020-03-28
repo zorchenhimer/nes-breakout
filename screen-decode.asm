@@ -1,11 +1,9 @@
 ; asmsyntax=ca65
 
 ; Load screen data to the PPU
-; TODO: make data lengths 5-bits instead of 7 (giving a chunk max length of $1F + 1)
 ; TODO: add offset opcode ("start at PPU address")
 ; TODO: add clear option to load screen? (ie, write $FF unitl the address given in offset opcode)
 ; TODO: figure out including attribute data in scene data
-; TODO: add an index table for screens.  (maybe an ENUM for the IDs?)
 
 ; This should handle all cutscene stuff
 ; scene dirirection:
@@ -54,6 +52,10 @@ Init_ScreenTest:
 
     lda #ScreenIDs::TvStatic
     ldx #$24
+    jsr LoadScreen
+
+    lda #ScreenIDs::TextBox
+    ldx #$20
     jsr LoadScreen
 
     lda #6
@@ -502,4 +504,16 @@ screen_DecodeRAW:
     rts
 
 screen_DecodeADDR:
+    bit $2002
+
+    iny
+    lda (AddressPointer0), y
+    sta $2006
+
+    iny
+    lda (AddressPointer0), y
+    sta $2006
+
+    lda #3
+    sta TmpZ
     rts
