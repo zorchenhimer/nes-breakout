@@ -5,14 +5,6 @@
 ; TODO: add clear option to load screen? (ie, write $FF unitl the address given in offset opcode)
 ; TODO: figure out including attribute data in scene data
 
-; This should handle all cutscene stuff
-; scene dirirection:
-;   - draw a scene on the background
-;   - update CHR
-;   - add/remove sprites
-;   - set timer for scene changes
-; this will all be encoded in some sort of binary format
-
 ScreenTest_Palette:
     .byte $0F, $0F, $00, $10
     .byte $0F, $00, $20, $10
@@ -46,7 +38,8 @@ Init_ScreenTest:
     jsr ClearAttrTable0
     jsr ClearAttrTable1
 
-    lda #ScreenIDs::News
+    ;lda #ScreenIDs::News
+    lda #ScreenIDs::Hood
     ldx #$20
     jsr LoadScreen
 
@@ -74,14 +67,6 @@ Init_ScreenTest:
     bne :-
 
     jsr WritePalettes
-
-    ; Copy sprites from ROM to RAM
-    ldx #0
-:
-    lda screen_Sprites, x
-    sta Sprites, x
-    inx
-    bne :-
 
     jsr WriteTvAttr
     jsr WriteStaticAttributes
@@ -386,12 +371,6 @@ LoadScreen:
     lda screen_Index+1, y
     sta AddressPointer0+1
 
-    lda #0
-    ; this is used as a two byte counter, not a pointer
-    ; stop drawing when count hits 960 ($03C0)
-    sta AddressPointer1
-    sta AddressPointer1+1
-
     bit $2002
     ;lda #$20
     stx $2006
@@ -434,6 +413,11 @@ LoadScreen:
     jsr screen_DecodeADDR
     jmp @next
 :
+    cmp #CHUNK_SPR
+    bne :+
+    jsr screen_DecodeSPR
+    jmp @next
+:
     brk ; Invailid command
 
 @next:
@@ -448,25 +432,7 @@ LoadScreen:
     adc #0
     sta AddressPointer0+1
 
-    ; Add previous chunk length to counter
-    lda TmpZ
-    and #$7F
-    clc
-    adc AddressPointer1
-    sta AddressPointer1
-
-    lda AddressPointer1+1
-    adc #0
-    sta AddressPointer1+1
-
-    cmp #3
-    bcc @loop
-
-    lda AddressPointer1
-    cmp #$C0
-    bcc @loop
-
-    rts
+    jmp @loop
 
 screen_DecodeRLE:
     lda TmpZ
@@ -516,4 +482,41 @@ screen_DecodeADDR:
 
     lda #3
     sta TmpZ
+    rts
+
+screen_DecodeSPR:
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer2
+
+    iny
+    lda (AddressPointer0), y
+    sta AddressPointer2+1
+
+    tya
+    pha
+
+    ldy #0
+    ldx #0  ; TODO: load sprites at an offset?
+
+    ; Load number of sprites
+    lda (AddressPointer2), y
+    sta TmpX
+    iny
+:
+    .repeat 4
+    lda (AddressPointer2), y
+    sta Sprites, x
+    iny
+    inx
+    .endrepeat
+
+    dec TmpX
+    bne :-
+
+    dey
+    sty LastSpriteOffset
+
+    pla
+    tay
     rts

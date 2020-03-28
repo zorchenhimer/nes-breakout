@@ -29,24 +29,6 @@ Init_Title:
     jsr Clear_NonGlobalRam
     jsr ClearSprites
 
-    ; Copy sprites from ROM to RAM
-    ldx #0
-:
-    lda screen_Sprites, x
-    sta Sprites, x
-    inx
-    bne :-
-
-    lda #79
-    sta Sprites
-    lda #70
-    sta Sprites+3
-
-    lda #TitleCursorTile    ; tile
-    sta Sprites+1
-    lda #$00    ; attr
-    sta Sprites+2
-
     lda #$0F
     sta CurrentBoard
 
@@ -71,6 +53,18 @@ Init_Title:
     sta AddressPointer0+1
     lda #$4A
     sta AddressPointer0+0
+
+    ldx LastSpriteOffset
+    lda #79
+    sta Sprites, x
+    lda #70
+    sta Sprites+3, x
+
+    lda #TitleCursorTile    ; tile
+    sta Sprites+1, x
+    lda #$00    ; attr
+    sta Sprites+2, x
+
 
     ldx #0
     ldy #0
@@ -165,7 +159,8 @@ Frame_Title:
     asl a
     clc
     adc #TITLE_SpriteTop
-    sta Sprites+0
+    ldx LastSpriteOffset
+    sta Sprites+0, x
 
     jsr WaitForNMI
     jmp Frame_Title
@@ -239,9 +234,9 @@ title_SelectMenuOption:
 
 ; Text is null terminated
 data_TitleMenu:
-    .byte "Level Select", $00, 3
-    .byte "Credits", $00, 2
-    .byte "Screen Test", $00, 5
+    .byte "Level Select", $00, InitIDs::LevelSelect
+    .byte "Credits", $00, InitIDs::Credits
+    .byte "Screen Test", $00, InitIDs::ScreenTest
     .byte $00
 
 title_PalBackground:

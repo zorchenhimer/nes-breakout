@@ -11,6 +11,7 @@ const (
 	CHUNK_RLE  ChunkType = 1 << 5
 	CHUNK_RAW  ChunkType = 2 << 5
 	CHUNK_ADDR ChunkType = 3 << 5
+	CHUNK_SPR  ChunkType = 4 << 5
 	CHUNK_DONE ChunkType = 0 // no more chunks
 )
 
@@ -19,6 +20,7 @@ const ChunkMaxLength = 32
 type Chunk struct {
 	Type ChunkType
 	Data []byte
+	SpriteLabel string
 }
 
 func (c Chunk) ToBytes() []byte {
@@ -76,6 +78,11 @@ func (c Chunk) ToAsm(bgTile int) string {
 	case CHUNK_DONE:
 		strVals = []string{"$FF"}
 		return ".byte CHUNK_DONE"
+
+	case CHUNK_SPR:
+		return fmt.Sprintf(".byte CHUNK_SPR, .lobyte(%s), .hibyte(%s)",
+			c.SpriteLabel, c.SpriteLabel)
+
 	default:
 		panic(fmt.Sprintf("Invalid chunk type: %v", c.Type))
 	}
@@ -108,7 +115,7 @@ func (cl *ChunkList) Chunks() []Chunk {
 	return cl.past
 }
 
-func (cl ChunkList) TileCount() int {
+func (cl *ChunkList) TileCount() int {
 	count := 0
 	for _, c := range cl.past {
 		count += c.Length()
@@ -252,9 +259,7 @@ func (cl ChunkList) ToAsm(bgTile int) string {
 		}
 		data = append(data, c.ToAsm(bgTile))
 	}
-	if cl.isOffset {
-		data = append(data, ".byte CHUNK_DONE")
-	}
+	data = append(data, ".byte CHUNK_DONE")
 
 	return strings.Join(data, "\n")
 }

@@ -1,7 +1,9 @@
 ; asmsyntax=ca65
 
-go_Text:
+go_Ded:
     .byte "Game Over", $00
+go_Win:
+    .byte "OMG you won", $00
 go_Start:
     .byte "Press Start", $00
 
@@ -9,7 +11,20 @@ go_Palette:
     .byte $0F, $0F, $00, $10
     .byte $0F, $2A, $20, $10
 
+Init_GameWon:
+    lda #<go_Win
+    sta AddressPointer0
+    lda #>go_Win
+    sta AddressPointer0+1
+    jmp gameover_init
+
 Init_GameOver:
+    lda #<go_Ded
+    sta AddressPointer0
+    lda #>go_Ded
+    sta AddressPointer0+1
+
+gameover_init:
     .Disable_Drawing
     .NMI_Disable
 
@@ -19,8 +34,8 @@ Init_GameOver:
     sta PaletteBufferSprites+i
 .endrepeat
 
-    lda #' '
-    jsr FillNametable0
+    ;lda #' '
+    ;jsr FillNametable0
     jsr ClearAttrTable0
 
     jsr ClearSprites
@@ -30,19 +45,9 @@ Init_GameOver:
 
     jsr WriteTvAttr
 
-    lda #<screen_Tv
-    sta AddressPointer0
-    lda #>screen_Tv
-    sta AddressPointer0+1
+    lda #ScreenIDs::Tv
+    ldx #$20
     jsr LoadScreen
-
-    ; Copy sprites from ROM to RAM
-    ldx #0
-:
-    lda screen_Sprites, x
-    sta Sprites, x
-    inx
-    bne :-
 
     bit $2002
     lda #$21
@@ -50,12 +55,12 @@ Init_GameOver:
     lda #$4B
     sta $2006
 
-    ldx #0
+    ldy #0
 :
-    lda go_Text, x
+    lda (AddressPointer0), y
     beq :+
     sta $2007
-    inx
+    iny
     jmp :-
 :
 
@@ -86,7 +91,7 @@ Frame_GameOver:
     beq :+
 
     jsr WaitForNMI
-    lda #0
+    lda #InitIDs::Title
     jmp JumpToInit
 :
 
@@ -103,6 +108,6 @@ NMI_GameOver:
     sta $2005
     sta $2005
 
-    .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN | PPU_CTRL_SP_PATTERN 
+    .Update_PpuControl PPU_CTRL_NMI
     dec Sleeping
     rti

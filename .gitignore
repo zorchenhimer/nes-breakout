@@ -10,3 +10,4 @@ credit-names/*.csv
 *.chr
 *.json
 *.i
+*.idx

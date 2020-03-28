@@ -48,7 +48,18 @@ BUTTON_RIGHT    = 1 << 0
 CHUNK_RLE = 1 << 5
 CHUNK_RAW = 2 << 5
 CHUNK_ADDR = 3 << 5
+CHUNK_SPR = 4 << 5
 CHUNK_DONE = 0 ; no more chunks
+
+.enum InitIDs
+    Title
+    Game
+    Credits
+    LevelSelect
+    GameOver
+    ScreenTest
+    GameWon
+.endenum
 
 ; Each command might take more than one frame to
 ; perform all its actions.  The commands should be
@@ -165,6 +176,8 @@ controller2_Old:    .res 1
 
 ; Each level is a bit
 CompletedLevels: .res 2
+
+LastSpriteOffset: .res 1
 
 .segment "NMIRAM"
 NMI_Instr:      .res 1
@@ -886,6 +899,8 @@ data_Inits:
         .word Init_GameOver
     .byte $00, 0, 2
         .word Init_ScreenTest
+    .byte $00, 0, 2
+        .word Init_GameWon
 
 
 ; TODO: find a way to auto-generate this table

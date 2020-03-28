@@ -410,12 +410,18 @@ Frame_Game:
 
     lda #BUTTON_START
     jsr ButtonPressedP1
-    beq :+
+    beq :++
     ; complete the level, lol
     lda CurrentBoard
+    cmp #15 ;end level
+    bne :+
+    jsr WaitForNMI
+    lda #InitIDs::GameWon
+    jmp JumpToInit
+:
     sta menu_PrevLevel
     jsr WaitForNMI
-    lda #3
+    lda #InitIDs::LevelSelect
     jmp JumpToInit
 :
 
@@ -1340,7 +1346,7 @@ game_GameOver:
 @done:
 
     jsr WaitForNMI
-    lda #4
+    lda #InitIDs::GameOver
     jmp JumpToInit
 
 game_SubtractLife:

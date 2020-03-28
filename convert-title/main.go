@@ -40,6 +40,8 @@ type Screen struct {
 	LayerNames []string
 	IsSprite   bool
 	IsOffset   bool		// TODO: Rename this to "UseStrips".
+
+	SpriteLayer string
 }
 
 var screens map[string]Screen = map[string]Screen{
@@ -48,15 +50,18 @@ var screens map[string]Screen = map[string]Screen{
 	},
 	"Tv":  Screen{
 		LayerNames: []string{"TV"},
+		SpriteLayer: "TvSprites",
 	},
 	"TvStatic":  Screen{
 		LayerNames: []string{"TV", "Static"},
+		SpriteLayer: "TvSprites",
 	},
 	"News":  Screen{
 		LayerNames: []string{"TV", "News"},
+		SpriteLayer: "TvSprites",
 	},
 
-	"Sprites": Screen{
+	"TvSprites": Screen{
 		LayerNames: []string{"SpriteZero", "Sprites"},
 		IsSprite:   true,
 	},
@@ -108,13 +113,7 @@ func processScreen(data *tiled.Map, screenData Screen) (string, error) {
 
 	// convert data to chunks
 	if screenData.IsSprite {
-		sprites := convertSprites(merged.Data)
-
-		for len(sprites) < 64 {
-			sprites = append(sprites, Sprite{X:0xFF,Y:0xFF,Tile:0xFF})
-		}
-
-		return sprites.ToAsm(), nil
+		return convertSprites(merged.Data).ToAsm(), nil
 	}
 
 	var chunks *ChunkList
@@ -130,6 +129,19 @@ func processScreen(data *tiled.Map, screenData Screen) (string, error) {
 		if err != nil {
 			return "", err
 		}
+	}
+
+	if screenData.SpriteLayer != "" {
+		spChunk := Chunk{
+			Type: CHUNK_SPR,
+			Data: []byte{0},
+			SpriteLabel: LabelPrefix + screenData.SpriteLayer,
+		}
+
+		newCL := &ChunkList{}
+		newCL.past = []Chunk{spChunk}
+		newCL.past = append(newCL.past, chunks.past...)
+		chunks = newCL
 	}
 
 	return chunks.ToAsm(bgTile), nil
@@ -253,7 +265,7 @@ func (sl SpriteList) ToAsm() string {
 	for _, s := range sl {
 		lst = append(lst, s.ToAsm())
 	}
-	return strings.Join(lst, "\n")
+	return fmt.Sprintf(".byte %d\n%s", len(sl), strings.Join(lst, "\n"))
 }
 
 func convertSprites(data []uint32) SpriteList {
