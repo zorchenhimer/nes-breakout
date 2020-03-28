@@ -48,21 +48,11 @@ Init_ScreenTest:
     jsr ClearAttrTable0
     jsr ClearAttrTable1
 
-    lda #<screen_News
-    ;lda #<screen_Hood
-    sta AddressPointer0
-    lda #>screen_News
-    ;lda #>screen_Hood
-    sta AddressPointer0+1
-
+    lda #ScreenIDs::News
     ldx #$20
     jsr LoadScreen
 
-    lda #<screen_TvStatic
-    sta AddressPointer0
-    lda #>screen_TvStatic
-    sta AddressPointer0+1
-
+    lda #ScreenIDs::TvStatic
     ldx #$24
     jsr LoadScreen
 
@@ -387,6 +377,13 @@ WriteStaticAttributes:
 ; Expects pointer to screen data in AddressPointer0 and
 ; the high byte of the Nametable address in X
 LoadScreen:
+    asl a
+    tay
+    lda screen_Index, y
+    sta AddressPointer0
+    lda screen_Index+1, y
+    sta AddressPointer0+1
+
     lda #0
     ; this is used as a two byte counter, not a pointer
     ; stop drawing when count hits 960 ($03C0)

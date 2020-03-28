@@ -62,10 +62,7 @@ Init_Title:
 
     jsr WriteTvAttr
 
-    lda #<screen_Tv
-    sta AddressPointer0
-    lda #>screen_Tv
-    sta AddressPointer0+1
+    lda #ScreenIDs::Tv
     ldx #$20
     jsr LoadScreen
 

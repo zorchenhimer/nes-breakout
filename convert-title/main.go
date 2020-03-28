@@ -6,6 +6,7 @@ import (
 	"os"
 	//"strconv"
 	"strings"
+	"sort"
 
 	"github.com/zorchenhimer/go-tiled"
 )
@@ -42,30 +43,32 @@ type Screen struct {
 }
 
 var screens map[string]Screen = map[string]Screen{
-	"screen_Hood": Screen{
+	"Hood": Screen{
 		LayerNames: []string{"Hood", "TV"},
 	},
-	"screen_Tv":  Screen{
+	"Tv":  Screen{
 		LayerNames: []string{"TV"},
 	},
-	"screen_TvStatic":  Screen{
+	"TvStatic":  Screen{
 		LayerNames: []string{"TV", "Static"},
 	},
-	"screen_News":  Screen{
+	"News":  Screen{
 		LayerNames: []string{"TV", "News"},
 	},
 
-	"screen_Sprites": Screen{
+	"Sprites": Screen{
 		LayerNames: []string{"SpriteZero", "Sprites"},
 		IsSprite:   true,
 	},
 
 	// TODO: add a bounding box? or a start address?
-	"screen_TextBox": Screen{
+	"TextBox": Screen{
 		LayerNames: []string{"Text"},
 		IsOffset:   true,
 	},
 }
+
+const LabelPrefix string = "screen_"
 
 func getLayer(data *tiled.Map, name string) (tiled.Layer, error) {
 	layers := data.GetLayerByName(name)
@@ -161,6 +164,8 @@ func main() {
 	}
 	defer file.Close()
 
+	screenLabels := []string{}
+
 	//fmt.Fprintln(file, "CHUNK_RLE = $00\nCHUNK_RAW = $80\nCHUNK_OFFSET = $40\nCHUNK_DONE = $FF\n")
 	for label, screen := range screens {
 		asm, err := processScreen(data, screen)
@@ -168,9 +173,29 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Fprintf(file, "%s:\n%v\n\n", label, asm)
+		screenLabels = append(screenLabels, label)
+		fmt.Fprintf(file, "%s%s:\n%v\n\n", LabelPrefix, label, asm)
 	}
 
+	idxFile, err := os.Create(args[1] + ".idx")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer idxFile.Close()
+
+	sort.Strings(screenLabels)
+
+	fmt.Fprintf(idxFile, "; asmsyntax=ca65\n\n.enum ScreenIDs\n")
+	for _, label := range screenLabels {
+		fmt.Fprintln(idxFile, "    " + label)
+	}
+	fmt.Fprintf(idxFile, ".endenum\n\n")
+
+	fmt.Fprintf(idxFile, "screen_Index:\n")
+	for _, label := range screenLabels {
+		fmt.Fprintf(idxFile, "    .word %s%s\n", LabelPrefix, label)
+	}
 }
 
 func convertOffset(data []uint32) (*ChunkList, error) {

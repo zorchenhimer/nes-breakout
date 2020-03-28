@@ -199,6 +199,7 @@ Sprites: .res 256
 .segment "PAGE02"
     .byte 2
 
+.include "screen-data.i.idx"
 .include "title.asm"
 .include "level-select.asm"
 .include "gameover.asm"
