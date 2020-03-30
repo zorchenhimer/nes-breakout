@@ -30,6 +30,12 @@ STATIC_TRAVEL_RATE = 4
 STATIC_ROW_COUNT = 4
 
 Init_ScreenTest:
+    lda #$55
+    jsr FillAttrTable0
+    lda #SceneIDs::Intro
+    jmp RunScene
+
+Init_ScreenTest_old:
     .NMI_Disable
     .Disable_Drawing
 
@@ -362,6 +368,7 @@ WriteStaticAttributes:
 ; TODO: This needs to be modified or rewritten.
 ; Expects pointer to screen data in AddressPointer0 and
 ; the high byte of the Nametable address in X
+; The bank number that contains the data should be in IdxA
 LoadScreen:
     asl a
     tay

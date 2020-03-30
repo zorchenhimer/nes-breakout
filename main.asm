@@ -61,6 +61,10 @@ CHUNK_DONE = 0 ; no more chunks
     GameWon
 .endenum
 
+.enum SceneIDs
+    Intro
+.endenum
+
 ; Each command might take more than one frame to
 ; perform all its actions.  The commands should be
 ; implemented in a way that they can be executed
@@ -86,6 +90,7 @@ CHUNK_DONE = 0 ; no more chunks
     ; Takes no arguments.  If set, pressing START
     ; will skip to the next scmd_GotoInit command.
     SetSkippable
+    SetUnskippable
 
     ; Draw null terminated text
     ; Arguments: [start PPU address] [text] $00
@@ -106,7 +111,7 @@ CHUNK_DONE = 0 ; no more chunks
     ; End a scene execution and jump to the given
     ; Init function.  Indexed with values from the
     ; data_Inits table
-    GotoInit = $FF
+    GotoInit; = $FF
 
 .endenum
 
@@ -179,6 +184,12 @@ CompletedLevels: .res 2
 
 LastSpriteOffset: .res 1
 
+sf_Skippable:   .res 1
+sf_Frames:      .res 1
+sf_Seconds:     .res 1
+sf_PpuOn:       .res 1
+sf_Scroll:      .res 1
+
 .segment "NMIRAM"
 NMI_Instr:      .res 1
 NMI_Pointer:    .res 2
@@ -216,7 +227,6 @@ Sprites: .res 256
 .include "title.asm"
 .include "level-select.asm"
 .include "gameover.asm"
-.include "screen-decode.asm"
 .include "screen-data.i"
 
 .segment "PAGE03"
@@ -588,23 +598,38 @@ ClearAttrTable0:
     bit $2002
     lda #$23
     sta $2006
+    lda #0
+    pha
     jmp utils_ClearAttrTable
 
 ClearAttrTable1:
     bit $2002
     lda #$27
     sta $2006
+    lda #0
+    pha
     jmp utils_ClearAttrTable
 
 ClearAttrTable2:
     bit $2002
     lda #$2B
     sta $2006
+    lda #0
+    pha
     jmp utils_ClearAttrTable
 
 ClearAttrTable3:
     bit $2002
     lda #$2F
+    sta $2006
+    lda #0
+    pha
+    jmp utils_ClearAttrTable
+
+FillAttrTable0:
+    pha
+    bit $2002
+    lda #$23
     sta $2006
     jmp utils_ClearAttrTable
 
@@ -612,7 +637,8 @@ utils_ClearAttrTable:
     lda #$C0
     sta $2006
     ldx #8
-    lda #$00
+    ;lda #$00
+    pla
 @loop:
 .repeat 8
     sta $2007
@@ -829,7 +855,8 @@ Clear_ExtendedRam:
 
     rts
 
-; Jumps to an init in the init table
+; Jumps to an init in the init table. ID in A.  Use the
+; InitIDs enum for IDs.
 JumpToInit:
     ; multiply A by 5
     tay
@@ -959,3 +986,6 @@ data_Mult12:
 .include "credits.asm"
 .include "map_decode.asm"
 .include "bg_anim.asm"
+.include "screen-decode.asm"
+.include "scene-engine.asm"
+.include "scene-data.asm"

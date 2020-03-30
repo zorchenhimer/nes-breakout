@@ -8,24 +8,30 @@
 ;   - set timer for scene changes
 ; this will all be encoded in some sort of binary format
 
+Scene_Index:
+    .word Scene_Intro
+
 Scene_Intro:
     .byte SceneCmd::SetSkippable
+    .byte SceneCmd::TurnOffPPU
 
     .byte SceneCmd::DrawFullScene
         .byte 2 ; page 2
-        .word screen_News
+        .byte $20 ; dest nametable
+        .byte ScreenIDs::News
 
     .byte SceneCmd::DrawText
         .word $22CA
-        .byte "lel, welcome to"
+        .asciiz "lel, welcome to"
 
     .byte SceneCmd::DrawText
         .word $22EA
-        .byte "the news"
+        .asciiz "the news"
+
+    .byte SceneCmd::TurnOnPPU
 
     .byte SceneCmd::WaitSeconds
         .byte 5
 
     .byte SceneCmd::GotoInit
-        .byte 0  ; title
-    .byte $00 ; last resort end
+        .byte InitIDs::Title
