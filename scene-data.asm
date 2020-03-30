@@ -20,13 +20,18 @@ Scene_Intro:
         .byte $20 ; dest nametable
         .byte ScreenIDs::News
 
-    .byte SceneCmd::DrawText
-        .word $22CA
-        .asciiz "lel, welcome to"
+    .byte SceneCmd::DrawFullScene
+        .byte 2
+        .byte $20
+        .byte ScreenIDs::TextBox
 
     .byte SceneCmd::DrawText
-        .word $22EA
-        .asciiz "the news"
+        .word $22A9
+        .asciiz "lel, welcome"
+
+    .byte SceneCmd::DrawText
+        .word $22C9
+        .asciiz "to the news"
 
     .byte SceneCmd::TurnOnPPU
 
