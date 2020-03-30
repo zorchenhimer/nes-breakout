@@ -23,6 +23,29 @@ type Chunk struct {
 	SpriteLabel string
 }
 
+func (c Chunk) String() string {
+	t := ""
+	switch c.Type {
+	case CHUNK_RLE:
+		t = "CHUNK_RLE"
+	case CHUNK_RAW:
+		t = "CHUNK_RAW"
+	case CHUNK_ADDR:
+		t = "CHUNK_ADDR"
+	case CHUNK_SPR:
+		t = "CHUNK_SPR"
+	case CHUNK_DONE:
+		t = "CHUNK_DONE"
+	}
+
+	data := []string{}
+	for _, d := range c.Data {
+		data = append(data, fmt.Sprintf("%02X", d))
+	}
+
+	return fmt.Sprintf("<Chunk Type: %s; SpriteLabel: %q; Data: %s>", t, c.SpriteLabel, data)
+}
+
 func (c Chunk) ToBytes() []byte {
 	ret := []byte{
 		uint8(c.Type) | uint8(len(c.Data)),
@@ -101,6 +124,29 @@ type ChunkList struct {
 	isOffset bool
 }
 
+func (cl *ChunkList) String() string {
+	past := []string{}
+	for _, p := range cl.past {
+		past = append(past, p.String())
+	}
+
+	if cl.prevByte != nil {
+		return fmt.Sprintf("current: %v; prevByte: %02X; isOffset: %t; past:\n  %s",
+			cl.current,
+			*cl.prevByte,
+			cl.isOffset,
+			strings.Join(past, "\n  "),
+		)
+	} else {
+		return fmt.Sprintf("current: %v; prevByte: %02X; isOffset: %t; past:\n  %s",
+			cl.current,
+			cl.prevByte,
+			cl.isOffset,
+			strings.Join(past, "\n  "),
+		)
+	}
+}
+
 func (cl *ChunkList) Chunks() []Chunk {
 	if cl.prevByte != nil {
 		cl.Add(*cl.prevByte)
@@ -133,21 +179,35 @@ func (cl *ChunkList) TileCount() int {
 	return count
 }
 
-func (cl *ChunkList) AddOffset(start, end uint16) error {
-	if cl.past != nil || cl.current != nil || cl.prevByte != nil {
-		return fmt.Errorf("Offset must be first chunk")
+func (cl *ChunkList) AddOffset(start uint16) error {
+	//if cl.past != nil || cl.current != nil || cl.prevByte != nil {
+	//	return fmt.Errorf("Offset must be first chunk")
+	//}
+
+	if cl.past == nil {
+		cl.past = []Chunk{}
+	}
+
+	// Flush the add buffer
+	if cl.current != nil {
+		if cl.prevByte != nil {
+			cl.Add(*cl.prevByte)
+			cl.prevByte = nil
+		}
+
+		cl.past = append(cl.past, *cl.current)
+		cl.current = nil
 	}
 
 	var address uint16 = 0x2000 + start
 	var high uint8 = uint8((address & 0xFF00) >> 8)
 	var low uint8 = uint8(address & 0x00FF)
 
-	cl.past = []Chunk{
+	cl.past = append(cl.past,
 		Chunk{
 			Type: CHUNK_ADDR,
 			Data: []byte{high, low},
-		},
-	}
+		})
 	cl.isOffset = true
 
 	return nil

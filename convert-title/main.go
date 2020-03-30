@@ -12,24 +12,31 @@ import (
 )
 
 /*
-	The data format used for the screens is a combination of run-length and
-	raw data, with a length count in the first byte.
+	The data format used for the screens is command based.  The first byte of a
+	chunk contains the command in the upper three bits (bits 7-5).  The rest of
+	the byte (bits 4-0) contain the length of data minus one, if applicable.
 
-	The data is split up into chunks.  Each chunk is either run-length or
-	raw data.  The first byte of a chunk holds both the type and the length
-	of data.
+	Commands are as follows:
+		CHUNK_RLE  = 1 << 5
+		CHUNK_RAW  = 2 << 5
+		CHUNK_ADDR = 3 << 5
+		CHUNK_SPR  = 4 << 5
+		CHUNK_DONE = 0 // no more chunks
 
-	The first bit determines the chunk type.  If bit 7 is set, the chunk is
-	a raw data chunk.  It is a run-length chunk otherwise.  Bits 6-0 hold
-	the length of the data.
+	RLE takes a size and a single byte of data.  The data will be repeated SIZE + 1
+	number of times.
 
-	A run-length chunk will always be two bytes long.  The first byte is the
-	chunk type and length, while the second byte is the data to be repeated.
+	RAW takes a size and SIZE + 1 number of bytes to write.
 
-	A raw data chunk is N + 1 bytes long.  The first byte is the chunk type
-	and length (just like the RLE byte), and it is followed by a list of data.
+	ADDR sets a new PPU address to write to.  This is used for partial updates
+	of the screen.
 
-	TLLL LLLL
+	SPR defines a sprite layer that should be used with the current background
+	layer.
+
+	DONE denotes the end of a screen.
+
+	TTTL LLLL
 	T: Type
 	L: Length
 */
@@ -210,28 +217,41 @@ func main() {
 	}
 }
 
+type DataRange struct {
+	start int
+	end int
+}
+
 func convertOffset(data []uint32) (*ChunkList, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("No data to convert!")
 	}
 
-	start := uint16(0)
-	end := uint16(0)
+	ranges := []DataRange{}
+
+	start := 0
 	// find start and end of data
 	for i, val := range data {
 		if start == 0 && val != 0 {
-			start = uint16(i)
+			start = i
 		} else if start != 0 && val == 0 {
-			end = uint16(i - 1)
+			rng := DataRange{start: start, end: i}
+			start = 0
+			ranges = append(ranges, rng)
 		}
 	}
 
-	chunks := &ChunkList{}
-	chunks.AddOffset(start, end)
+	chunks := &ChunkList{past: []Chunk{}}
+	for _, r := range ranges {
+		//fmt.Printf("ChunkList: %s\n", chunks)
+		chunks.AddOffset(uint16(r.start))
 
-	for _, val := range data[start:end] {
-		chunks.Add(byte(val))
+		for _, val := range data[r.start:r.end] {
+			chunks.Add(byte(val))
+		}
 	}
+
+	//fmt.Println(chunks.String())
 
 	return chunks, nil
 }
