@@ -2058,11 +2058,11 @@ CheckBrickCollide:
 :
 .endif
 
-    lda Row_Addresses_Low, x
-    sta BrickAddress
-    lda Row_Addresses_High, x
-    sta BrickAddress+1
+    stx BrickRow
+    sty BrickCol
+    jsr GetAddressesForBrick
 
+    ldy #0
     lda (BrickAddress), y
     ; There is an adjacent brick, do
     ; not collide with that brick.
@@ -2146,6 +2146,10 @@ CheckBrickCollide:
     beq @horizDoCollide
 :
 
+    stx BrickRow
+    sty BrickCol
+    jsr GetAddressesForBrick
+
     ldy #0
     lda (BrickAddress), y
     bne @noHorizCollide ; there is a brick, do not collide
@@ -2195,7 +2199,6 @@ CheckBrickCollide:
 ;
 ; Input: BrickRow, Brickcol
 ; Output: BrickAddress, BrickPpuAddress
-; TODO: verify that this still works
 game_GetAddressForChildBrick:
     lda CurrentBoard
     and #$7F
@@ -2302,48 +2305,13 @@ GetAddressesForBrick:
     ; (needs to be pointing to the first byte)
     ldy BrickCol
     lda (BrickAddress), y   ; BrickAddress is the start of the row
-.ifdef DEBUG
-    beq @failA
-.endif
     bpl :++
     lda BrickCol
     bne :+
-.ifdef DEBUG
-    lda BrickAddress
-    sta zp_BrickAddress
-    lda BrickAddress+1
-    sta zp_BrickAddress+1
-    brk ; Brick column 0, but second brick byte
-@failA:
-    lda BrickAddress
-    sta zp_BrickAddress
-    lda BrickAddress+1
-    sta zp_BrickAddress+1
-    brk ; Not a brick!
-.endif
 :
     ; On second byte, subtract one to get first byte
     dec BrickCol
 :
-
-.ifdef DEBUG
-    ; This sanity check breaks on half-bricks
-    ;
-    ; Sanity check B
-;    ldy BrickCol
-;    lda (BrickAddress), y
-;    bmi @failB  ; it's the second byte
-;    and #%0100_0000
-;    beq @failB  ; it's not the first byte
-;    jmp @passB
-;@failB:
-;    lda BrickAddress
-;    sta zp_BrickAddress
-;    lda BrickAddress+1
-;    sta zp_BrickAddress+1
-;    brk ; Failed sanity check
-;@passB:
-.endif
 
     lda game_BoardOffsetY
     lsr a   ; offset is in pixels
@@ -2389,30 +2357,6 @@ GetAddressesForBrick:
     lda BrickPpuAddress+1
     adc #0
     sta BrickPpuAddress+1
-
-.ifdef DEBUG
-    ; This sanity check breaks on half-bricks
-    ;
-    ; Sanity check C
-;    ldy #0
-;    lda (BrickAddress), y
-;    bmi @fail
-;    and #%0100_0000
-;    beq @fail
-;
-;    lda BrickAddress
-;    sta zp_BrickAddress
-;    lda BrickAddress+1
-;    sta zp_BrickAddress+1
-;    rts
-;
-;@fail:
-;    lda BrickAddress
-;    sta zp_BrickAddress
-;    lda BrickAddress+1
-;    sta zp_BrickAddress+1
-;    brk ; Failed sanity check
-.endif
     rts
 
 ; Perform the vertical collision on a brick.
@@ -2437,7 +2381,6 @@ DoVerticalBrickCollide:
     ; add that distance to the opposite direction of the ball
     lda BrickRowIndex_Vert
     and #$7F
-    pha
 
     sta BrickRow
     lda BrickColIndex_Vert
@@ -2445,19 +2388,18 @@ DoVerticalBrickCollide:
 
     bit powerup_NoClip_Active
     bpl @noNoClip
-    pla  ; clear a value off the stack
     jmp game_RemoveBrick
 
 @noNoClip:
 
     jsr DoBrickAction
     beq :+
-    pla ; does this PLA break anything? why is it here?
     rts ; DoBrickAction returns 1 if
         ; everything else should be skipped.
 :       ; "everything" is to be determined.
 
-    pla
+    lda BrickRowIndex_Vert
+    and #$7F
     tay
 
     bit BallDirection
@@ -2584,7 +2526,7 @@ BounceHoriz:
 ; it in A.
 ;
 ; Input: TmpY, TmpX
-; Output: A
+; Output: A, X, Y (a = brick, X/Y = row column of brick)
 CheckPointCollide:
     lda TmpY
     ; Y >= BOARD_OFFSET_Y, continue
@@ -2889,7 +2831,7 @@ Index_BgAnimRows:
 ; Check two point's collision and return
 ; the proper brick it collided with.
 ; Return values in CollisionRow_Ret and CollisionCol_Ret
-; TODO: fix this.  There's at least one off-by-one in here (column)
+; TODO: fix this.  There's at least one off-by-one in here (column) (is there?)
 CheckTwoPointCollision:
     lda PointA_X
     sta TmpX
