@@ -29,13 +29,13 @@ STATIC_ANIM_RATE = 3
 STATIC_TRAVEL_RATE = 4
 STATIC_ROW_COUNT = 4
 
-Init_ScreenTest:
+;Init_ScreenTest_new:
     lda #$55
     jsr FillAttrTable0
     lda #SceneIDs::Intro
     jmp RunScene
 
-Init_ScreenTest_old:
+;Init_ScreenTest:
     .NMI_Disable
     .Disable_Drawing
 

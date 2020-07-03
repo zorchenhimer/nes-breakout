@@ -122,10 +122,10 @@ Init_Game:
     ;jsr FillNametable1
     jsr ClearAttrTable0
 
-    lda #1
+    lda #ChrData::Game
     jsr LoadChrData
 
-    lda #4
+    lda #ChrData::Game2
     jsr LoadChrData
 
     lda #$00

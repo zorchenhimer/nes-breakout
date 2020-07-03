@@ -57,12 +57,23 @@ CHUNK_DONE = 0 ; no more chunks
     Credits
     LevelSelect
     GameOver
-    ScreenTest
+    ;ScreenTest
     GameWon
 .endenum
 
 .enum SceneIDs
     Intro
+.endenum
+
+.enum ChrData
+    Credits
+    Game
+    Title
+    Hex
+    Game2
+    LevelSelect
+    Tv
+    TvLower
 .endenum
 
 ; Each command might take more than one frame to
@@ -107,6 +118,9 @@ CHUNK_DONE = 0 ; no more chunks
 
     ; Fill the nametable with the next byte
     FillNametable
+
+    ; Load CHR data onto the PPU
+    LoadChr
 
     ; End a scene execution and jump to the given
     ; Init function.  Indexed with values from the
@@ -308,8 +322,7 @@ LevelSelectTileData_Count = 0
 TvTileData:
     ;.incbin "title.chr", 0, (16 * 32) ; (bytes/tile * tile count)
     .incbin "tv.chr"
-;TvTileData_Count = (* - TvTileData) / 16
-TvTileData_Count = 0
+TvTileData_Count = ((* - TvTileData) / 16) & $FF
 
 TvTileDataLower:
     .incbin "tv-lower.chr"
@@ -373,16 +386,11 @@ RESET:
 
     jsr MMC1_Init
 
-    lda #<Init_Title
-    sta AddressPointer0
-    lda #>Init_Title
-    sta AddressPointer0+1
-    lda #2
-    jmp LongJump
+    lda SceneIDs::Intro
+    jmp RunScene
 
-Forever:
-    jsr WaitForNMI
-    jmp Forever
+    ;lda InitIDs::Title
+    ;jmp JumpToInit
 
 ; Maybe change this to use a sleeping flag
 ; This can probably break if NMI goes long
@@ -495,53 +503,81 @@ WritePaletteData:
 
     rts
 
-; Take a bank in A, and pointer in AddressPointer0.
-; Swap to the bank in A, and jump to the pointer.
-LongJump:
+; TODO: Add an offset parameter?
+LoadChrData:
+    ldx $8000   ; Load the bank ID
+
+    ; A holds index to Index_ChrData
+    asl a
+    asl a
+    tay
+
+    ; Load up data pointer
+    lda Index_ChrData+0, y
+    sta AddressPointer4+0
+    lda Index_ChrData+1, y
+    sta AddressPointer4+1
+
+    ; Load up tile count
+    lda Index_ChrData+2, y
+    sta ChrWriteTileCount
+
+    ; Load the destination pattern table, and mapper
+    ; page that contains the CHR data.
+    lda Index_ChrData+3, y
+    and #$80
+    beq :+
+    lda #$10
+    jmp :++
+:
+    lda #0
+:
+    sta AddressPointer5+1
+    lda #0
+    sta AddressPointer5+0
+    ;sta ChrWriteDest
+
+    ; Right half contains page of data
+    lda Index_ChrData+3, y
+    and #$0F
     jsr MMC1_Select_Page
 
-    ; Reset stack
-    ldx #$FF
-    txs
+    jsr WriteChrData
 
-    jmp (AddressPointer0)
+    ; Go back to the original page
+    txa
+    jsr MMC1_Select_Page
+
+    rts
 
 ; Writes CHR data directly to RAM from ROM space
 ; Input:
-;   AddressPointer3     source data location
-;   ChrWriteDest        destination pattern table
+;   AddressPointer4     source data location
+;   AddressPointer5     destination address
 ;   ChrWriteTileCount   number of tiles
 WriteChrData:
     bit $2002
 
-    bit ChrWriteDest
-    bmi @bottomTable
-    lda #$00
+    lda AddressPointer5+1
     sta $2006
-    sta $2006
-    jmp @copyLoop
-
-@bottomTable:
-    lda #$10
-    sta $2006
-    lda #$00
+    lda AddressPointer5+0
     sta $2006
 
 @copyLoop:
     ldy #0
-:   lda (AddressPointer3), y
+:   lda (AddressPointer4), y
     sta $2007
     iny
     cpy #16
     bne :-
 
     ; Increment pointer to next tile
-    lda AddressPointer3
+    lda AddressPointer4
     clc
     adc #16
-    sta AddressPointer3
+    sta AddressPointer4
     bcc :+
-    inc AddressPointer3+1
+    inc AddressPointer4+1
 :
     dec ChrWriteTileCount
     bne @copyLoop
@@ -655,42 +691,6 @@ ClearSprites:
     sta Sprites, x
     inx
     bne :-
-    rts
-
-; TODO: Add an offset parameter?
-LoadChrData:
-    ldx $8000   ; Load the bank ID
-
-    ; A holds index to Index_ChrData
-    asl a
-    asl a
-    tay
-
-    ; Load up data pointer
-    lda Index_ChrData+0, y
-    sta AddressPointer3+0
-    lda Index_ChrData+1, y
-    sta AddressPointer3+1
-
-    ; Load up tile count
-    lda Index_ChrData+2, y
-    sta ChrWriteTileCount
-
-    ; Load the destination pattern table, and mapper
-    ; page that contains the CHR data.
-    lda Index_ChrData+3, y
-    sta ChrWriteDest
-
-    ; Right half contains page of data
-    and #$0F
-    jsr MMC1_Select_Page
-
-    jsr WriteChrData
-
-    ; Go back to the original page
-    txa
-    jsr MMC1_Select_Page
-
     rts
 
 ; Was a button pressed this frame?
@@ -868,11 +868,15 @@ JumpToInit:
     lda data_Inits+4, x
     sta AddressPointer0+1
 
-    ; grab the bank
+    ; swap banks
     lda data_Inits+2, x
+    jsr MMC1_Select_Page
 
-    ; do a long jump
-    jmp LongJump
+    ; Reset stack
+    ldx #$FF
+    txs
+
+    jmp (AddressPointer0)
 
 WritePalettes:
     lda #PPU_CTRL_NMI
@@ -924,11 +928,10 @@ data_Inits:
         .word Init_LevelSelect
     .byte $00, 0, 2
         .word Init_GameOver
-    .byte $00, 0, 2
-        .word Init_ScreenTest
+    ;.byte $00, 0, 2
+    ;    .word Init_ScreenTest
     .byte $00, 0, 2
         .word Init_GameWon
-
 
 ; TODO: find a way to auto-generate this table
 Index_ChrData:
@@ -981,6 +984,16 @@ data_Mult5:
 data_Mult12:
 .repeat 10, i
     .byte (i * 12)
+.endrepeat
+
+data_Mult16_A:
+.repeat 256, i
+    .byte (i * 16) & $FF
+.endrepeat
+
+data_Mult16_B:
+.repeat 256, i
+    .byte (i * 16) >> 8
 .endrepeat
 
 .include "credits.asm"

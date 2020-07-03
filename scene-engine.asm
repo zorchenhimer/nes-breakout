@@ -1,5 +1,9 @@
 ; asmsyntax=ca65
 
+; TODO: sprite-zero commands (moving it around?)
+; TODO: extract static animation from test code
+; TODO: New CHR for text box (ascii and text box BG)
+
 ; Scene ID in A, use the SceneIDs enum.
 RunScene:
     asl a
@@ -52,6 +56,7 @@ scene_Functions:
     .word sf_TurnOffPPU-1
     .word sf_TurnOnPPU-1
     .word sf_FillNametable-1
+    .word sf_LoadChr-1
     .word sf_GotoInit-1
 
 sf_EOD:
@@ -79,6 +84,9 @@ sf_DrawFullScene:
     pla
     tay
     iny
+
+    jsr ClearAttrTable0
+
     rts
 
 sf_WaitSeconds:
@@ -163,6 +171,66 @@ sf_TurnOnPPU:
 
 sf_FillNametable:
     rts
+
+sf_LoadChr:
+    lda $8000
+    sta LastBank
+
+    lda #0
+    sta AddressPointer5
+
+    ; Dest pattern table
+    ;iny
+    lda (AddressPointer3), y
+    and #$80
+
+    ; AddressPointer0 is the dest start address for CHR
+    sta AddressPointer5+1
+
+    ; Source Page
+    lda (AddressPointer3), y
+    and #$7F
+    jsr MMC1_Select_Page
+
+    ; Dest offset (in tiles)
+    iny
+    lda (AddressPointer3), y
+
+    ; tiles -> address
+    tax
+    lda data_Mult16_A, x
+    sta AddressPointer5+0
+
+    lda AddressPointer5+1
+    ora data_Mult16_B, x
+    sta AddressPointer5+1
+
+    ; Tile count
+    iny
+    lda (AddressPointer3), y
+    sta ChrWriteTileCount
+
+    iny
+    lda (AddressPointer3), y
+    sta AddressPointer4
+
+    iny
+    lda (AddressPointer3), y
+    sta AddressPointer4+1
+    iny
+
+    ; Save Y
+    tya
+    pha
+
+    jsr WriteChrData
+
+    ; Restore Y
+    pla
+    tay
+
+    lda LastBank
+    jmp MMC1_Select_Page
 
 sf_GotoInit:
     lda (AddressPointer3), y

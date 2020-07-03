@@ -1,12 +1,14 @@
 ; asmsyntax=ca65
 
 ; This should handle all cutscene stuff
-; scene dirirection:
+; scene dirirection (spleling counts):
 ;   - draw a scene on the background
 ;   - update CHR
 ;   - add/remove sprites
 ;   - set timer for scene changes
 ; this will all be encoded in some sort of binary format
+
+
 
 Scene_Index:
     .word Scene_Intro
@@ -14,6 +16,12 @@ Scene_Index:
 Scene_Intro:
     .byte SceneCmd::SetSkippable
     .byte SceneCmd::TurnOffPPU
+
+    .byte SceneCmd::LoadChr
+        .byte $00 | 14 ; dest pattern table (bit 7) & page
+        .byte 0 ; Dest tile offset
+        .byte TvTileData_Count; tile count
+        .word TvTileData ; Source label
 
     .byte SceneCmd::DrawFullScene
         .byte 2 ; page 2

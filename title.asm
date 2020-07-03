@@ -236,7 +236,7 @@ title_SelectMenuOption:
 data_TitleMenu:
     .byte "Level Select", $00, InitIDs::LevelSelect
     .byte "Credits", $00, InitIDs::Credits
-    .byte "Screen Test", $00, InitIDs::ScreenTest
+    ;.byte "Screen Test", $00, InitIDs::ScreenTest
     .byte $00
 
 title_PalBackground:

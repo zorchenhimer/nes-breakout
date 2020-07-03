@@ -40,7 +40,8 @@ SOURCES := main.asm nes2header.inc \
 		  title.asm menu_ram.asm level-select.asm \
 		  macros.asm bg_anim.asm \
 		  lsbg.i level-select-data.asm gameover.asm \
-		  screen-decode.asm screen-data.i
+		  screen-decode.asm screen-data.i \
+		  scene-engine.asm scene-data.asm
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
