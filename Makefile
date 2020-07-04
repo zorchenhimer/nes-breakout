@@ -158,7 +158,7 @@ tv.chr: images/tv.bmp images/hooded.bmp images/news-anchor.bmp
 		images/tv.bmp --tile-offset 0 --tile-count 32 \
 		images/hooded.bmp --remove-empty \
 		images/news-anchor.bmp --remove-empty \
-		images/tv.bmp --tile-offset 32 --tile-count 5
+		images/tv.bmp --tile-offset 32 --tile-count 6
 
 tv-lower.chr: images/tv.bmp
 	$(CHRUTIL) -o $@ images/tv.bmp --tile-count 12

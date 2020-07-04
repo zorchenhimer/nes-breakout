@@ -3,6 +3,7 @@
 ; TODO: sprite-zero commands (moving it around?)
 ; TODO: extract static animation from test code
 ; TODO: New CHR for text box (ascii and text box BG)
+; TODO: Palette data
 
 ; Scene ID in A, use the SceneIDs enum.
 RunScene:
@@ -57,6 +58,7 @@ scene_Functions:
     .word sf_TurnOnPPU-1
     .word sf_FillNametable-1
     .word sf_LoadChr-1
+    .word sf_PadSprites-1
     .word sf_GotoInit-1
 
 sf_EOD:
@@ -77,8 +79,19 @@ sf_DrawFullScene:
 
     ; scene id
     lda (AddressPointer3), y
+    pha
 
+    lda $8000
+    sta LastBank
+
+    lda #2
+    jsr MMC1_Select_Page
+
+    pla ; get scene id from stac
     jsr LoadScreen
+
+    lda LastBank
+    jsr MMC1_Select_Page
 
     ; restore Y
     pla
@@ -184,6 +197,9 @@ sf_LoadChr:
     lda (AddressPointer3), y
     and #$80
 
+    beq :+
+    lda #$10
+:
     ; AddressPointer0 is the dest start address for CHR
     sta AddressPointer5+1
 
@@ -232,15 +248,32 @@ sf_LoadChr:
     lda LastBank
     jmp MMC1_Select_Page
 
+sf_PadSprites:
+    ldx LastSpriteOffset
+    lda #$FE
+:
+    sta Sprites, x
+    inx
+    inx
+    inx
+    inx
+    bne :-
+
+    rts
+
 sf_GotoInit:
     lda (AddressPointer3), y
     jmp JumpToInit
 
 NMI_Scene:
+    pha
     lda sf_PpuOn
     beq :+
     lda #0
     sta sf_PpuOn
+
+    jsr WriteSprites
+
     ; TODO: put the values into variables
     .Update_PpuMask PPU_MASK_ON | PPU_MASK_LEFTSPRITES | PPU_MASK_LEFTBACKGROUND
     .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_SP_PATTERN
@@ -249,4 +282,5 @@ NMI_Scene:
     sta $2005
 :
     dec Sleeping
+    pla
     rti

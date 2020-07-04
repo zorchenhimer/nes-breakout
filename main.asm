@@ -122,6 +122,9 @@ CHUNK_DONE = 0 ; no more chunks
     ; Load CHR data onto the PPU
     LoadChr
 
+    ; Blank out the remaining sprites
+    PadSprites
+
     ; End a scene execution and jump to the given
     ; Init function.  Indexed with values from the
     ; data_Inits table
@@ -333,6 +336,8 @@ TvTileDataLower_Count = (* - TvTileDataLower) / 16
 .out .sprintf("TitleData_Count: %d", TitleData_Count)
 .out .sprintf("HexTileData_Count: %d", HexTileData_Count)
 .out .sprintf("LevelSelectTileData_Count: %d", LevelSelectTileData_Count)
+.out .sprintf("TvTileData_Count: %d", TvTileData_Count)
+.out .sprintf("TvTileDataLower_Count: %d", TvTileDataLower_Count)
 
 .segment "PAGE_FIXED"
     .byte 15
@@ -565,12 +570,14 @@ WriteChrData:
 
 @copyLoop:
     ldy #0
+    ;
+    ; Copy single tile
 :   lda (AddressPointer4), y
     sta $2007
     iny
     cpy #16
     bne :-
-
+    ;
     ; Increment pointer to next tile
     lda AddressPointer4
     clc
