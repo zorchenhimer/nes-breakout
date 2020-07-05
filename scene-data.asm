@@ -77,8 +77,14 @@ Scene_Intro:
     .byte SceneCmd::TvAttr
     .byte SceneCmd::StaticAttr
 
+    .byte SceneCmd::RunFunction
+        .word InitStatic
+
     .byte SceneCmd::SetFramePointer
-        .word Frame_ScreenTest-1
+        .word Frame_ScreenTest
+
+    .byte SceneCmd::SetNMIPointer
+        .word NMI_ScreenTest
 
     .byte SceneCmd::TurnOnPPU
 

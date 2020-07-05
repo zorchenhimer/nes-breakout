@@ -134,13 +134,20 @@ CHUNK_DONE = 0 ; no more chunks
     TvAttr
     StaticAttr
 
+    ; Clear an attribute table to $00
     ClearAttr0
     ClearAttr1
     ClearAttr2
     ClearAttr3
 
+    ; Set a pointer to a function to run during
+    ; the frame and NMI code, respectively.
     SetFramePointer
     SetNMIPointer
+
+    ; Run an arbitrary function immediately.
+    ; Expects an RTS.
+    RunFunction
 
     ; End a scene execution and jump to the given
     ; Init function.  Indexed with values from the

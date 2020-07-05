@@ -76,6 +76,7 @@ STATIC_ROW_COUNT = 4
     jsr WriteTvAttr
     jsr WriteStaticAttributes
 
+InitStatic:
     lda #STATIC_START_OFFSET
     sta IdxB
 
@@ -93,10 +94,7 @@ STATIC_ROW_COUNT = 4
     ; Speed static bars travel down the screen
     lda #STATIC_TRAVEL_RATE
     sta TmpY
-
-    .Update_PpuControl PPU_CTRL_NMI
-
-    jsr WaitForNMI
+    rts
 
     ; cycles per scanline: 113 1/3
 Frame_ScreenTest:
@@ -152,7 +150,6 @@ Frame_ScreenTest:
     sta IdxA
 
     ; increment the static start line
-
     dec TmpY
     bne :+
     lda #STATIC_TRAVEL_RATE
@@ -216,9 +213,6 @@ WaitScanline:
     rts
 
 NMI_ScreenTest:
-    jsr WriteSprites
-    jsr WritePalettes
-
     ; Write the appropriate static palette to the PPU
     lda TmpW
     asl a
@@ -237,15 +231,7 @@ NMI_ScreenTest:
     inx
     dey
     bne :-
-
-    .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_SP_PATTERN
-    .Update_PpuMask PPU_MASK_ON | PPU_MASK_LEFTSPRITES | PPU_MASK_LEFTBACKGROUND
-
-    lda #0
-    sta $2005
-    sta $2005
-    dec Sleeping
-    rti
+    rts
 
 WriteTvAttr:
     ; 23CA

@@ -74,6 +74,7 @@ scene_Functions:
     .word ClearAttrTable3-1
     .word sf_SetFramePointer-1
     .word sf_SetNMIPointer-1
+    .word sf_RunFunction-1
     .word sf_GotoInit-1
 
 fn_lastidx = ((* - scene_Functions) / 2) - 1
@@ -123,17 +124,18 @@ sf_DrawFullScene:
     rts
 
 scene_AnimLaunch:
+    lda sf_AnimPointers+0, x
+    sta AddressPointer0+0
+    lda sf_AnimPointers+1, x
+    sta AddressPointer0+1
+
+    jmp (AddressPointer0)
+
+; A = 0 Frame
+; A = 1 NMI
+scene_frameCode:
     asl a
     tax
-    lda sf_AnimPointers+1, x
-    pha
-    lda sf_AnimPointers+0, x
-    pha
-    rts ; jump to function code
-
-; X = 0 Frame
-; X = 2 NMI
-scene_frameCode:
     lda sf_AnimPointers+1, x
     beq :+
     lda $8000
@@ -145,7 +147,6 @@ scene_frameCode:
     tya
     pha
 
-    lda #0
     jsr scene_AnimLaunch
 
     pla
@@ -172,7 +173,7 @@ sf_WaitSeconds:
 
 @frames:
     ; frame code
-    ldx #0
+    lda #0
     jsr scene_frameCode
 
     jsr WaitForNMI
@@ -194,7 +195,7 @@ sf_WaitFrames:
 
 :
     ; frame code
-    ldx #0
+    lda #0
     jsr scene_frameCode
 
     jsr WaitForNMI
@@ -362,6 +363,17 @@ sf_SetNMIPointer:
     iny
     rts
 
+sf_RunFunction:
+    lda (AddressPointer3), y
+    sta AddressPointer0+0
+    iny
+
+    lda (AddressPointer3), y
+    sta AddressPointer0+1
+    iny
+
+    jmp (AddressPointer0)
+
 sf_GotoInit:
     lda (AddressPointer3), y
     jmp JumpToInit
@@ -370,13 +382,13 @@ NMI_Scene:
     pha
     lda sf_PpuOn
     beq :+
-    lda #0
-    sta sf_PpuOn
+    ;lda #0
+    ;sta sf_PpuOn
 
     jsr WriteSprites
     jsr WritePalettes
 
-    ldx #2
+    lda #1
     jsr scene_frameCode
 
     ; TODO: put the values into variables
