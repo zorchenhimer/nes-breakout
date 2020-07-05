@@ -100,8 +100,6 @@ STATIC_ROW_COUNT = 4
 
     ; cycles per scanline: 113 1/3
 Frame_ScreenTest:
-    .NMI_Set NMI_ScreenTest
-
     dec TmpX
     lda TmpX
     bne :+
@@ -208,9 +206,7 @@ Frame_ScreenTest:
     sty $2000
 
 @NoStatic:
-
-    jsr WaitForNMI
-    jmp Frame_ScreenTest
+    rts
 
 WaitScanline:
     ora IdxC
@@ -250,27 +246,6 @@ NMI_ScreenTest:
     sta $2005
     dec Sleeping
     rti
-
-; Fill the second nametable with static
-FillStatic:
-    lda #$20
-    sta $2006
-    lda #$C8
-    sta $2006
-
-    .repeat 5
-    ldx #$1A
-    sta 2007
-    inx
-    sta 2007
-    inx
-    sta 2007
-    inx
-    sta 2007
-    inx
-    sta 2007
-    .endrepeat
-    rts
 
 WriteTvAttr:
     ; 23CA

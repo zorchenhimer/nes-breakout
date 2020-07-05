@@ -125,6 +125,23 @@ CHUNK_DONE = 0 ; no more chunks
     ; Blank out the remaining sprites
     PadSprites
 
+    ; Set a single palette.  First byte is
+    ; destination palette ID.  0-3 are
+    ; background, 4-7 are sprites.
+    SetPalette
+
+    ; TODO: rewrite these functions
+    TvAttr
+    StaticAttr
+
+    ClearAttr0
+    ClearAttr1
+    ClearAttr2
+    ClearAttr3
+
+    SetFramePointer
+    SetNMIPointer
+
     ; End a scene execution and jump to the given
     ; Init function.  Indexed with values from the
     ; data_Inits table
@@ -157,6 +174,10 @@ AddressPointer3:    .res 2
 AddressPointer4:    .res 2
 AddressPointer5:    .res 2
 AddressPointer6:    .res 2
+
+; First two bytes are frame code, second are NMI
+sf_AnimPointers: .res 4
+sf_AnimBank:  .res 1
 
 Sleeping: .res 1
 

@@ -36,12 +36,54 @@ Scene_Intro:
         ; This should be the news scene
         .byte ScreenIDs::News
 
+    .byte SceneCmd::DrawFullScene
+        .byte 2 ; page 2
+        .byte $24 ; dest nametable
+        ;
+        ; This should be the news scene
+        .byte ScreenIDs::TvStatic
+
     .byte SceneCmd::PadSprites
+
+    .byte SceneCmd::SetPalette
+        ; dest palette.
+        ; 0-3: BG
+        ; 4-7: Sprites
+        .byte 0
+        ; 4 bytes for the colors
+        ;.byte $0F, $2A, $20, $3A
+        .byte $0F, $0F, $00, $10
+
+    .byte SceneCmd::SetPalette
+        ; dest palette.
+        ; 0-3: BG
+        ; 4-7: Sprites
+        .byte 1
+        ; 4 bytes for the colors
+        .byte $0F, $00, $20, $10
+
+    .byte SceneCmd::SetPalette
+        ; dest palette.
+        ; 0-3: BG
+        ; 4-7: Sprites
+        .byte 4
+        ; 4 bytes for the colors
+        .byte $0F, $0F, $00, $10
+        ;.byte $0F, $0F, $0F, $0F
+
+    .byte SceneCmd::ClearAttr0
+    .byte SceneCmd::ClearAttr1
+
+    .byte SceneCmd::TvAttr
+    .byte SceneCmd::StaticAttr
+
+    .byte SceneCmd::SetFramePointer
+        .word Frame_ScreenTest-1
 
     .byte SceneCmd::TurnOnPPU
 
     .byte SceneCmd::WaitSeconds
-        .byte 5
+        .byte 10
 
     .byte SceneCmd::TurnOffPPU
     .byte SceneCmd::DrawFullScene

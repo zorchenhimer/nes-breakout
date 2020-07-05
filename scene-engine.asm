@@ -14,6 +14,12 @@ RunScene:
     lda Scene_Index+1, x
     sta AddressPointer3+1
 
+    lda #0
+    sta sf_AnimPointers+0
+    sta sf_AnimPointers+1
+    sta sf_AnimPointers+2
+    sta sf_AnimPointers+3
+
     .NMI_Set NMI_Scene
 
 @loop:
@@ -59,9 +65,25 @@ scene_Functions:
     .word sf_FillNametable-1
     .word sf_LoadChr-1
     .word sf_PadSprites-1
+    .word sf_SetPalette-1
+    .word WriteTvAttr-1
+    .word WriteStaticAttributes-1
+    .word ClearAttrTable0-1
+    .word ClearAttrTable1-1
+    .word ClearAttrTable2-1
+    .word ClearAttrTable3-1
+    .word sf_SetFramePointer-1
+    .word sf_SetNMIPointer-1
     .word sf_GotoInit-1
 
+fn_lastidx = ((* - scene_Functions) / 2) - 1
+.out .sprintf("fn_lastidx: %d", fn_lastidx)
+.if fn_lastidx <> SceneCmd::GotoInit
+    .error "scene_Functions table does not match SceneCmd enum!"
+.endif
+
 sf_EOD:
+    brk ; u wot m8
     rts
 
 sf_DrawFullScene:
@@ -98,8 +120,40 @@ sf_DrawFullScene:
     tay
     iny
 
-    jsr ClearAttrTable0
+    rts
 
+scene_AnimLaunch:
+    asl a
+    tax
+    lda sf_AnimPointers+1, x
+    pha
+    lda sf_AnimPointers+0, x
+    pha
+    rts ; jump to function code
+
+; X = 0 Frame
+; X = 2 NMI
+scene_frameCode:
+    lda sf_AnimPointers+1, x
+    beq :+
+    lda $8000
+    sta LastBank
+
+    lda sf_AnimBank
+    jsr MMC1_Select_Page
+
+    tya
+    pha
+
+    lda #0
+    jsr scene_AnimLaunch
+
+    pla
+    tay
+
+    lda LastBank
+    jsr MMC1_Select_Page
+:
     rts
 
 sf_WaitSeconds:
@@ -117,7 +171,9 @@ sf_WaitSeconds:
     sta sf_Frames
 
 @frames:
-    ; TODO: frame code?
+    ; frame code
+    ldx #0
+    jsr scene_frameCode
 
     jsr WaitForNMI
     dec sf_Frames
@@ -137,7 +193,9 @@ sf_WaitFrames:
     .NMI_Set NMI_Scene
 
 :
-    ; TODO: frame code?
+    ; frame code
+    ldx #0
+    jsr scene_frameCode
 
     jsr WaitForNMI
     dec sf_Frames
@@ -185,6 +243,7 @@ sf_TurnOnPPU:
     rts
 
 sf_FillNametable:
+    brk
     rts
 
 sf_LoadChr:
@@ -263,6 +322,46 @@ sf_PadSprites:
 
     rts
 
+sf_SetPalette:
+    lda (AddressPointer3), y
+    asl a
+    asl a
+    tax
+    clc
+    adc #4
+    sta TmpX ; exit condition
+    iny
+
+@loop:
+    lda (AddressPointer3), y
+    sta PaletteBuffer, x
+    iny
+    inx
+    cpx TmpX
+    bne @loop
+
+    rts
+
+sf_SetFramePointer:
+    lda (AddressPointer3), y
+    sta sf_AnimPointers+0
+    iny
+
+    lda (AddressPointer3), y
+    sta sf_AnimPointers+1
+    iny
+    rts
+
+sf_SetNMIPointer:
+    lda (AddressPointer3), y
+    sta sf_AnimPointers+2
+    iny
+
+    lda (AddressPointer3), y
+    sta sf_AnimPointers+3
+    iny
+    rts
+
 sf_GotoInit:
     lda (AddressPointer3), y
     jmp JumpToInit
@@ -275,6 +374,10 @@ NMI_Scene:
     sta sf_PpuOn
 
     jsr WriteSprites
+    jsr WritePalettes
+
+    ldx #2
+    jsr scene_frameCode
 
     ; TODO: put the values into variables
     .Update_PpuMask PPU_MASK_ON | PPU_MASK_LEFTSPRITES | PPU_MASK_LEFTBACKGROUND
