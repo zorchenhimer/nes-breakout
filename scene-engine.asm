@@ -105,6 +105,7 @@ sf_DrawFullScene:
 sf_WaitSeconds:
     ; turn on PPU here?
     lda (AddressPointer3), y
+    iny
     sta sf_Seconds
 
 @seconds:
@@ -130,6 +131,7 @@ sf_WaitSeconds:
 sf_WaitFrames:
     ; turn on PPU here?
     lda (AddressPointer3), y
+    iny
     sta sf_Frames
 
     .NMI_Set NMI_Scene
