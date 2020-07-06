@@ -98,20 +98,6 @@ InitStatic:
 
     ; cycles per scanline: 113 1/3
 Frame_ScreenTest:
-    dec TmpX
-    lda TmpX
-    bne :+
-
-    lda #STATIC_ANIM_RATE
-    sta TmpX
-
-    inc TmpW
-    lda TmpW
-    cmp #4
-    bcc :+
-    lda #0
-    sta TmpW
-:
 
 ;    ; This controller code moved the start point up and down
 ;    jsr ReadControllers
@@ -213,6 +199,20 @@ WaitScanline:
     rts
 
 NMI_ScreenTest:
+    dec TmpX
+    lda TmpX
+    bne :+
+
+    lda #STATIC_ANIM_RATE
+    sta TmpX
+
+    inc TmpW
+    lda TmpW
+    cmp #4
+    bcc :+
+    lda #0
+    sta TmpW
+:
     ; Write the appropriate static palette to the PPU
     lda TmpW
     asl a

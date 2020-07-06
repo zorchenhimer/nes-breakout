@@ -43,6 +43,11 @@ Scene_Intro:
         ; This should be the news scene
         .byte ScreenIDs::TvStatic
 
+    .byte SceneCmd::DrawFullScene
+        .byte 2
+        .byte $20
+        .byte ScreenIDs::TextBox
+
     .byte SceneCmd::PadSprites
 
     .byte SceneCmd::SetPalette
@@ -80,18 +85,32 @@ Scene_Intro:
     .byte SceneCmd::RunFunction
         .word InitStatic
 
+    .byte SceneCmd::TurnOnPPU
+
+    .byte SceneCmd::WaitSeconds
+        .byte 10
+
     .byte SceneCmd::SetFramePointer
         .word Frame_ScreenTest
 
     .byte SceneCmd::SetNMIPointer
         .word NMI_ScreenTest
 
-    .byte SceneCmd::TurnOnPPU
+    .byte SceneCmd::WaitSeconds
+        .byte 3
+
+    .byte SceneCmd::SetNametable1
+
+    ; clear the frame pointer.  no more static lines
+    .byte SceneCmd::SetFramePointer
+        .word $0000
 
     .byte SceneCmd::WaitSeconds
-        .byte 10
+        .byte 2
 
     .byte SceneCmd::TurnOffPPU
+    .byte SceneCmd::SetNametable0
+
     .byte SceneCmd::DrawFullScene
         .byte 2 ; page 2
         .byte $20 ; dest nametable

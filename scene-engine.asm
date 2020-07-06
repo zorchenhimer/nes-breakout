@@ -75,6 +75,10 @@ scene_Functions:
     .word sf_SetFramePointer-1
     .word sf_SetNMIPointer-1
     .word sf_RunFunction-1
+    .word sf_SetNametable0-1
+    .word sf_SetNametable1-1
+    .word sf_SetNametable2-1
+    .word sf_SetNametable3-1
     .word sf_GotoInit-1
 
 fn_lastidx = ((* - scene_Functions) / 2) - 1
@@ -374,6 +378,26 @@ sf_RunFunction:
 
     jmp (AddressPointer0)
 
+sf_SetNametable0:
+    lda #$00
+    sta sf_Nametable
+    rts
+
+sf_SetNametable1:
+    lda #$01
+    sta sf_Nametable
+    rts
+
+sf_SetNametable2:
+    lda #$02
+    sta sf_Nametable
+    rts
+
+sf_SetNametable3:
+    lda #$03
+    sta sf_Nametable
+    rts
+
 sf_GotoInit:
     lda (AddressPointer3), y
     jmp JumpToInit
@@ -393,7 +417,11 @@ NMI_Scene:
 
     ; TODO: put the values into variables
     .Update_PpuMask PPU_MASK_ON | PPU_MASK_LEFTSPRITES | PPU_MASK_LEFTBACKGROUND
-    .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_SP_PATTERN
+
+    lda #PPU_CTRL_NMI | PPU_CTRL_SP_PATTERN
+    ora sf_Nametable
+    sta $2000
+
     lda #0
     sta $2005
     sta $2005

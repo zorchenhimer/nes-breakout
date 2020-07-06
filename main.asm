@@ -149,6 +149,11 @@ CHUNK_DONE = 0 ; no more chunks
     ; Expects an RTS.
     RunFunction
 
+    SetNametable0
+    SetNametable1
+    SetNametable2
+    SetNametable3
+
     ; End a scene execution and jump to the given
     ; Init function.  Indexed with values from the
     ; data_Inits table
@@ -185,6 +190,7 @@ AddressPointer6:    .res 2
 ; First two bytes are frame code, second are NMI
 sf_AnimPointers: .res 4
 sf_AnimBank:  .res 1
+sf_Nametable: .res 1
 
 Sleeping: .res 1
 
