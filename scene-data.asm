@@ -15,6 +15,10 @@ Scene_Index:
 
 Scene_Intro:
     .byte SceneCmd::SetSkippable
+
+    .byte SceneCmd::SetExitRoutine
+        .byte InitIDs::Title
+
     .byte SceneCmd::TurnOffPPU
 
     .byte SceneCmd::LoadChr
@@ -132,10 +136,18 @@ Scene_Intro:
     ;    .word $22C9
     ;    .asciiz "to the news"
 
+    .byte SceneCmd::SetFramePointer
+        .word Frame_ScreenTest
+
     .byte SceneCmd::TurnOnPPU
 
     .byte SceneCmd::WaitSeconds
-        .byte 5
+        .byte 2
+
+    .byte SceneCmd::SetFramePointer
+        .word $0000
+
+    .byte SceneCmd::WaitSeconds
+        .byte 10
 
     .byte SceneCmd::GotoInit
-        .byte InitIDs::Title

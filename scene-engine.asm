@@ -79,6 +79,7 @@ scene_Functions:
     .word sf_SetNametable1-1
     .word sf_SetNametable2-1
     .word sf_SetNametable3-1
+    .word sf_SetExitRoutine-1
     .word sf_GotoInit-1
 
 fn_lastidx = ((* - scene_Functions) / 2) - 1
@@ -180,6 +181,8 @@ sf_WaitSeconds:
     lda #0
     jsr scene_frameCode
 
+    jsr sf_CheckSkip
+
     jsr WaitForNMI
     dec sf_Frames
     bne @frames
@@ -188,6 +191,21 @@ sf_WaitSeconds:
     bne @seconds
 
     rts
+
+sf_CheckSkip:
+    jsr ReadControllers
+
+    lda #BUTTON_START
+    jsr ButtonPressedP1
+    bne :+
+    rts
+:
+    lda #0
+    sta sf_PpuOn
+
+    jsr WaitForNMI
+    lda sf_ExitRoutine
+    jmp JumpToInit
 
 sf_WaitFrames:
     ; turn on PPU here?
@@ -201,6 +219,8 @@ sf_WaitFrames:
     ; frame code
     lda #0
     jsr scene_frameCode
+
+    jsr sf_CheckSkip
 
     jsr WaitForNMI
     dec sf_Frames
@@ -398,8 +418,14 @@ sf_SetNametable3:
     sta sf_Nametable
     rts
 
-sf_GotoInit:
+sf_SetExitRoutine:
     lda (AddressPointer3), y
+    iny
+    sta sf_ExitRoutine
+    rts
+
+sf_GotoInit:
+    lda sf_ExitRoutine
     jmp JumpToInit
 
 NMI_Scene:

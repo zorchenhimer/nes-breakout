@@ -154,6 +154,9 @@ CHUNK_DONE = 0 ; no more chunks
     SetNametable2
     SetNametable3
 
+    ; Set the Init routine to jump to with GotoInit
+    SetExitRoutine
+
     ; End a scene execution and jump to the given
     ; Init function.  Indexed with values from the
     ; data_Inits table
@@ -191,6 +194,7 @@ AddressPointer6:    .res 2
 sf_AnimPointers: .res 4
 sf_AnimBank:  .res 1
 sf_Nametable: .res 1
+sf_ExitRoutine: .res 1
 
 Sleeping: .res 1
 
