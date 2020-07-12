@@ -324,7 +324,7 @@ txt_loadChar:
     jmp txt_loadChar
 
 FontData:
-    .include "font.chr.asm"
+    .include "font.i"
 
 FontLookup:
     ; Calculate the number of characters and error if it's more than 127.
@@ -340,4 +340,4 @@ FontLookup:
 
 ; Width in pixels for each character
 FontWidths:
-    .include "font.width.asm"
+    .include "font.widths.i"

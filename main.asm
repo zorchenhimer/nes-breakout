@@ -13,7 +13,7 @@ nes2end
 .feature leading_dot_in_identifiers
 .feature underline_in_numbers
 
-.include "font.map.asm"
+.include "font.map.i"
     .charmap ' ', $FF   ; The only one that can't really be auto-generated
 
 ; Remove this line to disable debug code

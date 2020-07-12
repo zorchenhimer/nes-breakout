@@ -24,6 +24,7 @@ CONVMAP = bin/convert-map$(EXT)
 
 # Tool that generates CHR data from Bitmap images
 CHRUTIL = go-nes/bin/chrutil$(EXT)
+FONTUTIL = go-nes/bin/fontutil$(EXT)
 
 TITLECONV = bin/convert-title$(EXT)
 
@@ -31,7 +32,7 @@ TITLECONV = bin/convert-title$(EXT)
 NAME = breakout
 
 # any CHR files included
-CHR = credits.chr game.chr title.chr level-select.chr
+CHR = credits.chr game.chr title.chr level-select.chr font.i
 
 # List of all the sources files
 SOURCES := main.asm nes2header.inc \
@@ -107,7 +108,7 @@ default: all
 all: tools chr bin/$(NAME).nes
 names: tools chr clrNames credits_data.i bin/$(NAME).nes
 maps: tools chr map_data.i map_child_data.i lsbg.i
-tools: $(CONVMAP) $(GENCRED) $(CA) $(LD) $(CHRUTIL)
+tools: $(CONVMAP) $(GENCRED) $(CHRUTIL) $(FONTUTIL)
 travis: trav tools sample_credits chr bin/$(NAME).nes
 chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR) $(MATRIX14_CHR) $(MATRIX7_CHR)
 waves: $(WAVE_CHR)
@@ -124,6 +125,7 @@ sample_credits:
 
 clean:
 	rm -f bin/*.o bin/*.nes bin/*.map bin/*.dbg *.i *.chr
+	rm -f go-nes/bin/*
 
 cleanall:
 	rm -f -r bin/
@@ -163,6 +165,9 @@ tv.chr: images/tv.bmp images/hooded.bmp images/news-anchor.bmp
 
 tv-lower.chr: images/tv.bmp
 	$(CHRUTIL) -o $@ images/tv.bmp --tile-count 12
+
+font.i: images/font.bmp
+	$(FONTUTIL) -o $@ -i $< -w font.widths.i -r font.map.i
 
 maps/title.png: title.chr
 	$(CHRUTIL) -o $@ $^
@@ -231,3 +236,6 @@ $(LD):
 
 $(CHRUTIL):
 	$(MAKE) -C go-nes/ bin/chrutil$(EXT)
+
+$(FONTUTIL):
+	$(MAKE) -C go-nes/ bin/fontutil$(EXT)
