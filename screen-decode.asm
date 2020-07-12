@@ -278,6 +278,19 @@ WriteTvAttr:
     sta $2007
     sta $2007
     sta $2007
+
+    lda #$23
+    sta $2006
+    lda #$E9
+    sta $2006
+
+    lda #$AA
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
     rts
 
 WriteStaticAttributes:
@@ -338,6 +351,8 @@ LoadScreen:
     lda screen_Index+1, y
     sta AddressPointer0+1
 
+    stx TmpY    ; High byte of nametable address
+
     bit $2002
     ;lda #$20
     stx $2006
@@ -362,6 +377,8 @@ LoadScreen:
     and #$E0
 
     bne @notDone
+    lda #0
+    sta TmpY    ; clear out MSB for nametable address
     rts
 @notDone:
 
@@ -385,7 +402,7 @@ LoadScreen:
     jsr screen_DecodeSPR
     jmp @next
 :
-    brk ; Invailid command
+    brk ; Invalid command
 
 @next:
     iny
@@ -438,11 +455,22 @@ screen_DecodeRAW:
 
 screen_DecodeADDR:
     bit $2002
+    lda TmpY
+    beq :+
+
+    iny
+    lda (AddressPointer0), y
+    and #$03
+    ora TmpY
+    sta $2006
+    jmp :++
+:
 
     iny
     lda (AddressPointer0), y
     sta $2006
 
+:
     iny
     lda (AddressPointer0), y
     sta $2006

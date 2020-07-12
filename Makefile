@@ -41,7 +41,8 @@ SOURCES := main.asm nes2header.inc \
 		  macros.asm bg_anim.asm \
 		  lsbg.i level-select-data.asm gameover.asm \
 		  screen-decode.asm screen-data.i \
-		  scene-engine.asm scene-data.asm
+		  scene-engine.asm scene-data.asm \
+		  text-engine.asm text-engine-ram.asm
 
 DATA_OBJ := $(addprefix bin/,credits_data.o map_data.o)
 
@@ -150,15 +151,15 @@ matrix14.chr: $(MATRIX14_BMP)
 matrix7.chr: $(MATRIX7_BMP)
 	$(CHRUTIL) --first-plane -o $@ $^
 
-title.chr: images/tv.bmp images/ascii.bmp
-	$(CHRUTIL) -o $@ --pad-tiles 256 images/tv.bmp --tile-count 32 images/ascii.bmp --tile-offset 32
+title.chr: images/tv.bmp
+	$(CHRUTIL) -o $@ --pad-tiles 256 images/tv.bmp --tile-count 32
 
 tv.chr: images/tv.bmp images/hooded.bmp images/news-anchor.bmp
 	$(CHRUTIL) -o $@ --remove-duplicates --pad-tiles 256 \
-		images/tv.bmp --tile-offset 0 --tile-count 32 \
+		images/tv.bmp --tile-offset 0 --tile-count 29 \
 		images/hooded.bmp --remove-empty \
 		images/news-anchor.bmp --remove-empty \
-		images/tv.bmp --tile-offset 32 --tile-count 6
+		images/tv.bmp --tile-offset 32 --tile-count 11
 
 tv-lower.chr: images/tv.bmp
 	$(CHRUTIL) -o $@ images/tv.bmp --tile-count 12

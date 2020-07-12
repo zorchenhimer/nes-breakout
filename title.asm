@@ -3,7 +3,13 @@
 .importzp main_NUMBER_OF_MAPS
 
 TITLE_SpriteTop = 79    ; topmost Y coordinate of cursor
-TitleCursorTile = '"'
+TitleCursorTile = $1D
+
+Title_TextChrIdStart = $20
+Title_TextChrAddrStart = Title_TextChrIdStart * 16
+Title_TextLength = 12
+Title_TextRowCount = 2
+
 Pal_Title:
     .byte $0F, $0F, $00, $10
     .byte $0F, $2A, $20, $3A
@@ -65,15 +71,18 @@ Init_Title:
     lda #$00    ; attr
     sta Sprites+2, x
 
-
+    ; Draw two rows for the menu text.
+    ldy #Title_TextChrIdStart
     ldx #0
-    ldy #0
-@menuLoop:
+    stx TmpX    ; rows
+@textTileLoop:
+    ; CHR start address for the text
     lda AddressPointer0+1
     sta $2006
     lda AddressPointer0+0
     sta $2006
 
+    ; Calculate the next start address
     clc
     adc #64
     sta AddressPointer0+0
@@ -82,7 +91,30 @@ Init_Title:
     adc #0
     sta AddressPointer0+1
 
+    ldx #0      ; colums
+:
+    sty $2007
+    iny
+    inx
+    cpx #Title_TextLength
+    bne :-
+
+    inc TmpX
+    lda TmpX
+    cmp #Title_TextRowCount
+    bne @textTileLoop
+
+    ldx #0
+    ldy #0
+    sty TmpX
+@menuLoop:
+
+    txa
+    pha
     jsr title_DrawText
+    pla
+    tax
+    inc TmpX
 
     ; Read the init index
     iny
@@ -211,14 +243,54 @@ NMI_Title:
 ; Null terminated string in AddressPointer0, PPU
 ; address should already be set.
 title_DrawText:
+    jsr TextClearStringBuffer
+
+    ldx #0
+    lda #0
+:
+    sta TextBuffer, x
+    inx
+    cpx #12
+    bne :-
+
     ;ldy #0
+    ldx #0
 :
     lda data_TitleMenu, y
     beq :+
-    sta $2007
+    sta TextBuffer, x
+    inx
     iny
     jmp :-
 :
+
+    tya
+    pha
+    jsr TextPrepare
+
+    lda TmpX
+    beq @firstRow
+    ; Second row
+    lda #$C0
+    sta AddressPointer0+0
+    lda #$02
+    sta AddressPointer0+1
+
+    jmp @end
+
+@firstRow:
+    lda #$00
+    sta AddressPointer0+0
+    lda #$02
+    sta AddressPointer0+1
+
+@end:
+    ;pla ; number of tiles to write
+    lda #12
+    jsr WriteTextBuffer
+
+    pla
+    tay
     rts
 
 title_SelectMenuOption:
@@ -236,8 +308,8 @@ title_SelectMenuOption:
 data_TitleMenu:
     .byte "Level Select", $00, InitIDs::LevelSelect
     .byte "Credits", $00, InitIDs::Credits
-    ;.byte "Screen Test", $00, InitIDs::ScreenTest
     .byte $00
+
 
 title_PalBackground:
     .byte $0F, $11, $14, $1B

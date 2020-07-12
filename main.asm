@@ -1,7 +1,20 @@
 ; asmsyntax=ca65
 
+.include "nes2header.inc"
+nes2mapper 1
+nes2prg 16 * 16 * 1024  ; 256k PRG
+nes2chr 0
+nes2chrram 1 * 8 * 1024 ; 8k CHR RAM
+nes2wram 1 * 8 * 1024
+nes2mirror 'V'
+nes2tv 'N'
+nes2end
+
 .feature leading_dot_in_identifiers
 .feature underline_in_numbers
+
+.include "font.map.asm"
+    .charmap ' ', $FF   ; The only one that can't really be auto-generated
 
 ; Remove this line to disable debug code
 DEBUG = 1
@@ -157,6 +170,8 @@ CHUNK_DONE = 0 ; no more chunks
     ; Set the Init routine to jump to with GotoInit
     SetExitRoutine
 
+    PrepareText
+
     ; End a scene execution and jump to the given
     ; Init function.  Indexed with values from the
     ; data_Inits table
@@ -164,17 +179,8 @@ CHUNK_DONE = 0 ; no more chunks
 
 .endenum
 
-.include "nes2header.inc"
-nes2mapper 1
-nes2prg 16 * 16 * 1024  ; 256k PRG
-nes2chr 0
-nes2chrram 1 * 8 * 1024 ; 8k CHR RAM
-nes2wram 1 * 8 * 1024
-nes2mirror 'V'
-nes2tv 'N'
-nes2end
-
 .include "menu_ram.asm"
+.include "text-engine-ram.asm"
 
 .segment "VECTORS"
     .word NMI_Instr
@@ -195,6 +201,7 @@ sf_AnimPointers: .res 4
 sf_AnimBank:  .res 1
 sf_Nametable: .res 1
 sf_ExitRoutine: .res 1
+sf_TextStartTiles: .res 2 ; Tile IDs where the two text areas start
 
 Sleeping: .res 1
 
@@ -1047,3 +1054,4 @@ data_Mult16_B:
 .include "screen-decode.asm"
 .include "scene-engine.asm"
 .include "scene-data.asm"
+.include "text-engine.asm"

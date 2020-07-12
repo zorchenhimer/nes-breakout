@@ -52,6 +52,11 @@ Scene_Intro:
         .byte $20
         .byte ScreenIDs::TextBox
 
+    .byte SceneCmd::DrawFullScene
+        .byte 2
+        .byte $24
+        .byte ScreenIDs::TextBox
+
     .byte SceneCmd::PadSprites
 
     .byte SceneCmd::SetPalette
@@ -72,6 +77,10 @@ Scene_Intro:
         .byte $0F, $00, $20, $10
 
     .byte SceneCmd::SetPalette
+        .byte 2
+        .byte $0F, $10, $10, $20
+
+    .byte SceneCmd::SetPalette
         ; dest palette.
         ; 0-3: BG
         ; 4-7: Sprites
@@ -85,6 +94,30 @@ Scene_Intro:
 
     .byte SceneCmd::TvAttr
     .byte SceneCmd::StaticAttr
+
+    .byte SceneCmd::PrepareText
+        .word $22A8 ; NT address
+        ;.word $0820 ; CHR address
+        .byte 0     ; ID
+        .byte $90 ; start tile ID
+        ;.byte 16    ; Length
+
+    .byte SceneCmd::PrepareText
+        .word $22C8 ; NT address
+        ;.word $0920 ; CHR address
+        .byte 1     ; ID
+        .byte $A0 ; start tile ID
+        ;.byte 16    ; length
+
+    .byte SceneCmd::DrawText
+        ;.word $22A9
+        .byte 0 ; text area id
+        .asciiz "lel, welcome to the"
+
+    .byte SceneCmd::DrawText
+        .byte 1 ; text area id
+        ;.word $22C9
+        .asciiz "news"
 
     .byte SceneCmd::RunFunction
         .word InitStatic
@@ -128,13 +161,6 @@ Scene_Intro:
         .byte $20
         .byte ScreenIDs::TextBox
 
-    ;.byte SceneCmd::DrawText
-    ;    .word $22A9
-    ;    .asciiz "lel, welcome"
-
-    ;.byte SceneCmd::DrawText
-    ;    .word $22C9
-    ;    .asciiz "to the news"
 
     .byte SceneCmd::SetFramePointer
         .word Frame_ScreenTest

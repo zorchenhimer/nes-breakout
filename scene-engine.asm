@@ -80,6 +80,7 @@ scene_Functions:
     .word sf_SetNametable2-1
     .word sf_SetNametable3-1
     .word sf_SetExitRoutine-1
+    .word sf_PrepareText-1
     .word sf_GotoInit-1
 
 fn_lastidx = ((* - scene_Functions) / 2) - 1
@@ -235,26 +236,6 @@ sf_SetSkippable:
 sf_SetUnskippable:
     lda #0
     sta sf_Skippable
-    rts
-
-sf_DrawText:
-    bit $2002
-    lda (AddressPointer3), y
-    pha
-    iny
-    lda (AddressPointer3), y
-    sta $2006
-    pla
-    sta $2006
-
-@text:
-    iny
-    lda (AddressPointer3), y
-    beq @done
-    sta $2007
-    jmp @text
-@done:
-
     rts
 
 sf_TurnOffPPU:
@@ -422,6 +403,85 @@ sf_SetExitRoutine:
     lda (AddressPointer3), y
     iny
     sta sf_ExitRoutine
+    rts
+
+sf_DrawText:
+    ;bit $2002
+    lda (AddressPointer3), y ;text area ID
+    tax
+
+    ; Get the CHR start tile ID
+    lda sf_TextStartTiles, x
+    tax
+
+    ; TileID -> CHR Address
+    lda data_Mult16_A, x
+    sta AddressPointer0+0
+    lda data_Mult16_B, x
+    sta AddressPointer0+1
+
+    ldx #$FF
+@loop:
+    iny
+    inx
+    lda (AddressPointer3), y
+    sta TextBuffer, x
+    bne @loop
+
+    tya
+    pha
+
+    jsr TextPrepare
+
+    lda #16 ; number of chars
+    ldx #$FF
+    jsr WriteTextBuffer
+
+    jsr TextClearBuffer
+
+    pla
+    tay
+    iny
+    rts
+
+sf_PrepareText:
+    ; Get the nametable address
+    bit $2002
+    lda (AddressPointer3), y
+    pha
+    iny
+    lda (AddressPointer3), y
+    sta $2006
+    pla
+    sta $2006
+    iny
+
+    lda (AddressPointer3), y    ; text area ID
+    tax
+    iny
+
+    lda (AddressPointer3), y    ; start tile ID
+    sta sf_TextStartTiles, x ;save it
+    iny
+    tax
+    tya ; backup AddressPointer3's Y
+    pha
+
+
+    ; Draw a line of sequential tiles
+    ldy #8  ; 16 tiles long, 2 written per loop
+@loop:
+    stx $2007
+    inx
+    stx $2007
+    inx
+    dey
+    bne @loop
+
+    ; Restore AddressPointer3's Y
+    pla
+    tay
+
     rts
 
 sf_GotoInit:
