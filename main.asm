@@ -1028,7 +1028,7 @@ data_Mult3:
 .endrepeat
 
 data_Mult5:
-.repeat 10, i
+.repeat 20, i
     .byte (i * 5)
 .endrepeat
 

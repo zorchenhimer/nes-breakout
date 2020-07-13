@@ -51,8 +51,8 @@ title_MenuItems: .res 10
 menu_PrevLevel: .res 1
 
 ; Relative to nametable, not current scroll.
-ls_SpriteX: .res 16
-ls_SpriteY: .res 16
+ls_SpriteX: .res 32
+ls_SpriteY: .res 32
 
 ; Bit 7 - Flip Vertically
 ; Bit 6 - Flip Horizontally
@@ -61,17 +61,17 @@ ls_SpriteY: .res 16
 ; Bit 3 - X coord 9th bit
 ; Bit 2 - unused
 ; Bits 0,1 - Palette ID
-ls_SpriteFlags: .res 16
+ls_SpriteFlags: .res 32
 
 ; Tile IDs
-ls_SpriteTiles: .res 16
+ls_SpriteTiles: .res 32
 
 ; one entry per sprite obj
-ls_SpriteFrames: .res 16
-ls_SpriteFrameTimer: .res 16
+ls_SpriteFrames: .res 32
+ls_SpriteFrameTimer: .res 32
 
-ls_PaletteFrames: .res 8
-ls_PaletteFrameTimer: .res 8
+ls_PaletteFrames: .res 16
+ls_PaletteFrameTimer: .res 16
 
 ls_PalTmp: .res 4
 

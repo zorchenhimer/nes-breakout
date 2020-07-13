@@ -24,24 +24,43 @@ data_PaletteAnim_Def00:
 ; A "sprite object" is a meta-sprite for animation.
 data_SpriteObject_List:
     .word data_SpriteObj_Def_Stack
-        .byte 112, 35    ; base X/Y
+        .byte 112, 35   ; base X/Y
+        .byte 0         ; Nametable
     .word data_SpriteObj_Def_Stack
         .byte 104, 115    ; base X/Y
+        .byte 0         ; Nametable
 
     .word data_SpriteObj_Def_Modem
         .byte 240, 16
+        .byte 0
     .word data_SpriteObj_Def_Modem
         .byte 184, 64
+        .byte 0
     .word data_SpriteObj_Def_Modem
         .byte 168, 112
+        .byte 0
 
-    ; TODO: 2nd screen
     .word data_SpriteObj_Def_Sat
         .byte 248, 63
+        .byte 0
     .word data_SpriteObj_Def_Sat
         .byte 232, 127
+        .byte 0
 
-SPRITE_OBJ_COUNT = (* - data_SpriteObject_List) / 4
+    .word data_SpriteObj_Def_Rack
+        .byte 64, 31
+        .byte 1
+    .word data_SpriteObj_Def_Rack
+        .byte 80, 63
+        .byte 1
+    .word data_SpriteObj_Def_Rack
+        .byte 96, 95
+        .byte 1
+    .word data_SpriteObj_Def_Rack
+        .byte 64, 127
+        .byte 1
+
+SPRITE_OBJ_COUNT = (* - data_SpriteObject_List) / 5
 
 ; Static "animation" (only palette is animated)
 data_SpriteObj_Def_Modem:
@@ -117,6 +136,33 @@ data_SpriteObj_01FrameX:
 data_SpriteObj_01FrameY:
     .byte 0, 6, 12, 6
 
+data_SpriteObj_Def_Rack:
+    .byte 0         ; animation type
+    .byte 10        ; frame rate
+    .byte 2         ; sprite count
+    .byte 4         ; frame count
+
+    .word data_SpriteObj_04Tiles
+    .word data_SpriteObj_04Attr
+    .word data_SpriteObj_04X
+    .word data_SpriteObj_04Y
+    .word data_SpriteObj_04FrameX
+    .word data_SpriteObj_04FrameY
+
+data_SpriteObj_04Tiles:
+    .byte $08, $18
+data_SpriteObj_04Attr:
+    .byte 0, 0
+data_SpriteObj_04X:
+    .byte 0, 0
+data_SpriteObj_04Y:
+    .byte 0, 8
+
+data_SpriteObj_04FrameX:
+    .byte 0, 0, 1, 1
+data_SpriteObj_04FrameY:
+    .byte 0, 1, 1, 0
+
 ; Cursor data for the level select
 data_LevelSelect_Cursor:
     ; X, Y, w, h
@@ -174,7 +220,6 @@ data_LevelSelect_CursorScroll:
     .byte 170
     .byte 170
 
-    ; TODO: nametable?
     ; 6
     .byte 255
     .byte 255

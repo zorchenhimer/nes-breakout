@@ -673,14 +673,17 @@ ls_PaletteAnimate:
 ; coords, and write it to OAM if it is on screen.
 ls_SpriteScroll:
     tax
+    lda ls_SpriteFlags, x
+    and #$08
+    bne @nt2check
+    ; First nametable
     lda ls_SpriteX, x
-    ; TODO: Set carry depending on X's 9th bit? (bit 3 of flags)
     sec
     sbc menu_ScrollValue
-    bcs :+
+    bcs @drawOk
     ; Off the left side of the screen; don't draw.
     rts
-:
+@drawOk:
     sta TmpX
     lda menu_DrawnSprites
     clc
@@ -710,22 +713,18 @@ ls_SpriteScroll:
     inc menu_DrawnSprites
     rts
 
+@nt2check:
+    lda ls_SpriteX, x
+    sec
+    sbc menu_ScrollValue
+    bcc @drawOk
+    rts
+
 ; Initial sprite loading stuff
 ; Loads the frame rate info into RAM
 ls_LoadSprites:
     ldx #0
 :
-    ; ID -> DWORD index
-    txa
-    asl a
-    asl a
-    tay
-
-    lda data_SpriteObject_List+0, y
-    sta AddressPointer0+0
-    lda data_SpriteObject_List+1, y
-    sta AddressPointer0+1
-
     ; frame rate.  Start at 1 so every sprite is
     ; updated on the first call to ls_SpriteAnimate.
     lda #1
@@ -742,9 +741,8 @@ ls_SpriteAnimate:
     sta TmpX    ; A holds the obj sprite index
 
     ; ID -> DWORD index
-    asl a
-    asl a
-    tax
+    tay
+    ldx data_Mult5, y
 
     ; sprite obj definition
     lda data_SpriteObject_List, x
@@ -760,6 +758,16 @@ ls_SpriteAnimate:
     inx
     lda data_SpriteObject_List, x
     sta tmp_BaseY
+    inx
+
+    ; Nametable
+    lda #0
+    sta tmp_SpriteFlags
+    lda data_SpriteObject_List, x
+    beq :+
+    lda #$08
+    sta tmp_SpriteFlags
+:
 
     ; reload sprite obj ID
     ldx TmpX
@@ -773,7 +781,7 @@ ls_SpriteAnimate:
     lda ls_SpriteFrames, x
 
     ; frame count in the definition
-    ldy #2
+    ldy #3
     cmp (AddressPointer0), y
 
     bcc :+
@@ -964,6 +972,7 @@ ls_SpriteAnimate:
 
     ; sprite Attr
     lda (AddressPointer2), y
+    ora tmp_SpriteFlags
     sta tmp_SpriteFlags
 
     ; copy values from tmp
