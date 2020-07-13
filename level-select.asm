@@ -361,21 +361,6 @@ Frame_LevelSelect:
 Frame_LevelSelect_ViewMap:
     jsr ReadControllers
 
-    ldx #11
-    ldy #10
-    lda #228
-    sta TmpX
-    lda #139
-    sta TmpY
-
-    jsr ls_DrawCursorXY
-    jsr ls_DoAnimations
-
-    jsr WaitForSpriteZero
-    lda #0
-    sta $2005
-    sta $2005
-
     lda controller1
     and #BUTTON_LEFT
     beq :+
@@ -400,6 +385,21 @@ Frame_LevelSelect_ViewMap:
     jsr WaitForNMI
     jmp Frame_LevelSelect
 :
+
+    ldx #11
+    ldy #10
+    lda #228
+    sta TmpX
+    lda #139
+    sta TmpY
+
+    jsr ls_DrawCursorXY
+    jsr ls_DoAnimations
+
+    jsr WaitForSpriteZero
+    lda #0
+    sta $2005
+    sta $2005
 
     jsr WaitForNMI
     jmp Frame_LevelSelect_ViewMap
