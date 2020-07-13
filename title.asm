@@ -146,6 +146,7 @@ Init_Title:
 
     lda #3
     sta LivesCount
+    jsr ReadControllers
 
     .NMI_Set NMI_Title
 
