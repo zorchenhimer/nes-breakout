@@ -15,7 +15,7 @@ waves_currentFrame: .res 1
 waves_ChrDest:  .res 2  ; CHR address to start writing
 waves_ChrSrc:   .res 2  ; the start of an 8 tile row
 
-.segment "RAMGLOBAL"
+.segment "MAINRAM"
 ; One row of the background animation
 ChrRamCacheRow: .res 128
 

@@ -13,14 +13,13 @@ nes2end
 .feature leading_dot_in_identifiers
 .feature underline_in_numbers
 
+.importzp main_BOARD_DATA_WIDTH, main_BOARD_DATA_HEIGHT
+
 .include "font.map.i"
     .charmap ' ', $FF   ; The only one that can't really be auto-generated
 
 ; Remove this line to disable debug code
 DEBUG = 1
-
-.importzp main_BOARD_DATA_WIDTH, main_BOARD_DATA_HEIGHT
-
 .include "macros.asm"
 
 .ifdef ROW26
@@ -231,7 +230,7 @@ FlipFlop: .res 1
 btnX: .res 1
 btnY: .res 1
 
-.segment "RAMGLOBAL"
+.segment "MAINRAM"
 
 ChrWriteDest:       .res 1  ; $00 or $80. picks pattern table to write to.
 ChrWriteTileCount:  .res 1

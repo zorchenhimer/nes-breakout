@@ -1,7 +1,7 @@
 ; asmsyntax=ca65
 
 .pushseg
-.segment "RAMCREDIT"
+.segment "MAINRAM"
 
 cr_frameOdd:    .res 1
 cr_chunkCurrent: .res 1  ; current name

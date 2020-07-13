@@ -2,7 +2,7 @@
 
 .pushseg
 
-.segment "ZPGAME" : zeropage
+.segment "ZEROPAGE" : zeropage
 
 ; Bit 7
 ;   0 - Down
@@ -97,7 +97,7 @@ powerup_FrameAction_Value: .res 2
 
 powerup_NoClip_Active: .res 1
 
-.segment "RAMGAME"
+.segment "MAINRAM"
 ; Overworld map
 CurrentMap: .res (BOARD_WIDTH * BOARD_HEIGHT)
 
@@ -140,8 +140,6 @@ Gravity_MainMap: .res 1
 
 PowerupCount: .res 1
 PowerupList: .res (8 * 3) ; Three byte elements
-
-.segment "RAMGLOBAL"
 
 LivesCount: .res 1
 

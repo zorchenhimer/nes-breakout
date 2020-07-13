@@ -21,4 +21,4 @@ ChrOverflow:    .res 1  ; number of overflowed columns
 TextBuffer: .res 21
 
 .segment "BUFFRAM"
-ChrBuffer:  .res 0;.res 21 * 8
+ChrBuffer:  .res 18 * 8

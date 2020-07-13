@@ -9,7 +9,7 @@ CURSOR_TILE = $26
 
 .pushseg
 
-.segment "ZPMENU" : zeropage
+.segment "ZEROPAGE" : zeropage
 
 ; Horizontal scroll for the map
 menu_ScrollValue:   .res 1
@@ -42,7 +42,7 @@ ls_TmpTracePointer: .res 2
 ls_PrevTraceAddr: .res 2
 ls_PrevTraceData: .res 1
 
-.segment "RAMMENU"
+.segment "MAINRAM"
 title_MenuLength: .res 1
 title_MenuItems: .res 10
 
@@ -80,7 +80,6 @@ ls_ActiveLevels: .res 8     ; list of indexes for active level icons
 ls_SelectedLevel: .res 1
 ls_SelectedLevel_Prev: .res 1
 
-.segment "RAMGLOBAL"
 ls_PrevTraceCount: .res 1
 ls_PrevTraces: .res 10
 
