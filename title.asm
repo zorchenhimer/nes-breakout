@@ -10,17 +10,13 @@ Title_TextChrAddrStart = Title_TextChrIdStart * 16
 Title_TextLength = 12
 Title_TextRowCount = 2
 
-Pal_Title:
-    .byte $0F, $0F, $00, $10
-    .byte $0F, $2A, $20, $3A
-
 Init_Title:
     .NMI_Disable
     .Disable_Drawing
 
     ; Load up a palette
 .repeat 8, i
-    lda Pal_Title+i
+    lda Pal_Tv+i
     sta PaletteBuffer+i
     sta PaletteBufferSprites+i
 .endrepeat
@@ -32,7 +28,7 @@ Init_Title:
 ;    sta PaletteBufferSprites+8+i
 ;.endrepeat
 
-    jsr Clear_NonGlobalRam
+    jsr ClearRam
     jsr ClearSprites
 
     lda #$0F

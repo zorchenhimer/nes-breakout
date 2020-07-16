@@ -3,6 +3,9 @@
 .segment "ZEROPAGE" : zeropage
 
 TextPointer:    .res 2
+TextEor: .res 1
+
+.segment "MAINRAM"
 
 ChrAddr:    .res 2
 ChrCount:   .res 1  ; Tile count, not byte count

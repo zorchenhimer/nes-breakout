@@ -1,5 +1,7 @@
 ; asmsyntax=ca65
 
+; FIXME: level progression is borked past the modems
+
 ls_PalStack:
     .byte $0F, $20, $20, $20
 

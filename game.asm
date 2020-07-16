@@ -139,7 +139,7 @@ Init_Game:
 
     jsr ClearSprites
 
-    jsr Clear_NonGlobalRam
+    jsr Clear_GameRam
     jsr Clear_ExtendedRam
 
     ; Tile
@@ -3311,6 +3311,24 @@ game_ActionHalf:
     lda #$C0
     sta BrickDestroyHalf
     lda #0
+    rts
+
+Clear_GameRam:
+    ldx #0
+    lda #0
+:
+    sta GAME_RAM_START, x
+    inx
+    cpx #GAME_MAINRAM_SIZE
+    bne :-
+
+    ldx #0
+:
+    sta GAME_ZPRAM_START, x
+    inx
+    cpx #GAME_ZPRAM_SIZE
+    bne :-
+
     rts
 
 NoTileID = $00

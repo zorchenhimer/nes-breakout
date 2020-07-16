@@ -66,7 +66,7 @@ scene_Functions:
     .word sf_LoadChr-1
     .word sf_PadSprites-1
     .word sf_SetPalette-1
-    .word WriteTvAttr-1
+    .word WriteNewsAttr-1
     .word WriteStaticAttributes-1
     .word ClearAttrTable0-1
     .word ClearAttrTable1-1
@@ -407,7 +407,17 @@ sf_SetExitRoutine:
 
 sf_DrawText:
     ;bit $2002
+    lda #$00
+    sta TextEor
+
     lda (AddressPointer3), y ;text area ID
+    and #$80
+    beq :+
+    lda #$FF
+    sta TextEor
+:
+    lda (AddressPointer3), y ;text area ID
+    and #$7F
     tax
 
     ; Get the CHR start tile ID
@@ -434,7 +444,8 @@ sf_DrawText:
     jsr TextPrepare
 
     lda #16 ; number of chars
-    ldx #$FF
+    ldx #0
+    ;ldx #$FF
     jsr WriteTextBuffer
 
     jsr TextClearBuffer

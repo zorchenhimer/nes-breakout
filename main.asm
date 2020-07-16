@@ -12,6 +12,7 @@ nes2end
 
 .feature leading_dot_in_identifiers
 .feature underline_in_numbers
+.feature addrsize
 
 .importzp main_BOARD_DATA_WIDTH, main_BOARD_DATA_HEIGHT
 
@@ -849,13 +850,15 @@ Clear_NonGlobalZp:
     rts
 
 ; Clears ram from $0400 to $07FC
-Clear_NonGlobalRam:
+ClearRam:
     lda #$00
     sta AddressPointer0
-    lda #$04
+    lda #$03
     sta AddressPointer0+1
     jsr clr_ram
 
+    inc AddressPointer0+1   ; $0400
+    jsr clr_ram
     inc AddressPointer0+1   ; $0500
     jsr clr_ram
     inc AddressPointer0+1   ; $0600
@@ -966,6 +969,10 @@ BinToHex:
 
 @done:
     rts
+
+Pal_Tv:
+    .byte $0F, $10, $00, $0F
+    .byte $0F, $2A, $20, $3A
 
 data_Inits:
     ; Tile start ID, length, bank, init pointer

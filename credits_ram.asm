@@ -3,6 +3,7 @@
 .pushseg
 .segment "MAINRAM"
 
+CREDIT_RAM_START = *
 cr_frameOdd:    .res 1
 cr_chunkCurrent: .res 1  ; current name
 cr_chunkLength:  .res 1  ; length of the current chunk
@@ -38,5 +39,7 @@ cr_scrollToPause: .res 1
 cr_TileBuffer:  .res 64
 .align 128
 cr_attribBuffer: .res 32*4
+
+CREDIT_RAM_SIZE = * - CREDIT_RAM_START
 
 .popseg

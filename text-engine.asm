@@ -44,27 +44,35 @@ WriteTextBuffer:
     ldx #0
 @loop:
     lda ChrBuffer, x
+    eor TextEor
     sta $2007
 
     lda ChrBuffer+1, x
+    eor TextEor
     sta $2007
 
     lda ChrBuffer+2, x
+    eor TextEor
     sta $2007
 
     lda ChrBuffer+3, x
+    eor TextEor
     sta $2007
 
     lda ChrBuffer+4, x
+    eor TextEor
     sta $2007
 
     lda ChrBuffer+5, x
+    eor TextEor
     sta $2007
 
     lda ChrBuffer+6, x
+    eor TextEor
     sta $2007
 
     lda ChrBuffer+7, x
+    eor TextEor
     sta $2007
 
     ; Second plane
@@ -92,6 +100,7 @@ WriteTextBuffer:
 
     lda #$00
     sta ChrBufferReady
+    sta TextEor
     rts
 
 TextClearBuffer:

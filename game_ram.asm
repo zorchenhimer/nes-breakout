@@ -22,6 +22,13 @@ BALL_DIR_DOWN = $00
 
 BALL_DIR_RIGHT = $40
 BALL_DIR_LEFT = $00
+
+; Bit 7 - If 1, we're in a child board.
+;         If 0, we're in the main board
+; Bits 6-0: board ID in RAM
+CurrentBoard: .res 1
+
+GAME_ZPRAM_START = *
 BallDirection: .res 1
 
 ; Coordinates with sub-pixel accuracy
@@ -63,11 +70,6 @@ game_WallRight: .res 1
 ; The gravity value for the currently
 ; loaded map (either main or child).
 game_currentGravity: .res 1
-
-; Bit 7 - If 1, we're in a child board.
-;         If 0, we're in the main board
-; Bits 6-0: board ID in RAM
-CurrentBoard: .res 1
 ParentBoard: .res 1
 
 Address_RowCoordTop:    .res 2
@@ -97,10 +99,14 @@ powerup_FrameAction_Value: .res 2
 
 powerup_NoClip_Active: .res 1
 
+; Length of ZP ram for the game
+GAME_ZPRAM_SIZE = * - GAME_ZPRAM_START
+
 .segment "MAINRAM"
 ; Overworld map
 CurrentMap: .res (BOARD_WIDTH * BOARD_HEIGHT)
 
+GAME_RAM_START = *
 ; Bit 7 is set when these have a valid value
 BrickRowIndex_Horiz:    .res 1
 BrickColIndex_Horiz:    .res 1
@@ -140,6 +146,9 @@ Gravity_MainMap: .res 1
 
 PowerupCount: .res 1
 PowerupList: .res (8 * 3) ; Three byte elements
+
+GAME_MAINRAM_SIZE = * - GAME_RAM_START
+;.out .sprintf("GAME_MAINRAM: %d (size: %d)", GAME_MAINRAM, .addrsize(GAME_MAINRAM))
 
 LivesCount: .res 1
 

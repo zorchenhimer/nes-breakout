@@ -61,7 +61,7 @@ Init_Credits:
     jsr ClearSprites
     jsr WriteSprites
 
-    jsr Clear_NonGlobalRam
+    jsr Clear_CreditRam
 
     lda #$23
     sta AddressPointer2
@@ -1045,6 +1045,16 @@ credits_IncScroll:
 @gotoBottom:
     lda #CR_BOTTOM
     sta cr_scroll_table
+    rts
+
+Clear_CreditRam:
+    lda #0
+    ldx #0
+:
+    sta CREDIT_RAM_START, x
+    inx
+    cpx #CREDIT_RAM_SIZE
+    bne :-
     rts
 
 ; start of row addresses - 30 total rows

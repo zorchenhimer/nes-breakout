@@ -21,8 +21,9 @@ ST_BOTR = %1100_0000
 ST_TOPL = %0000_0011
 ST_TOPR = %0000_1100
 
-SCREEN_ATTR_TV = %0101_0101
-SCREEN_ATTR_ST = %1111_1111
+SCREEN_ATTR_01 = %0101_0101
+SCREEN_ATTR_02 = %1010_1010
+SCREEN_ATTR_03 = %1111_1111
 
 STATIC_START_OFFSET = 1
 STATIC_ANIM_RATE = 3
@@ -240,7 +241,7 @@ WriteTvAttr:
     lda #$CA
     sta $2006
 
-    lda #(ST_BOTL | ST_BOTR) & SCREEN_ATTR_TV
+    lda #(ST_BOTL | ST_BOTR) & SCREEN_ATTR_01
     sta $2007
     sta $2007
     sta $2007
@@ -251,7 +252,7 @@ WriteTvAttr:
     lda #$D2
     sta $2006
 
-    lda #(ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR) & SCREEN_ATTR_TV
+    lda #SCREEN_ATTR_01
     sta $2007
     sta $2007
     sta $2007
@@ -262,7 +263,7 @@ WriteTvAttr:
     lda #$DA
     sta $2006
 
-    lda #(ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR) & SCREEN_ATTR_TV
+    lda #(ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR) & SCREEN_ATTR_01
     sta $2007
     sta $2007
     sta $2007
@@ -273,7 +274,48 @@ WriteTvAttr:
     lda #$E2
     sta $2006
 
-    lda #(ST_TOPL | ST_TOPR) & SCREEN_ATTR_TV
+    lda #(ST_TOPL | ST_TOPR) & SCREEN_ATTR_01
+    sta $2007
+    sta $2007
+    sta $2007
+    sta $2007
+    rts
+WriteNewsAttr:
+    ; 23CA
+    lda #$23
+    sta $2006
+    lda #$CA
+    sta $2006
+
+    lda #(ST_BOTL | ST_BOTR) & SCREEN_ATTR_01
+    sta $2007
+    sta $2007
+
+    lda #(ST_BOTL | ST_BOTR) & SCREEN_ATTR_02
+    sta $2007
+    sta $2007
+
+    lda #$23
+    sta $2006
+    lda #$D2
+    sta $2006
+
+    lda #((ST_TOPL | ST_TOPR) & SCREEN_ATTR_01) | ((ST_BOTL | ST_BOTR) & SCREEN_ATTR_02)
+    sta $2007
+    sta $2007
+
+    ; lda #something_else_lol
+
+    lda #SCREEN_ATTR_02
+    sta $2007
+    sta $2007
+
+    lda #$23
+    sta $2006
+    lda #$DA
+    sta $2006
+
+    lda #(ST_BOTL | ST_BOTR | ST_TOPL | ST_TOPR) & SCREEN_ATTR_02
     sta $2007
     sta $2007
     sta $2007
@@ -281,12 +323,10 @@ WriteTvAttr:
 
     lda #$23
     sta $2006
-    lda #$E9
+    lda #$E2
     sta $2006
 
-    lda #$AA
-    sta $2007
-    sta $2007
+    lda #(ST_TOPL | ST_TOPR) & SCREEN_ATTR_02
     sta $2007
     sta $2007
     sta $2007

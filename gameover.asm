@@ -29,7 +29,7 @@ gameover_init:
     .NMI_Disable
 
 .repeat 8, i
-    lda go_Palette+i
+    lda Pal_Tv+i
     sta PaletteBuffer+i
     sta PaletteBufferSprites+i
 .endrepeat

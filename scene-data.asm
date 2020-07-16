@@ -66,7 +66,7 @@ Scene_Intro:
         .byte 0
         ; 4 bytes for the colors
         ;.byte $0F, $2A, $20, $3A
-        .byte $0F, $0F, $00, $10
+        .byte $0F, $10, $00, $0F
 
     .byte SceneCmd::SetPalette
         ; dest palette.
@@ -74,11 +74,16 @@ Scene_Intro:
         ; 4-7: Sprites
         .byte 1
         ; 4 bytes for the colors
-        .byte $0F, $00, $20, $10
+        ;.byte $0F, $00, $20, $10
+        .byte $0F, $17, $37, $17
 
     .byte SceneCmd::SetPalette
         .byte 2
-        .byte $0F, $10, $10, $20
+        .byte $0F, $30, $37, $10
+
+    .byte SceneCmd::SetPalette
+        .byte 3
+        .byte $0F, $0F, $10, $30
 
     .byte SceneCmd::SetPalette
         ; dest palette.
@@ -86,14 +91,18 @@ Scene_Intro:
         ; 4-7: Sprites
         .byte 4
         ; 4 bytes for the colors
-        .byte $0F, $0F, $00, $10
+        .byte $0F, $10, $00, $0F
         ;.byte $0F, $0F, $0F, $0F
 
     .byte SceneCmd::ClearAttr0
     .byte SceneCmd::ClearAttr1
 
-    .byte SceneCmd::TvAttr
-    .byte SceneCmd::StaticAttr
+    ;.byte SceneCmd::TvAttr
+    .byte SceneCmd::RunFunction
+        .word WriteNewsAttr
+    ;.byte SceneCmd::StaticAttr
+    .byte SceneCmd::RunFunction
+        .word WriteStaticAttributes
 
     .byte SceneCmd::PrepareText
         .word $22A8 ; NT address
@@ -111,11 +120,11 @@ Scene_Intro:
 
     .byte SceneCmd::DrawText
         ;.word $22A9
-        .byte 0 ; text area id
+        .byte 0 | $80 ; text area id
         .asciiz "lel, welcome to the"
 
     .byte SceneCmd::DrawText
-        .byte 1 ; text area id
+        .byte 1 | $80 ; text area id
         ;.word $22C9
         .asciiz "news"
 
@@ -161,6 +170,13 @@ Scene_Intro:
         .byte $20
         .byte ScreenIDs::TextBox
 
+    .byte SceneCmd::SetPalette
+        .byte 1
+        .byte $0F, $00, $20, $10
+
+    .byte SceneCmd::SetPalette
+        .byte 2
+        .byte $0F, $00, $20, $10
 
     .byte SceneCmd::SetFramePointer
         .word Frame_ScreenTest
