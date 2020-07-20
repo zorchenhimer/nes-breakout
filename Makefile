@@ -109,7 +109,7 @@ all: tools chr bin/$(NAME).nes
 names: tools chr clrNames credits_data.i bin/$(NAME).nes
 maps: tools chr map_data.i map_child_data.i lsbg.i
 tools: $(CONVMAP) $(GENCRED) $(CHRUTIL) $(FONTUTIL) $(TITLECONV)
-travis: trav tools sample_credits chr bin/$(NAME).nes
+travis: trav tools sample_credits chr bin/$(NAME).nes $(CA) $(LD)
 chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR) $(MATRIX14_CHR) $(MATRIX7_CHR)
 waves: $(WAVE_CHR)
 newwaves: clean rmwaves waves all
