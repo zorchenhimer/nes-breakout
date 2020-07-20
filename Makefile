@@ -108,7 +108,7 @@ default: all
 all: tools chr bin/$(NAME).nes
 names: tools chr clrNames credits_data.i bin/$(NAME).nes
 maps: tools chr map_data.i map_child_data.i lsbg.i
-tools: $(CONVMAP) $(GENCRED) $(CHRUTIL) $(FONTUTIL)
+tools: $(CONVMAP) $(GENCRED) $(CHRUTIL) $(FONTUTIL) $(TITLECONV)
 travis: trav tools sample_credits chr bin/$(NAME).nes
 chr: game.chr credits.chr title.chr hex.chr $(WAVE_CHR) $(MATRIX14_CHR) $(MATRIX7_CHR)
 waves: $(WAVE_CHR)
@@ -117,14 +117,13 @@ newwaves: clean rmwaves waves all
 matrix: $(MATRIX14_CHR) $(MATRIX7_CHR)
 
 trav:
-	cd convert-map && go get github.com/zorchenhimer/go-tiled
 	touch images/*.bmp
 
 sample_credits:
 	$(GENCRED) -x zorchenhimer -o credits_data.i -i ./credit-names/ -sample-names
 
 clean:
-	rm -f bin/*.o bin/*.nes bin/*.map bin/*.dbg *.i *.chr
+	rm -f bin/*.o bin/*.nes bin/*.map bin/*.dbg bin/*.exe *.i *.chr
 	rm -f go-nes/bin/*
 
 cleanall:
@@ -196,7 +195,7 @@ bin/%.o: %.i
 # maps/title.png isn't actually needed here, but putting it here
 # removes the need to manually regenerate it.
 screen-data.i: maps/title.tmx maps/title.png maps/tv.png maps/tv-lower.png $(TITLECONV)
-	$(TITLECONV) -b 255 $< $@
+	cd maps && ../$(TITLECONV) -b 255 title.tmx ../$@
 
 bin/map_data.o: map_data.asm main_map_data.i child_map_data.i
 	$(CA) $(CAFLAGS) -o $@ map_data.asm

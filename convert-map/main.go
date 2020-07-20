@@ -11,10 +11,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
+	//"strconv"
 	"strings"
+	//"sort"
 
 	"github.com/zorchenhimer/go-tiled"
+	//"../../go-tiled"
 )
 
 func usage() {
@@ -23,6 +25,7 @@ func usage() {
 
 func main() {
 	var levelselect bool
+	var err error
 	flag.BoolVar(&levelselect, "levelselect", false, "Convert level select background")
 	flag.Parse()
 
@@ -48,11 +51,13 @@ func main() {
 
 	prefix := os.Args[2]
 
-	mainTilesets := NewTileset()
+	bricks := NewBricks()
+	//mainTilesets := NewTileset()
 	for _, ts := range mapData.Tilesets {
-		err := mainTilesets.Add(ts.Source, ts.FirstId)
+		//fmt.Printf("map tileset: %v\n", ts)
+		bricks, err = bricks.Add(ts.FirstGid, ts)
 		if err != nil {
-			fmt.Printf("Unable to load tileset %q: %v\n", ts.Source, err)
+			fmt.Printf("Unable to add tileset %q: %v\n", ts.Source, err)
 			os.Exit(1)
 		}
 	}
@@ -65,24 +70,24 @@ func main() {
 	//fmt.Println("Main tileset:")
 	//fmt.Println(mainTilesets)
 
-	mainMaps := []*GameMap{}
+	mainMaps := map[int]*GameMap{}
 	//childMaps := []*GameMap{}
 
-	layerSizes := [][]int{}
+	layerSizes := map[int][]uint{}
 
 	for _, m := range mapData.Layers {
-		if m.GetId() < 0 {
+		if m.Id < 0 {
 			fmt.Printf("Skipping layer %q\n", m.Name)
 			continue
 		}
 
-		gm, err := LoadGameMap(m, mainTilesets)
+		gm, err := LoadGameMap(m, bricks)
 		if err != nil {
 			fmt.Printf("Unable to load map %q: %v\n", m.Name, err)
 			os.Exit(1)
 		}
-		mainMaps = append(mainMaps, gm)
-		layerSizes = append(layerSizes, []int{m.Width, m.Height})
+		mainMaps[m.Id] = gm
+		layerSizes[m.Id] = []uint{m.Width, m.Height}
 	}
 
 	outfile, err := os.Create(os.Args[3])
@@ -96,6 +101,14 @@ func main() {
 	fmt.Fprintln(outfile, ".segment \"PAGE01\"")
 	fmt.Fprintf(outfile, ".export %s_Index_Maps, %s_BOARD_DATA_WIDTH, %s_BOARD_DATA_HEIGHT\n", prefix, prefix, prefix)
 	fmt.Fprintf(outfile, ".export %s_NUMBER_OF_MAPS\n%s_NUMBER_OF_MAPS = %d\n\n%s_Index_Maps:\n", prefix, prefix, len(mainMaps), prefix)
+	//keys := []int{}
+	//for k, _ := range mainMaps {
+	//	keys = append(keys, k)
+	//}
+
+	//sort.Ints(keys)
+
+	//for _, i := range keys {
 	for i := 0; i < len(mainMaps); i++ {
 		fmt.Fprintf(outfile, "    .word %s_Meta_Map%02d\n", prefix, i)
 	}
@@ -109,13 +122,15 @@ func main() {
 	// %11110    PowerDown  ;; nope
 	// %11110   Half brick
 	for _, m := range mainMaps {
+	//for _, i := range keys {
+		//m := mainMaps[i]
 		//fmt.Println("Map:", m.Id)
 		data := []string{}
 
 		currentByte := uint8(0)
 		count := 0
-		for _, tile := range m.Tiles {
-			for i := 0; i < int(tile.Type); i++ {
+		for _, brick := range m.Bricks {
+			for i := 0; i < int(brick.Type); i++ {
 				currentByte = (currentByte << uint8(1)) | uint8(1)
 				count += 1
 				if count >= 8 {
@@ -139,12 +154,12 @@ func main() {
 		}
 		data = append(data, fmt.Sprintf("%%%08b", currentByte))
 
-		tileValues := []string{}
-		for _, val := range m.TileValues {
-			tileValues = append(tileValues, fmt.Sprintf("$%02X", val))
+		brickValues := []string{}
+		for _, val := range m.BrickValues {
+			brickValues = append(brickValues, fmt.Sprintf("$%02X", val))
 		}
-		if len(tileValues) == 0 {
-			tileValues = append(tileValues, "$00")
+		if len(brickValues) == 0 {
+			brickValues = append(brickValues, "$00")
 		}
 
 		flags := m.Health | (BoolToAsm(m.Gravity) << 7) | (BoolToAsm(m.RandomDrops) << 6) | (BoolToAsm(m.RandomChildren) << 5)
@@ -157,12 +172,12 @@ func main() {
 		)
 
 		fmt.Fprintf(outfile, "%s_Data_Map%02d_TileValues:\n", prefix, m.Id)
-		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(tileValues, ", "))
+		fmt.Fprintf(outfile, "    .byte %s\n", strings.Join(brickValues, ", "))
 		fmt.Fprintf(outfile, "%s_Data_Map%02d_Tiles:\n", prefix, m.Id)
 		fmt.Fprintf(outfile, "    .byte %s\n\n", strings.Join(data, ", "))
 
-		if len(tileValues) > 256 {
-			fmt.Printf("Board %d has too much value data! %d bytes\n", m.Id, len(tileValues))
+		if len(brickValues) > 256 {
+			fmt.Printf("Board %d has too much value data! %d bytes\n", m.Id, len(brickValues))
 			os.Exit(1)
 		}
 
@@ -172,13 +187,15 @@ func main() {
 		}
 
 		fmt.Printf("  Board %d: % 4d% 4d% 4d | % 4d% 4d% 4d% 4d\n",
-			m.Id, len(tileValues), len(data), m.BrickCount,
+			m.Id, len(brickValues), len(data), m.BrickCount,
 			m.CountHealth, m.CountSpawn, m.CountPowerUp, m.CountPowerDown,
 		)
 	}
 
-	width := 0
-	height := 0
+	var (
+		width uint
+		height uint
+	)
 
 	for id, layer := range layerSizes {
 
@@ -219,12 +236,13 @@ func doLevelSelectInstead() error {
 
 	one, two := []string{}, []string{}
 
-	data := strings.Split(strings.ReplaceAll(xml.Layers[2].Data, "\n", ""), ",")
-	for i := 0; i < len(data); i++ {
-		num, err := strconv.ParseInt(data[i], 10, 32)
-		if err != nil {
-			return fmt.Errorf("Invalid number in map data at offset %d: %q", i, data[i])
-		}
+	//data := strings.Split(strings.ReplaceAll(xml.Layers[2].Data, "\n", ""), ",")
+	for i := 0; i < len(xml.Layers[2].Data); i++ {
+		//num, err := strconv.ParseInt(data[i], 10, 32)
+		//if err != nil {
+		//	return fmt.Errorf("Invalid number in map data at offset %d: %q", i, data[i])
+		//}
+		num := xml.Layers[2].Data[i]
 
 		if num != 0 {
 			num -= 1

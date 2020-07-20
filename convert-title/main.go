@@ -8,7 +8,8 @@ import (
 	"strings"
 	"sort"
 
-	"github.com/zorchenhimer/go-tiled"
+	//"github.com/zorchenhimer/go-tiled"
+	"../../go-tiled"
 )
 
 /*
