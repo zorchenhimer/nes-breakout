@@ -35,6 +35,7 @@ WriteTextBuffer:
     sta ChrCount
     txa
     pha
+    bit $2002
     lda AddressPointer0+1
     sta $2006
     lda AddressPointer0+0

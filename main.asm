@@ -972,7 +972,7 @@ BinToHex:
 
 Pal_Tv:
     .byte $0F, $10, $00, $0F
-    .byte $0F, $2A, $20, $3A
+    .byte $0F, $2A, $0F, $0A
 
 data_Inits:
     ; Tile start ID, length, bank, init pointer

@@ -1,28 +1,42 @@
 ; asmsyntax=ca65
 
 go_Ded:
-    .byte "Game Over", $00
+    .byte " Game Over", $00
 go_Win:
     .byte "OMG you won", $00
 go_Start:
-    .byte "Press Start", $00
-
-go_Palette:
-    .byte $0F, $0F, $00, $10
-    .byte $0F, $2A, $20, $10
+    .byte "  Press Start", $00
 
 Init_GameWon:
-    lda #<go_Win
-    sta AddressPointer0
-    lda #>go_Win
-    sta AddressPointer0+1
+    ldx #0
+    stx TextEor
+:
+    lda go_Win, x
+    sta TextBuffer, x
+    beq @done
+    inx
+    cpx #18
+    bne :-
+@done:
+    jsr TextPrepare
     jmp gameover_init
 
 Init_GameOver:
-    lda #<go_Ded
-    sta AddressPointer0
-    lda #>go_Ded
-    sta AddressPointer0+1
+    jsr TextClearStringBuffer
+
+    ; load into the buffer
+    ldx #0
+    stx TextEor
+:
+    lda go_Ded, x
+    sta TextBuffer, x
+    beq @done
+    inx
+    cpx #18
+    bne :-
+@done:
+    jsr TextPrepare
+
 
 gameover_init:
     .Disable_Drawing
@@ -43,6 +57,37 @@ gameover_init:
     lda #2
     jsr LoadChrData
 
+    lda #$00
+    sta AddressPointer0+0
+    lda #$02
+    sta AddressPointer0+1
+
+    lda #12
+    ldx #0
+    jsr WriteTextBuffer
+
+    jsr TextClearStringBuffer
+    ldx #0
+    stx TextEor
+:
+    lda go_Start, x
+    sta TextBuffer, x
+    beq @st_text_done
+    inx
+    cpx #18
+    bne :-
+@st_text_done:
+    jsr TextPrepare
+
+    lda #$20
+    sta AddressPointer0+0
+    lda #$03
+    sta AddressPointer0+1
+
+    lda #12
+    ldx #$FF
+    jsr WriteTextBuffer
+
     jsr WriteTvAttr
 
     lda #ScreenIDs::Tv
@@ -50,33 +95,33 @@ gameover_init:
     jsr LoadScreen
 
     bit $2002
+    ; Tiles for "Game Over"
     lda #$21
     sta $2006
     lda #$4B
     sta $2006
 
-    ldy #0
+    ldx #$20
+    ldy #12
 :
-    lda (AddressPointer0), y
-    beq :+
-    sta $2007
-    iny
-    jmp :-
-:
+    stx $2007
+    inx
+    dey
+    bne :-
 
+    ; Tiles for "Press Start"
     lda #$21
     sta $2006
-    lda #$EA
+    lda #$CA
     sta $2006
 
-    ldx #0
+    ldx #$32
+    ldy #12
 :
-    lda go_Start, x
-    beq :+
-    sta $2007
+    stx $2007
     inx
-    jmp :-
-:
+    dey
+    bne :-
 
 Frame_GameOver:
     .NMI_Set NMI_GameOver
