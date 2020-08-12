@@ -1,11 +1,15 @@
 ; asmsyntax=ca65
 
 ls_PalStack:
-    .byte $0F, $20, $20, $20
+    .byte $0F, $0F, $20, $20
+
+ls_PalCables:
+    .byte $0F, $12, $1A, $16
 
 data_ls_BGPalettes:
-    .byte $0F, $19, $10, $09
+    .byte $0F, $19, $2A, $09
     .byte $0F, $39, $0F, $09
+    .byte $0F, $00, $10, $30
 
     nop
     nop
@@ -26,7 +30,7 @@ ls_LoadPalettes:
     lda data_ls_BGPalettes, x
     sta PaletteBuffer, x
     inx
-    cpx #8
+    cpx #12
     bne :-
 
 ; TODO: Read this from the animation data
@@ -36,6 +40,17 @@ ls_LoadPalettes:
     sta ls_PaletteFrameTimer, x
     dex
     bpl :-
+
+; cable palette
+    ldx #0
+    ldy #8
+:
+    lda ls_PalCables, x
+    sta PaletteBufferSprites, y
+    iny
+    inx
+    cpx #4
+    bne :-
     rts
 
 Init_LevelSelect:
@@ -52,7 +67,10 @@ Init_LevelSelect:
     jsr ClearAttrTable0
     jsr ClearAttrTable1
 
-    lda #5
+    lda #ChrData::LevelSelect
+    jsr LoadChrData
+
+    lda #ChrData::LevelSelectUi
     jsr LoadChrData
 
     bit $2000
@@ -248,18 +266,240 @@ Init_LevelSelect:
 
     jsr ls_LoadCursor
 
+; Draw bottom UI
+    lda #$22
+    sta $2006
+    lda #$80
+    sta $2006
+
+    ;ldy data_ls_ui2_len
+    ;lda data_LS_Ui_Len+0
+    ;sta AddressPointer0+0
+    ;lda data_LS_Ui_Len+1
+    ;sta AddressPointer0+1
+
+    lda #<data_LS_Ui
+    sta AddressPointer1+0
+    lda #>data_LS_Ui
+    sta AddressPointer1+1
+
+    ldy #0
+@uiLoop:
+    lda (AddressPointer1), y
+    cmp #$FF
+    beq @uiDone
+    sta $2007
+
+    ; increment pointer
+    inc AddressPointer1
+    bne :+
+    inc AddressPointer1+1
+:
+
+    jmp @uiLoop
+@uiDone:
+
+    ; Attributes for the bottom
+    lda #$23
+    sta $2006
+    lda #$E8
+    sta $2006
+
+    ldy #data_LS_Ui_Attr_Len
+    ldx #0
+:
+    lda data_LS_Ui_Attr, x
+    sta $2007
+    inx
+    dey
+    bne :-
+
+    ; Level title
+    lda #$22
+    sta $2006
+    lda #$C6
+    sta $2006
+
+    ldx #$B0
+:
+    stx $2007
+    inx
+    cpx #$B8
+    bne :-
+
+    ; Level text, line one
+    lda #$23
+    sta $2006
+    lda #$06
+    sta $2006
+
+    ldx #$B8
+:
+    stx $2007
+    inx
+    cpx #$C8
+    bne :-
+
+    ; Level text, line two
+    lda #$23
+    sta $2006
+    lda #$26
+    sta $2006
+
+    ldx #$C8
+:
+    stx $2007
+    inx
+    cpx #$D8
+    bne :-
+
+    lda #$26
+    sta $2006
+    lda #$80
+    sta $2006
+
+    lda #$FE
+    ldy #10
+:
+    .repeat 32
+    sta $2007
+    .endrepeat
+    dey
+    bne :-
+
+    lda #1
+    sta ls_WriteText
+
+    ; title text
+    jsr ls_PrepLevelText
+    jsr ls_WriteTextTiles
+    ;lda #$1B
+    ;sta AddressPointer0+1
+    ;lda #$00
+    ;sta AddressPointer0+0
+    ;lda #8
+    ;jsr WriteTextBuffer_LevelSelect_8
+
+    ; line 1 text
+    jsr ls_PrepLevelText
+    jsr ls_WriteTextTiles
+    jsr ls_WriteTextTiles
+    ;lda #$1B
+    ;sta AddressPointer0+1
+    ;lda #$80
+    ;sta AddressPointer0+0
+    ;lda #16
+    ;jsr WriteTextBuffer_LevelSelect_15
+
+    ; line 2 text
+    jsr ls_PrepLevelText
+    jsr ls_WriteTextTiles
+    jsr ls_WriteTextTiles
+    ;lda #$1C
+    ;sta AddressPointer0+1
+    ;lda #$80
+    ;sta AddressPointer0+0
+    ;lda #16
+    ;jsr WriteTextBuffer_LevelSelect_15
+
+    lda #0
+    sta ls_WriteText
+
+    ; Draw the cable sprites on the right
+LSCABLE_YSTART = 160
+LSCABLE_XSTART = 226
+    ;ldx #4 * 6  ; destination offset
+    ldx #2   ; attr
+    .repeat 4, i
+    lda #LSCABLE_YSTART
+    sta Sprites+(5*4)+(i*4)+0
+    lda #$B0 + i
+    sta Sprites+(5*4)+(i*4)+1
+    stx Sprites+(5*4)+(i*4)+2
+    lda #LSCABLE_XSTART + (i * 8)
+    sta Sprites+(5*4)+(i*4)+3
+    .endrepeat
+
+    .repeat 4, i
+    lda #LSCABLE_YSTART+8
+    sta Sprites+(9*4)+(i*4)+0
+    lda #$B4 + i
+    sta Sprites+(9*4)+(i*4)+1
+    stx Sprites+(9*4)+(i*4)+2
+    lda #LSCABLE_XSTART + (i * 8)
+    sta Sprites+(9*4)+(i*4)+3
+    .endrepeat
+
+    .repeat 4, i
+    lda #LSCABLE_YSTART+16
+    sta Sprites+(13*4)+(i*4)+0
+    lda #$B8 + i
+    sta Sprites+(13*4)+(i*4)+1
+    stx Sprites+(13*4)+(i*4)+2
+    lda #LSCABLE_XSTART + (i * 8)
+    sta Sprites+(13*4)+(i*4)+3
+    .endrepeat
+
+    .repeat 4, i
+    lda #LSCABLE_YSTART+24
+    sta Sprites+(17*4)+(i*4)+0
+    lda #$BC + i
+    sta Sprites+(17*4)+(i*4)+1
+    stx Sprites+(17*4)+(i*4)+2
+    lda #LSCABLE_XSTART + (i * 8)
+    sta Sprites+(17*4)+(i*4)+3
+    .endrepeat
+
+    ldx #$42   ; attr
+    .repeat 4, i
+    lda #LSCABLE_YSTART+(8*4)+(i*8)-3
+    sta Sprites+(21*4)+(i*4)+0
+    lda #$B0 + (i * 4)
+    sta Sprites+(21*4)+(i*4)+1
+    stx Sprites+(21*4)+(i*4)+2
+    lda #3
+    sta Sprites+(21*4)+(i*4)+3
+    .endrepeat
+
+    lda #1
+    sta ls_SpinnerCount
+    lda #0
+    sta ls_SpinnerFlip
+
+    ;jsr ls_PrepLevelText
+
+    jsr TextClearBuffer
+    jsr TextClearStringBuffer
+
     .NMI_Set NMI_LevelSelect
     jsr WaitForNMI
+
+    lda #1
+    sta ls_WriteText
+    ;jsr WaitForNMI
+    ;jsr WaitForNMI
+    ;jsr WaitForNMI
+    ;jsr WaitForNMI
+    ;jsr WaitForNMI
+    ;jsr WaitForNMI
+    ;jsr WaitForNMI
+    ;jsr WaitForNMI
+    ;jsr WaitForNMI
+    ;jsr WaitForNMI
 
 Frame_LevelSelect:
     lda #0
     sta TmpZ
+    jsr ls_AnimateSpinner
 
     jsr ReadControllers
 
     lda #BUTTON_RIGHT
     jsr ButtonPressedP1
     beq :+
+    lda #1
+    sta ls_WriteText
+
     lda ls_SelectedLevel
     sta ls_SelectedLevel_Prev
     inc ls_SelectedLevel
@@ -269,6 +509,9 @@ Frame_LevelSelect:
     lda #BUTTON_DOWN
     jsr ButtonPressedP1
     beq :+
+    lda #1
+    sta ls_WriteText
+
     lda ls_SelectedLevel
     sta ls_SelectedLevel_Prev
     inc ls_SelectedLevel
@@ -287,6 +530,9 @@ Frame_LevelSelect:
     lda #BUTTON_LEFT
     jsr ButtonPressedP1
     beq :+
+    lda #1
+    sta ls_WriteText
+
     lda ls_SelectedLevel
     sta ls_SelectedLevel_Prev
     dec ls_SelectedLevel
@@ -296,6 +542,9 @@ Frame_LevelSelect:
     lda #BUTTON_UP
     jsr ButtonPressedP1
     beq :+
+    lda #1
+    sta ls_WriteText
+
     lda ls_SelectedLevel
     sta ls_SelectedLevel_Prev
     dec ls_SelectedLevel
@@ -328,12 +577,10 @@ Frame_LevelSelect:
 :
 
     jsr ls_LoadCursor
-    jsr ls_DoAnimations
-
-    jsr WaitForSpriteZero
-    lda #0
-    sta $2005
-    sta $2005
+    lda ls_WriteText
+    beq :+
+    jsr ls_PrepLevelText
+:
 
     lda #BUTTON_A
     jsr ButtonPressedP1
@@ -351,9 +598,30 @@ Frame_LevelSelect:
     lda #BUTTON_SELECT
     jsr ButtonPressedP1
     beq :+
+
+    jsr WaitForSpriteZero
+    lda #0
+    sta $2005
+    sta $2005
+
+    lda #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN
+    sta $2000
     jsr WaitForNMI
+    jsr ls_DoAnimations
     jmp Frame_LevelSelect_ViewMap
 :
+
+    jsr WaitForSpriteZero
+    lda #0
+    sta $2005
+    sta $2005
+
+    lda #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN
+    sta $2000
+
+    jsr ls_DoAnimations
+
+    ;jsr TextClearBuffer
 
     jsr WaitForNMI
     jmp Frame_LevelSelect
@@ -382,6 +650,18 @@ Frame_LevelSelect_ViewMap:
     lda #BUTTON_SELECT
     jsr ButtonPressedP1
     beq :+
+
+    jsr ls_DrawCursorXY
+    jsr ls_DoAnimations
+
+    jsr WaitForSpriteZero
+    lda #0
+    sta $2005
+    sta $2005
+
+    lda #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN
+    sta $2000
+
     jsr WaitForNMI
     jmp Frame_LevelSelect
 :
@@ -400,6 +680,9 @@ Frame_LevelSelect_ViewMap:
     lda #0
     sta $2005
     sta $2005
+
+    lda #PPU_CTRL_NMI | PPU_CTRL_BG_PATTERN
+    sta $2000
 
     jsr WaitForNMI
     jmp Frame_LevelSelect_ViewMap
@@ -452,9 +735,17 @@ ls_DoAnimations:
     sta IdxA
 
 ; Load visible sprite animations
+;    ;.repeat SPRITE_OBJ_COUNT, count
+;    .repeat 11, count
+;    lda #count
+;    jsr ls_SpriteAnimate
+;    .endrepeat
 @animLoop:
     lda IdxA
     jsr ls_SpriteAnimate
+
+    ;lda IdxA
+    ;jsr ls_SpriteScroll
 
     inc IdxA
     lda IdxA
@@ -462,16 +753,16 @@ ls_DoAnimations:
     bne @animLoop
 
 ; scroll animation sprites
-    ldx #0
-    stx IdxA
-@scrollLoop:
-    lda IdxA
-    jsr ls_SpriteScroll
-
-    inc IdxA
-    lda IdxA
-    cmp menu_LoadedSprites
-    bne @scrollLoop
+;    ldx #0
+;    stx IdxA
+;@scrollLoop:
+;    lda IdxA
+;    jsr ls_SpriteScroll
+;
+;    inc IdxA
+;    lda IdxA
+;    cmp menu_LoadedSprites
+;    bne @scrollLoop
 
     ; sprite ID -> offset
     lda menu_DrawnSprites
@@ -519,6 +810,11 @@ ls_StepCursor:
     rts
 
 NMI_LevelSelect:
+    pha
+    txa
+    pha
+    tya
+    pha
 
     jsr WritePalettes
 
@@ -530,33 +826,127 @@ NMI_LevelSelect:
     jsr ls_WriteTraceAttr
 :
 
-    .Update_PpuMask PPU_MASK_ON
-    .Update_PpuControl PPU_CTRL_NMI
+    jsr ls_WriteTextTiles
 
     ;.SetScroll_Var 0
     ; TODO: nametable
     bit $2000
+
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+
     lda menu_ScrollValue
     sta $2005
     lda #0
     sta $2005
 
+    .Update_PpuControl PPU_CTRL_NMI
+    .Update_PpuMask PPU_MASK_ON
+
     lda #$FF
     sta Sleeping
 
+    pla
+    tay
+    pla
+    tax
+    pla
     rti
+
+ls_WriteTextTiles:
+    lda #0
+    sta $2001
+
+    ldx ls_WriteText
+    beq @noWrite
+
+    dex
+    lda ls_writeTilesJmp_Lo, x
+    sta AddressPointer0+0
+    lda ls_writeTilesJmp_Hi, x
+    sta AddressPointer0+1
+    jmp (AddressPointer0)
+
+@noWrite:
+    rts
+
+ls_writeTiles_Title:
+    lda #$1B
+    sta AddressPointer0+1
+    lda #$00
+    sta AddressPointer0+0
+    jsr WriteTextBuffer_LevelSelect_8
+    jmp ls_writeTiles_done
+
+ls_writeTiles_Line1a:
+    lda #$1B
+    sta AddressPointer0+1
+    lda #$80
+    sta AddressPointer0+0
+    jsr WriteTextBuffer_LevelSelect_8
+    jmp ls_writeTiles_done
+
+ls_writeTiles_Line1b:
+    lda #$1C
+    sta AddressPointer0+1
+    lda #$00
+    sta AddressPointer0+0
+    jsr WriteTextBuffer_LevelSelect_7
+    jmp ls_writeTiles_done
+
+ls_writeTiles_Line2a:
+    lda #$1C
+    sta AddressPointer0+1
+    lda #$80
+    sta AddressPointer0+0
+    jsr WriteTextBuffer_LevelSelect_8
+    jmp ls_writeTiles_done
+
+ls_writeTiles_Line2b:
+    lda #$1D
+    sta AddressPointer0+1
+    lda #$00
+    sta AddressPointer0+0
+    jsr WriteTextBuffer_LevelSelect_7
+    jmp ls_writeTiles_done
+
+ls_writeTiles_done:
+    inc ls_WriteText
+    lda ls_WriteText
+    cmp #6
+    bne :+
+    lda #0
+    sta ls_WriteText
+    sta IgnoreInput
+:
+    rts
+
+ls_writeTilesJmp_Hi:
+    .byte .hibyte(ls_writeTiles_Title)
+    .byte .hibyte(ls_writeTiles_Line1a)
+    .byte .hibyte(ls_writeTiles_Line1b)
+    .byte .hibyte(ls_writeTiles_Line2a)
+    .byte .hibyte(ls_writeTiles_Line2b)
+
+ls_writeTilesJmp_Lo:
+    .byte .lobyte(ls_writeTiles_Title)
+    .byte .lobyte(ls_writeTiles_Line1a)
+    .byte .lobyte(ls_writeTiles_Line1b)
+    .byte .lobyte(ls_writeTiles_Line2a)
+    .byte .lobyte(ls_writeTiles_Line2b)
 
 ; jsr to AddressPointer0
 JsrPointer:
-    lda #>@end
+    lda #>@end-1
     pha
-    lda #<@end
+    lda #<@end-1
     pha
 
     jmp (AddressPointer0)
 
 @end:
-    nop
     rts
 
 ; PPU Address in AddressPointer0
@@ -672,7 +1062,9 @@ ls_PaletteAnimate:
 ; Read the sprite data from RAM, manipulate the
 ; coords, and write it to OAM if it is on screen.
 ls_SpriteScroll:
-    tax
+    ldx menu_LoadedSprites
+    ;dex
+    ;tax
     lda ls_SpriteFlags, x
     and #$08
     bne @nt2check
@@ -867,6 +1259,7 @@ ls_SpriteAnimate:
     lda (AddressPointer2), y
     sta ls_SpriteFlags, x
 
+    jsr ls_SpriteScroll
     inx
     stx menu_LoadedSprites
 
@@ -988,6 +1381,7 @@ ls_SpriteAnimate:
     lda tmp_SpriteFlags
     sta ls_SpriteFlags, x
 
+    jsr ls_SpriteScroll
     inx
     stx menu_LoadedSprites
 
@@ -1283,6 +1677,163 @@ ls_WriteTraceAttr:
     ; Restore stack pointer
     ldx IdxA
     txs
+    rts
+
+ls_PrepLevelText:
+    ;jsr TextClearStringBuffer
+    ;jsr TextClearBuffer
+    lda #1
+    sta IgnoreInput
+
+    ldx ls_SelectedLevel
+    lda ls_ActiveLevels, x
+    asl a
+    tax
+
+    lda ls_WriteText
+    cmp #1
+    beq @title
+    cmp #2
+    beq @line1
+    cmp #3
+    beq @line1
+    ; line 2
+
+    lda data_Level_Text_Line2_Idx+0, x
+    sta AddressPointer0+0
+    lda data_Level_Text_Line2_Idx+1, x
+    sta AddressPointer0+1
+    jmp @readText
+
+@title:
+    lda data_Level_Titles_Idx+0, x
+    sta AddressPointer0+0
+    lda data_Level_Titles_Idx+1, x
+    sta AddressPointer0+1
+    jmp @readText
+
+@line1:
+    lda data_Level_Text_Line1_Idx+0, x
+    sta AddressPointer0+0
+    lda data_Level_Text_Line1_Idx+1, x
+    sta AddressPointer0+1
+
+@readText:
+    ldy #0
+    ldx #0
+:
+    lda (AddressPointer0), y
+    sta TextBuffer, x
+    beq @doneRead
+    inx
+    iny
+    jmp :-
+
+@doneRead:
+    ;jsr TextPrepare
+    jmp TextPrepare_v3
+    ;rts
+
+; Write blank tiles to the text areas
+ls_ClearText:
+    bit $2002
+
+    ; Title
+    lda data_lsText_AddrTitle+1
+    sta $2006
+    lda data_lsText_AddrTitle+0
+    sta $2006
+
+    ldx #$FF
+    .repeat 8
+    stx $2007
+    .endrepeat
+
+    ; Line1
+    lda data_lsText_AddrLine1+1
+    sta $2006
+    lda data_lsText_AddrLine1+0
+    sta $2006
+
+    ldx #$FF
+    .repeat 15
+    stx $2007
+    .endrepeat
+
+    ; Line2
+    lda data_lsText_AddrLine2+1
+    sta $2006
+    lda data_lsText_AddrLine2+0
+    sta $2006
+
+    ldx #$FF
+    .repeat 15
+    stx $2007
+    .endrepeat
+    rts
+
+; Start tile ID for the text
+LS_TEXTTILE_OFFSET = $B0
+
+; A = tile number to write
+; X = tile count to write
+ls_WriteTextTile:
+    clc
+    adc #LS_TEXTTILE_OFFSET
+    tay
+
+    rts
+
+LSSPINNER_YSTART = 205
+LSSPINNER_XSTART = 233
+ls_AnimateSpinner:
+    dec ls_SpinnerCount
+    beq :+
+    rts
+:
+    lda #SPINNER_DELAY
+    sta ls_SpinnerCount
+    ldx #$C0
+
+    lda ls_SpinnerFlip
+    eor #$FF
+    sta ls_SpinnerFlip
+    beq :+
+    ; display non-mirrored
+    lda #LSSPINNER_YSTART
+    sta Sprites+(25*4)+0
+    stx Sprites+(25*4)+1
+    lda #$00
+    sta Sprites+(25*4)+2
+    lda #LSSPINNER_XSTART-1
+    sta Sprites+(25*4)+3
+
+    lda #LSSPINNER_YSTART+9
+    sta Sprites+(26*4)+0
+    stx Sprites+(26*4)+1
+    lda #$C0
+    sta Sprites+(26*4)+2
+    lda #LSSPINNER_XSTART+8
+    sta Sprites+(26*4)+3
+    rts
+:
+
+    ; display mirrored
+    lda #LSSPINNER_YSTART
+    sta Sprites+(25*4)+0
+    stx Sprites+(25*4)+1
+    lda #$40
+    sta Sprites+(25*4)+2
+    lda #LSSPINNER_XSTART+8
+    sta Sprites+(25*4)+3
+
+    lda #LSSPINNER_YSTART+9
+    sta Sprites+(26*4)+0
+    stx Sprites+(26*4)+1
+    lda #$80
+    sta Sprites+(26*4)+2
+    lda #LSSPINNER_XSTART-1
+    sta Sprites+(26*4)+3
     rts
 
 .include "level-select-data.asm"

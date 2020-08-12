@@ -37,7 +37,7 @@ cr_singleScreen: .res 1
 cr_scrollToPause: .res 1
 
 cr_TileBuffer:  .res 64
-.align 128
+;.align 128
 cr_attribBuffer: .res 32*4
 
 CREDIT_RAM_SIZE = * - CREDIT_RAM_START

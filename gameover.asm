@@ -54,8 +54,9 @@ gameover_init:
 
     jsr ClearSprites
 
-    lda #2
+    lda #ChrData::Title
     jsr LoadChrData
+    jsr WriteBlankTile
 
     lda #$00
     sta AddressPointer0+0

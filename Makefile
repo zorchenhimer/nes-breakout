@@ -32,7 +32,7 @@ TITLECONV = bin/convert-title$(EXT)
 NAME = breakout
 
 # any CHR files included
-CHR = credits.chr game.chr title.chr level-select.chr font.i
+CHR = credits.chr game.chr title.chr level-select.chr font.i level-select-ui.chr
 
 # List of all the sources files
 SOURCES := main.asm nes2header.inc \
@@ -153,7 +153,7 @@ matrix7.chr: $(MATRIX7_BMP)
 	$(CHRUTIL) --first-plane -o $@ $^
 
 title.chr: images/tv.bmp
-	$(CHRUTIL) -o $@ --pad-tiles 256 images/tv.bmp --tile-count 32
+	$(CHRUTIL) -o $@ images/tv.bmp --tile-count 32
 
 tv.chr: images/tv.bmp images/hooded.bmp images/news-anchor.bmp
 	$(CHRUTIL) -o $@ --remove-duplicates --pad-tiles 256 \
@@ -164,6 +164,14 @@ tv.chr: images/tv.bmp images/hooded.bmp images/news-anchor.bmp
 
 tv-lower.chr: images/tv.bmp
 	$(CHRUTIL) -o $@ images/tv.bmp --tile-count 12
+
+#level-select.chr: images/level-select.bmp images/level-select-bottom_sprites.bmp
+#	$(CHRUTIL) -o $@ $^ --tile-count 17
+
+level-select-ui.chr: images/level-select-just-bottom.bmp images/level-select-bottom_sprites.bmp
+	$(CHRUTIL) -o $@ \
+		images/level-select-just-bottom.bmp --remove-duplicates --nt-ids lsbg_ui.i \
+		images/level-select-bottom_sprites.bmp --tile-count 17
 
 font.i: images/font.bmp
 	$(FONTUTIL) -o $@ -i $< -w font.widths.i -r font.map.i

@@ -21,6 +21,9 @@ Init_Title:
     sta PaletteBufferSprites+i
 .endrepeat
 
+    ;lda #$0
+    ;sta txt_NoClear
+
     ; Unused palettes.  Make them red.
 ;    lda #$16
 ;.repeat 4, i
@@ -34,11 +37,12 @@ Init_Title:
     lda #$0F
     sta CurrentBoard
 
-    lda #2
+    lda #ChrData::Title
     jsr LoadChrData
+    jsr WriteBlankTile
 
-    lda #7
-    jsr LoadChrData
+    ;lda #7
+    ;jsr LoadChrData
 
     jsr ClearAttrTable0
     ;lda #$0F

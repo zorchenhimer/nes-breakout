@@ -635,3 +635,132 @@ data_Level_Progression:
 :   .byte 15, $FF
 
 :   .byte $FF
+
+data_Level_Titles_Idx:
+    .word :+
+    .word :++
+    .word :+++
+    .word :++++
+    .word :+++++
+    .word :++++++
+    .word :+++++++
+    .word :++++++++
+    .word :+++++++++
+    .word :++++++++++
+    .word :+++++++++++
+    .word :++++++++++++
+    .word :+++++++++++++
+    .word :++++++++++++++
+    .word :+++++++++++++++
+    .word :++++++++++++++++
+
+data_Level_Titles:
+:    .byte "Level 1", $00
+:    .byte "Level 2a", $00
+:    .byte "Level 2b", $00
+:    .byte "Level 3a", $00
+:    .byte "Level 3b", $00
+:    .byte "Level 3c", $00
+:    .byte "Level 4a", $00
+:    .byte "Level 4b", $00
+:    .byte "Level 5a", $00
+:    .byte "Level 5b", $00
+:    .byte "Level 5c", $00
+:    .byte "Level 5d", $00
+:    .byte "Level 6a", $00
+:    .byte "Level 6b", $00
+:    .byte "Level 6c", $00
+:    .byte "The Boss", $00
+
+
+data_Level_Text_Line1_Idx:
+    .word :+
+
+    .word :++
+    .word :++
+
+    .word :+++
+    .word :+++
+    .word :+++
+
+    .word :++++
+    .word :++++
+
+    .word :+++++
+    .word :+++++
+    .word :+++++
+    .word :+++++
+
+    .word :++++++
+    .word :++++++
+    .word :++++++
+
+    .word :+++++++
+
+data_Level_Text_Line1:
+:    .byte "The first level", $00
+:    .byte "The second column", $00
+:    .byte "The third column", $00
+:    .byte "The fourth column", $00
+:    .byte "The fifth column", $00
+:    .byte "The sixth column", $00
+:    .byte "The boss column", $00
+
+data_Level_Text_Line2_Idx:
+    .word :+
+
+    .word :++
+    .word :+++
+
+    .word :++
+    .word :+++
+    .word :++++
+
+    .word :++
+    .word :+++
+
+    .word :++
+    .word :+++
+    .word :++++
+    .word :+++++
+
+    .word :++
+    .word :+++
+    .word :++++
+
+    .word :++++++
+
+data_Level_Text_Line2:
+:    .byte "I guess...", $00
+:    .byte "The first one tho", $00
+:    .byte "The second one tho", $00
+:    .byte "The third one tho", $00
+:    .byte "The fourth one tho", $00
+:    .byte ">:C", $00
+
+;data_ls_ui_len: .byte 160
+;data_ls_ui:
+;.byte 0, 1, 2, 3, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 6, 1, 1, 1, 1, 1, 1, 7, 8, 9, 1, 10, 1, 11, 12, 13, 28, 29, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 31, 32, 33, 30, 34, 35, 36, 37, 38, 39, 26, 12, 40, 12, 55, 56, 57, 58, 45, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 59, 60, 61, 62, 63, 64, 65, 66, 67, 66, 68, 69, 13, 81, 82, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 116, 117, 118, 119, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 121, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 122, 27, 123, 124, 12
+;data_ls_ui2_len: .byte 128
+;data_ls_ui2:
+;.byte 11, 12, 13, 14, 15, 16, 17, 17, 17, 17, 17, 17, 17, 17, 17, 18, 17, 17, 19, 20, 17, 17, 21, 22, 23, 17, 24, 25, 26, 12, 27, 12, 41, 42, 43, 44, 45, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 46, 30, 30, 47, 48, 49, 50, 51, 52, 53, 26, 12, 54, 12, 68, 69, 70, 71, 45, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 72, 73, 74, 75, 76, 77, 27, 78, 79, 80, 68, 69, 13, 96, 97, 98, 99, 99, 99, 99, 99, 99, 99, 99, 99, 100, 101, 102, 103, 104, 99, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115
+
+; Tile addresses for the text
+data_lsText_AddrTitle:
+    .repeat 8, i
+    .word $22C6 + i
+    .endrepeat
+
+data_lsText_AddrLine1:
+    .repeat 15, i
+    .word $2306 + i
+    .endrepeat
+
+data_lsText_AddrLine2:
+    .repeat 15, i
+    .word $2326 + i
+    .endrepeat
+
+data_lsUiSprites_CableRight:
+    ;.byte 
+

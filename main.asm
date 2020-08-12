@@ -85,6 +85,7 @@ CHUNK_DONE = 0 ; no more chunks
     Hex
     Game2
     LevelSelect
+    LevelSelectUi
     Tv
     TvLower
 .endenum
@@ -338,8 +339,17 @@ am_Waves_TileLayout_b:
 
 TitleData:
     .incbin "title.chr";, 0, (16 * 160) + (16 * 12) ; (bytes/tile * tile count)
-;TitleData_Count = (* - TitleData) / 16
-TitleData_Count = 0
+TitleData_Count = ((* - TitleData) / 16) & $FF
+
+LevelSelectTileData:
+    .incbin "level-select.chr"
+LevelSelectTileData_Count = 0
+
+LevelSelectUiTileData:
+    .incbin "level-select-ui.chr"
+LevelSelectUiTileData_Count = (* - LevelSelectUiTileData) / 16
+
+.out .sprintf("LevelSelectUiTileData_Count: %d", LevelSelectUiTileData_Count)
 
 .segment "PAGE13"
     .byte 13
@@ -362,10 +372,6 @@ GameChrData_Count = (* - GameChrData) / 16
 HexTileData:
     .incbin "hex.chr", 0, (16 * 16)
 HexTileData_Count = (* - HexTileData) / 16
-
-LevelSelectTileData:
-    .incbin "level-select.chr"
-LevelSelectTileData_Count = 0
 
 TvTileData:
     ;.incbin "title.chr", 0, (16 * 32) ; (bytes/tile * tile count)
@@ -751,7 +757,7 @@ ButtonPressedP1:
 
     lda IgnoreInput
     beq :+
-    dec IgnoreInput
+    ;dec IgnoreInput
     lda #0
     rts
 :
@@ -970,6 +976,19 @@ BinToHex:
 @done:
     rts
 
+; Writes a blank tile to ID $FF
+WriteBlankTile:
+    bit $2002
+    lda #$0F
+    sta $2006
+    lda #$F0
+    sta $2006
+    lda #0
+    .repeat 16
+    sta $2007
+    .endrepeat
+    rts
+
 Pal_Tv:
     .byte $0F, $10, $00, $0F
     .byte $0F, $2A, $0F, $0A
@@ -1019,7 +1038,11 @@ Index_ChrData:
 
     .word LevelSelectTileData
     .byte LevelSelectTileData_Count
-    .byte $7E
+    .byte $7C
+
+    .word LevelSelectUiTileData
+    .byte LevelSelectUiTileData_Count
+    .byte $FC
 
     .word TvTileData
     .byte TvTileData_Count

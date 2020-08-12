@@ -426,9 +426,9 @@ sf_DrawText:
 
     ; TileID -> CHR Address
     lda data_Mult16_A, x
-    sta AddressPointer0+0
+    sta AddressPointer6+0
     lda data_Mult16_B, x
-    sta AddressPointer0+1
+    sta AddressPointer6+1
 
     ldx #$FF
 @loop:
@@ -441,7 +441,14 @@ sf_DrawText:
     tya
     pha
 
-    jsr TextPrepare
+    ;jsr TextPrepare
+    ;jsr TextPrepare_v2
+    jsr TextPrepare_v3
+
+    lda AddressPointer6+0
+    sta AddressPointer0+0
+    lda AddressPointer6+1
+    sta AddressPointer0+1
 
     lda #16 ; number of chars
     ldx #0

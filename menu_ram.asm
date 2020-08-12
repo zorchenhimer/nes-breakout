@@ -15,7 +15,7 @@ CURSOR_TILE = $26
 menu_ScrollValue:   .res 1
 menu_DrawnSprites:  .res 1
 menu_LoadedSprites: .res 1
-LEVELSELECT_SPRITE_OFFSET = 5
+LEVELSELECT_SPRITE_OFFSET = 5 + 12 + 27
 
 tmp_SpriteX: .res 1
 tmp_SpriteY: .res 1
@@ -82,5 +82,15 @@ ls_SelectedLevel_Prev: .res 1
 
 ls_PrevTraceCount: .res 1
 ls_PrevTraces: .res 10
+
+; 0 - no text to write
+; 1 - Title
+; 2 - Line 1
+; 3 - Line 2
+ls_WriteText: .res 1
+
+SPINNER_DELAY = 50
+ls_SpinnerCount: .res 1
+ls_SpinnerFlip: .res 1
 
 .popseg
