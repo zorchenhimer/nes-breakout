@@ -151,5 +151,6 @@ GAME_MAINRAM_SIZE = * - GAME_RAM_START
 ;.out .sprintf("GAME_MAINRAM: %d (size: %d)", GAME_MAINRAM, .addrsize(GAME_MAINRAM))
 
 LivesCount: .res 1
+MainBrickCount: .res 2
 
 .popseg

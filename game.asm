@@ -406,23 +406,17 @@ Frame_Game:
     ;jsr waves_PrepChrWrite
     jsr waves_CacheRow
 
-    jsr game_DebugData
+    ;jsr game_DebugData
 
     lda #BUTTON_START
     jsr ButtonPressedP1
-    beq :++
-    ; complete the level, lol
-    lda CurrentBoard
-    cmp #15 ;end level
-    bne :+
-    jsr WaitForNMI
-    lda #InitIDs::GameWon
-    jmp JumpToInit
-:
-    sta menu_PrevLevel
-    jsr WaitForNMI
-    lda #InitIDs::LevelSelect
-    jmp JumpToInit
+    beq :+
+    lda controller1
+    and #BUTTON_A
+    beq @pause
+    jmp EndLevel
+@pause:
+    nop
 :
 
     jsr WaitForNMI
@@ -2701,6 +2695,8 @@ game_ReturnToMain:
     sta (EnteredRam), y
     iny
     sta (EnteredRam), y
+
+    jsr game_decBrickCount
 :
 
     jsr ResetBall
@@ -2715,9 +2711,11 @@ DrawCurrentMap:
     lda #$90
     sta $2000
 
-    ldy #0
-    sty TmpX
-    sty TmpW
+    lda #0
+    sta TmpX
+    sta TmpW
+    sta MainBrickCount+0
+    sta MainBrickCount+1
 
 @loop:
     ; Load up current row's RAM address
@@ -2740,11 +2738,23 @@ DrawCurrentMap:
     ; Draw it
     jsr game_DrawRow
 
+    lda TmpW
+    clc
+    adc MainBrickCount+0
+    sta MainBrickCount+0
+
+    bcc :+
+    inc MainBrickCount+1
+:
+    lda #0
+    sta TmpW
+
     ; Are we done?
     inc TmpX
     lda TmpX
     cmp game_BoardHeight
     bne @loop
+
     rts
 
 ; Expects the PPU address to already be set.
@@ -2798,6 +2808,10 @@ game_DrawRow:
     inc game_PpuCol
     lda #HalfBrickID
     sta $2007
+
+    ; Brick count
+    inc TmpW
+
     iny
     cpy game_BoardWidth
     bne @loop
@@ -3247,17 +3261,9 @@ game_ActionItemDrop:
     jmp game_RemoveBrick
 
 game_RemoveBrick:
-    bit CurrentBoard
-    bpl :+
-    ; Check if this brick is the last one.
-    dec ChildBrickCount
-    bne :+
-    ; Board is empty, draw parent board
-    jsr game_ReturnToMain
-    lda #1
-    rts
-:
-    ; Remove from screen
+    jsr game_decBrickCount
+
+    ; Remove brick from screen
 
     ; First check if we already have to remove a brick.
     ; If so, use the second variable
@@ -3285,6 +3291,35 @@ game_RemoveBrick:
     lda #0
     rts
 
+game_decBrickCount:
+    bit CurrentBoard
+    bpl @decMain
+    ; Check if this brick is the last one.
+    dec ChildBrickCount
+    bne @rts
+    ; Board is empty, draw parent board
+    jsr game_ReturnToMain
+    lda #1
+    rts
+
+@decMain:
+    ; Decrement counter
+    lda MainBrickCount+0
+    sec
+    sbc #1
+    sta MainBrickCount+0
+    bcs :+
+    dec MainBrickCount+1
+:
+
+    lda MainBrickCount+0
+    bne @rts
+    lda MainBrickCount+1
+    bne @rts
+    jmp EndLevel
+@rts:
+    rts
+
 game_ActionHalf:
     ldy #0
     tya
@@ -3298,6 +3333,8 @@ game_ActionHalf:
     lda BrickPpuAddress+1
     sta BrickDestroyA+1
 
+    jsr game_decBrickCount
+
     lda #$80
     sta BrickDestroyHalf
     lda #0
@@ -3307,6 +3344,8 @@ game_ActionHalf:
     sta BrickDestroyB
     lda BrickPpuAddress+1
     sta BrickDestroyB+1
+
+    jsr game_decBrickCount
 
     lda #$C0
     sta BrickDestroyHalf
@@ -3330,6 +3369,19 @@ Clear_GameRam:
     bne :-
 
     rts
+
+EndLevel:
+    lda CurrentBoard
+    cmp #15 ; Boss level
+    bne :+
+    jsr WaitForNMI
+    lda #InitIDs::GameWon
+    jmp JumpToInit
+:
+    sta menu_PrevLevel
+    jsr WaitForNMI
+    lda #InitIDs::LevelSelect
+    jmp JumpToInit
 
 NoTileID = $00
 HalfBrickID = $0E
