@@ -118,7 +118,7 @@ Init_LevelSelect:
     lda #$9F
     sta $2006
 
-    .Update_PpuControl PPU_CTRL_NMI | PPU_CTRL_VERTICAL
+    .Update_PpuControl PPU_CTRL_VERTICAL
     lda #$FF
     ldx #10
 :
@@ -126,7 +126,8 @@ Init_LevelSelect:
     dex
     bne :-
 
-    .Update_PpuControl PPU_CTRL_NMI
+    ;.Update_PpuControl PPU_CTRL_NMI
+    .Update_PpuControl 0
 
     lda #$20
     sta $2006
@@ -472,20 +473,11 @@ LSCABLE_XSTART = 226
     jsr TextClearStringBuffer
 
     .NMI_Set NMI_LevelSelect
+    .Update_PpuControl PPU_CTRL_NMI
     jsr WaitForNMI
 
     lda #1
     sta ls_WriteText
-    ;jsr WaitForNMI
-    ;jsr WaitForNMI
-    ;jsr WaitForNMI
-    ;jsr WaitForNMI
-    ;jsr WaitForNMI
-    ;jsr WaitForNMI
-    ;jsr WaitForNMI
-    ;jsr WaitForNMI
-    ;jsr WaitForNMI
-    ;jsr WaitForNMI
 
 Frame_LevelSelect:
     lda #0
@@ -1840,3 +1832,7 @@ ls_AnimateSpinner:
 
 ; auto-generated from maps/lsbg-wang.tmx
 .include "lsbg.i"
+
+data_LS_Ui = :++
+.include "lsbg_ui.i"
+.byte $FF

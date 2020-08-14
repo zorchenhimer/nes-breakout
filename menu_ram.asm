@@ -81,7 +81,7 @@ ls_SelectedLevel: .res 1
 ls_SelectedLevel_Prev: .res 1
 
 ls_PrevTraceCount: .res 1
-ls_PrevTraces: .res 10
+ls_PrevTraces: .res 15
 
 ; 0 - no text to write
 ; 1 - Title

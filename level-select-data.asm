@@ -764,3 +764,6 @@ data_lsText_AddrLine2:
 data_lsUiSprites_CableRight:
     ;.byte 
 
+data_LS_Ui_Attr:
+    .byte $AA, $2A, $0A, $AA, $AA, $AA, $AA, $AA, $AA, $A2, $A0, $A0, $A0, $A8, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA
+data_LS_Ui_Attr_Len = * - data_LS_Ui_Attr
