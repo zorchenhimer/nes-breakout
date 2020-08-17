@@ -175,6 +175,7 @@ Init_Game:
     lda #MAX_BOOST_POOL
     sta BoostPool
 
+    ; Boost count sprite
     lda #16
     sta Sprites+(4*5)+0
     lda #24
@@ -397,15 +398,20 @@ Frame_Game:
     beq :+
     jmp Frame_Game
 :
-    jsr CheckPaddleCollide
-    jsr powerup_CollideCheck
 
+    bit CurrentBoard
+    bmi :+
+    ; Skip these on child boards
+    jsr powerup_CollideCheck
+    jsr powerup_DoFrameAction
+    jsr powerup_Animate
+:
+
+    jsr CheckPaddleCollide
     jsr UpdateBallSprite
     jsr UpdatePaddleSprite
     jsr UpdateBoostSprite
 
-    jsr powerup_DoFrameAction
-    jsr powerup_Animate
 
     ;jsr waves_PrepChrWrite
     jsr waves_CacheRow
@@ -850,6 +856,11 @@ UpdateBoostSprite:
     sta Sprites+(4*5)+3
     rts
 :
+    lda #16
+    sta Sprites+(4*5)
+    lda #24
+    sta Sprites+(4*5)+3
+
     lda BoostPool
     beq @empty
 
@@ -2720,6 +2731,11 @@ game_ReturnToMain:
     sta PaddleY+0
     lda backup_PaddleY+1
     sta PaddleY+1
+
+    lda game_currentGravity
+    beq :+
+    ; restore boost sprite
+:
 
     lda ParentBoard
     sta CurrentBoard
