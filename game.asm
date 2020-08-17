@@ -4,6 +4,9 @@
 
 .importzp child_NUMBER_OF_MAPS
 
+Death_Height = 200
+Death_Offset = 4    ; negative offset from ball center
+
 BALL_UP = $80
 BALL_DOWN = $00
 BALL_LEFT = $00
@@ -16,7 +19,7 @@ SPRITE_ID_PADDLE_MID = $09
 SPRITE_ID_PADDLE_SIDE = $08
 
 BOOST_VALUE = $F0
-MAX_BOOST_POOL = 2
+MAX_BOOST_POOL = 3
 
 Initial_Ball_Speed_WHOLE = 1
 Initial_Ball_Speed_FRACT = 0
@@ -374,6 +377,7 @@ Frame_Game:
     lda BallDirection
     and #BALL_STATE_INIT
     bne @Init
+
     lda #BUTTON_A
     jsr ButtonPressedP1
     beq :+
@@ -829,8 +833,8 @@ BoostTheBall:
     sbc BallSpeedY+0
     sta BallSpeedY+0
 
-    lda BallSpeedY+1
-    sbc #0
+    lda #0
+    sbc BallSpeedY+1
     sta BallSpeedY+1
 
     lda BallDirection
@@ -2386,12 +2390,6 @@ DoVerticalBrickCollide:
 
 @noNoClip:
 
-    jsr DoBrickAction
-    beq :+
-    rts ; DoBrickAction returns 1 if
-        ; everything else should be skipped.
-:       ; "everything" is to be determined.
-
     lda BrickRowIndex_Vert
     and #$7F
     tay
@@ -2410,7 +2408,7 @@ DoVerticalBrickCollide:
     sec
     sbc TmpX
     sta BallY+1
-    jmp BounceVert
+    jmp BrickBounceVert
 
 @goingUp:
     ; distance into brick = Wall - BallY
@@ -2422,7 +2420,7 @@ DoVerticalBrickCollide:
     adc (Address_RowCoordBot), y
     sta BallY+1
 
-    jmp BounceVert
+    jmp BrickBounceVert
 
 ; Perform the horizontal collision on a brick.
 ;
@@ -2451,13 +2449,6 @@ DoHorizontalBrickCollide:
     jmp game_RemoveBrick
 @noNoClip:
 
-    jsr DoBrickAction
-    beq :+
-    rts ; DoBrickAction returns 1 if
-        ; everything else should be skipped.
-        ; "everything" is to be determined.
-:
-
     ldy BrickColIndex_Horiz
 
     bit BallDirection
@@ -2474,7 +2465,7 @@ DoHorizontalBrickCollide:
     sec
     sbc TmpX
     sta BallX+1
-    jmp BounceHoriz
+    jmp BrickBounceHoriz
 
 @goingLeft:
     ; distance into wall = RightWall - BallX - EdgeOffset
@@ -2485,7 +2476,21 @@ DoHorizontalBrickCollide:
     adc (Address_RowCoordRight), y
     sta BallX+1
 
-    jmp BounceHoriz
+    jmp BrickBounceHoriz
+
+BrickBounceVert:
+    ; Bit 7 is vertical
+    lda BallDirection
+    eor #$80
+    sta BallDirection
+    jmp DoBrickAction
+
+BrickBounceHoriz:
+    ; Bit 6 is horizontal
+    lda BallDirection
+    eor #$40
+    sta BallDirection
+    jmp DoBrickAction
 
 ; Swap the ball's vertical movement direction.
 BounceVert:
@@ -2683,6 +2688,39 @@ game_ReturnToMain:
     lda #PADDLE_WALL_RIGHT
     sta game_PaddleWallRight
 
+    ; restore the state
+    lda backup_BallDirection
+    sta BallDirection
+    lda backup_BallX+0
+    sta BallX+0
+    lda backup_BallX+1
+    sta BallX+1
+
+    lda backup_BallY+0
+    sta BallY+0
+    lda backup_BallY+1
+    sta BallY+1
+
+    lda backup_BallSpeedX+0
+    sta BallSpeedX+0
+    lda backup_BallSpeedX+1
+    sta BallSpeedX+1
+
+    lda backup_BallSpeedY+0
+    sta BallSpeedY+0
+    lda backup_BallSpeedY+1
+    sta BallSpeedY+1
+
+    lda backup_PaddleX+0
+    sta PaddleX+0
+    lda backup_PaddleX+1
+    sta PaddleX+1
+
+    lda backup_PaddleY+0
+    sta PaddleY+0
+    lda backup_PaddleY+1
+    sta PaddleY+1
+
     lda ParentBoard
     sta CurrentBoard
 
@@ -2699,7 +2737,7 @@ game_ReturnToMain:
     jsr game_decBrickCount
 :
 
-    jsr ResetBall
+    ;jsr ResetBall
     jsr DrawCurrentMap
 
     jsr game_DrawWalls
@@ -2834,13 +2872,6 @@ game_DrawRow:
     cpy game_BoardWidth
     bne @loop
     rts
-
-; Tile ID's of the start of each row of tiles in
-; the background animation.
-Index_BgAnimRows:
-    .repeat 8, i
-    .byte (i * 8) + $C0
-    .endrepeat
 
 ; Check two point's collision and return
 ; the proper brick it collided with.
@@ -3043,6 +3074,40 @@ game_ActionSpawn:
     and #$30
     bne @drawChildMap
 
+    ; backup the main board's state
+    lda BallDirection
+    sta backup_BallDirection
+
+    lda BallX+0
+    sta backup_BallX+0
+    lda BallX+1
+    sta backup_BallX+1
+
+    lda BallY+0
+    sta backup_BallY+0
+    lda BallY+1
+    sta backup_BallY+1
+
+    lda BallSpeedX+0
+    sta backup_BallSpeedX+0
+    lda BallSpeedX+1
+    sta backup_BallSpeedX+1
+
+    lda BallSpeedY+0
+    sta backup_BallSpeedY+0
+    lda BallSpeedY+1
+    sta backup_BallSpeedY+1
+
+    lda PaddleX+0
+    sta backup_PaddleX+0
+    lda PaddleX+1
+    sta backup_PaddleX+1
+
+    lda PaddleY+0
+    sta backup_PaddleY+0
+    lda PaddleY+1
+    sta backup_PaddleY+1
+
     ; Set child board as loaded
     lda (BrickAddress), y
     ora #$30
@@ -3185,54 +3250,6 @@ game_ActionSpawn:
     lda PpuControl
     sta $2000
 
-    ; Write board IDs to the background
-    ; First value is index in RAM
-    lda ChildId
-    jsr BinToHex
-
-    lda #$20
-    sta $2006
-    lda #$47
-    sta $2006
-
-    lda TmpY
-    ora #$50
-    sta $2007
-    lda TmpX
-    ora #$50
-    sta $2007
-
-    ; Draw an arrow surrounded my a space
-    lda #$01
-    sta $2007
-    lda #$1F
-    sta $2007
-    lda #$01
-    sta $2007
-
-    ; Second value is index in ROM
-    lda ChildId
-    asl a
-    tax
-
-    lda Child_Map_Addresses, x
-    sta AddressPointer0
-    lda Child_Map_Addresses+1, x
-    sta AddressPointer0+1
-
-    ldy #73
-    lda (AddressPointer0), y
-    jsr BinToHex
-
-    lda TmpY
-    ora #$50
-    sta $2007
-    lda TmpX
-    ora #$50
-    sta $2007
-
-    ;bit $2002
-
     jsr ResetBall
 
     .NMI_Set NMI_Game
@@ -3299,7 +3316,7 @@ game_decBrickCount:
     bne @rts
     ; Board is empty, draw parent board
     jsr game_ReturnToMain
-    lda #1
+    lda #0
     rts
 
 @decMain:
@@ -3483,6 +3500,17 @@ Powerup_Actions:
     .word pu_LoseLife_Action
     .word pu_NoClip_Action
 
+    ; Not implemented
+    ;.word pu_Gravity_Action ; Turn on gravity for X frames
+    ;.word pu_Respawn_Action ; Respawn random bricks
+    ;.word pu_LightsOut_Action ; "Turn off the lights" via the palette
+    ;.word pu_SafetyNet_Action ; A wall under the paddle that will bounce the
+                              ; ball once before disappearing
+
+    ; "Maybies"
+    ;.word pu_LargeBall_Action  ; This would require duplicate lookup tables
+                                ; for collision detection stuff
+
 DeathAnim_Tiles:
 ;    ; Frame 1
 ;    .byte $22, $32, $42
@@ -3496,5 +3524,9 @@ DeathAnim_Tiles:
     .byte $25
     .byte $26
 
-Death_Height = 200
-Death_Offset = 4    ; negative offset from ball center
+; Tile ID's of the start of each row of tiles in
+; the background animation.
+Index_BgAnimRows:
+    .repeat 8, i
+    .byte (i * 8) + $C0
+    .endrepeat

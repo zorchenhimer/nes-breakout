@@ -40,14 +40,14 @@ BallY:  .res 2
 PaddleX:  .res 2
 PaddleY:  .res 2
 
-; Only added/subtracted to/from the Paddle's X/Y while
-; movement buttons are held down.
-PaddleSpeed:    .res 2
-
 ; These are signed
 ; First byte is unsigned decimal, second is signed integer
 BallSpeedX: .res 2
 BallSpeedY: .res 2
+
+; Only added/subtracted to/from the Paddle's X/Y while
+; movement buttons are held down.
+PaddleSpeed:    .res 2
 
 BrickPpuAddress:    .res 2
 BrickAddress:       .res 2
@@ -152,5 +152,15 @@ GAME_MAINRAM_SIZE = * - GAME_RAM_START
 
 LivesCount: .res 1
 MainBrickCount: .res 2
+
+backup_BallDirection: .res 1
+backup_BallX: .res 2
+backup_BallY: .res 2
+
+backup_PaddleX:  .res 2
+backup_PaddleY:  .res 2
+
+backup_BallSpeedX: .res 2
+backup_BallSpeedY: .res 2
 
 .popseg
