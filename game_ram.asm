@@ -94,10 +94,12 @@ game_ShakeCooldown: .res 1
 game_FlameCooldown: .res 1
 game_FlameFrame: .res 1
 
-powerup_FrameAction_Pointer: .res 2
-powerup_FrameAction_Value: .res 2
-
-powerup_NoClip_Active: .res 1
+; Flags indicating active items
+PU_GRAVITY = $80
+PU_NOCLIP = $40
+PU_LIGHTS = $20
+powerup_ActiveItems: .res 1
+powerup_NoClip_Timer: .res 2
 
 ; Length of ZP ram for the game
 GAME_ZPRAM_SIZE = * - GAME_ZPRAM_START
@@ -146,6 +148,7 @@ Gravity_MainMap: .res 1
 
 PowerupCount: .res 1
 PowerupList: .res (8 * 3) ; Three byte elements
+pu_Gravity: .res 2
 
 GAME_MAINRAM_SIZE = * - GAME_RAM_START
 ;.out .sprintf("GAME_MAINRAM: %d (size: %d)", GAME_MAINRAM, .addrsize(GAME_MAINRAM))

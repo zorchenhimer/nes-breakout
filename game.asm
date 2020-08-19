@@ -4,6 +4,9 @@
 
 .importzp child_NUMBER_OF_MAPS
 
+; Word value.  Frames active.
+PU_GRAVITY_DURATION = 600
+
 Death_Height = 200
 Death_Offset = 4    ; negative offset from ball center
 
@@ -365,9 +368,11 @@ Frame_Game:
     sta Sprites+(4*6)+1
 
     ; TODO: Make this a proper sprite / UI element
-    lda powerup_NoClip_Active
-    and #$80
+    bit powerup_ActiveItems
+    bvc :+
+    lda #$1F
     sta Sprites+(4*6)+1
+:
 
     lda #BUTTON_SELECT
     jsr ButtonPressedP1
@@ -1752,50 +1757,99 @@ pu_LoseLife_Action:
     rts
 
 pu_NoClip_Action:
-    lda #<pu_NoClip_FrameAction
-    sta powerup_FrameAction_Pointer+0
-    lda #>pu_NoClip_FrameAction
-    sta powerup_FrameAction_Pointer+1
+    lda #PU_NOCLIP
+    ora powerup_ActiveItems
+    sta powerup_ActiveItems
 
     lda #0
-    sta powerup_FrameAction_Value+0
+    sta powerup_NoClip_Timer+0
     lda #1
-    sta powerup_FrameAction_Value+1
+    sta powerup_NoClip_Timer+1
 
-    lda #$FF
-    sta powerup_NoClip_Active
+    ;lda #$FF
     rts
 
 pu_NoClip_FrameAction:
-    lda powerup_FrameAction_Value+1
+    lda powerup_NoClip_Timer+1
     bne @hasValue
-    lda powerup_FrameAction_Value+0
+    lda powerup_NoClip_Timer+0
     bne @hasValue
 
     ; reset powerup
     lda #0
-    sta powerup_FrameAction_Pointer+0
-    sta powerup_FrameAction_Pointer+1
-    sta powerup_NoClip_Active
+    lda powerup_ActiveItems
+    eor #PU_NOCLIP
+    sta powerup_ActiveItems
     rts
 
 @hasValue:
-    lda powerup_FrameAction_Value+0
+    lda powerup_NoClip_Timer+0
     sec
     sbc #1
-    sta powerup_FrameAction_Value+0
+    sta powerup_NoClip_Timer+0
 
-    lda powerup_FrameAction_Value+1
+    lda powerup_NoClip_Timer+1
     sbc #0
-    sta powerup_FrameAction_Value+1
+    sta powerup_NoClip_Timer+1
+    rts
+
+pu_Gravity_Action:
+    lda #<PU_GRAVITY_DURATION
+    sta pu_Gravity+0
+    lda #>PU_GRAVITY_DURATION
+    sta pu_Gravity+1
+
+    lda powerup_ActiveItems
+    ora #PU_GRAVITY
+    sta powerup_ActiveItems
+
+    lda #GRAVITY_VALUE
+    sta game_currentGravity
+    rts
+
+pu_Gravity_FrameAction:
+    lda pu_Gravity+0
+    bne @on
+    lda pu_Gravity+1
+    bne @on
+
+    bit powerup_ActiveItems
+    bmi @off  ; powerup active, needs to be turned off
+    rts
+@off:
+    lda powerup_ActiveItems
+    eor #PU_GRAVITY
+    sta powerup_ActiveItems
+    lda #0
+    sta game_currentGravity
+    rts
+
+@on:
+    lda pu_Gravity+0
+    sec
+    sbc #1
+    sta pu_Gravity+0
+
+    lda pu_Gravity+1
+    sbc #0
+    sta pu_Gravity+1
     rts
 
 powerup_DoFrameAction:
-    lda powerup_FrameAction_Pointer+1
-    bne :+
+    lda #$FF
+    bit powerup_ActiveItems
+    bne :+  ; Zero == no active items
     rts
 :
-    jmp (powerup_FrameAction_Pointer)
+    bvc :+
+    jsr pu_NoClip_FrameAction
+:
+
+    bit powerup_ActiveItems
+    bpl :+
+    jsr pu_Gravity_FrameAction
+:
+    rts
 
 CheckPaddleCollide:
     bit BallDirection
@@ -2395,8 +2449,8 @@ DoVerticalBrickCollide:
     lda BrickColIndex_Vert
     sta BrickCol
 
-    bit powerup_NoClip_Active
-    bpl @noNoClip
+    bit powerup_ActiveItems
+    bvc @noNoClip
     jmp game_RemoveBrick
 
 @noNoClip:
@@ -2455,8 +2509,8 @@ DoHorizontalBrickCollide:
     lda BrickColIndex_Horiz
     sta BrickCol
 
-    bit powerup_NoClip_Active
-    bpl @noNoClip
+    bit powerup_ActiveItems
+    bvc @noNoClip
     jmp game_RemoveBrick
 @noNoClip:
 
@@ -3511,13 +3565,17 @@ Powerup_TileAttr:
     .byte $12
     .byte $02
 
+    ; Gravity
+    .byte $10
+    .byte $02
+
 Powerup_Actions:
     .word pu_RefillLife_Action
     .word pu_LoseLife_Action
     .word pu_NoClip_Action
 
     ; Not implemented
-    ;.word pu_Gravity_Action ; Turn on gravity for X frames
+    .word pu_Gravity_Action ; Turn on gravity for X frames
     ;.word pu_Respawn_Action ; Respawn random bricks
     ;.word pu_LightsOut_Action ; "Turn off the lights" via the palette
     ;.word pu_SafetyNet_Action ; A wall under the paddle that will bounce the
