@@ -902,6 +902,16 @@ ResetBall:
     ;lda #Initial_Ball_Speed_WHOLE
     sta BallSpeedY+1
     sta BallSpeedX+1
+
+    ; Reset gravity powerup
+    lda Gravity_MainMap
+    bne :+
+    ; Turn off the gravity if you die
+    lda #0
+    sta game_currentGravity
+    sta pu_Gravity+0
+    sta pu_Gravity+1
+:
     rts
 
 ; Read the button inputs and update the paddle coords accordingly
@@ -1817,11 +1827,11 @@ pu_Gravity_FrameAction:
     bmi @off  ; powerup active, needs to be turned off
     rts
 @off:
+    ; turn off the bit.  gravity will turn off on next
+    ; paddle bounce.
     lda powerup_ActiveItems
     eor #PU_GRAVITY
     sta powerup_ActiveItems
-    lda #0
-    sta game_currentGravity
     rts
 
 @on:
@@ -1892,6 +1902,16 @@ CheckPaddleCollide:
     ;rts ; Ball is to the left of paddle
     jmp CheckPaddleHorizCollide
 :
+    lda Gravity_MainMap
+    bne :+
+    ; Turn off gravity if it was turned on by an item
+    ; and the timer ran out.
+    bit powerup_ActiveItems
+    bmi :+
+    lda #0
+    sta game_currentGravity
+:
+
     lda game_currentGravity
     beq :+
     inc BoostPool
