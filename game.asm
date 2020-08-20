@@ -1698,7 +1698,7 @@ powerup_CollideCheck:
 
     lda PaddleX+1
     sec
-    sbc #PADDLE_CENTER_WIDTH
+    sbc #PADDLE_CENTER_WIDTH+8
     cmp TmpX
     bcs @next   ; too far left
 
@@ -1709,7 +1709,7 @@ powerup_CollideCheck:
     sta TmpX
 
     lda PaddleX+1
-    adc #PADDLE_CENTER_WIDTH
+    adc #PADDLE_CENTER_WIDTH+8
     cmp TmpX
     bcc @next   ; too far right
 
