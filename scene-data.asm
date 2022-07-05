@@ -8,7 +8,18 @@
 ;   - set timer for scene changes
 ; this will all be encoded in some sort of binary format
 
-
+.enum Dialogue
+    BreakingNews_1
+    BreakingNews_2
+    BreakingNews_3
+    BreakingNews_4
+    BreakingNews_5
+    BreakingNews_6
+    CyberPiss_1
+    CyberPiss_2
+    CyberPiss_3
+    CyberPiss_4
+.endenum
 
 Scene_Index:
     .word Scene_Intro
@@ -134,7 +145,40 @@ Scene_Intro:
     .byte SceneCmd::TurnOnPPU
 
     .byte SceneCmd::WaitSeconds
-        .byte 10
+        .byte 3
+
+    .byte SceneCmd::DrawTextFromTable
+        .byte 0 | $80
+        .byte Dialogue::BreakingNews_1
+
+    .byte SceneCmd::DrawTextFromTable
+        .byte 1 | $80
+        .byte Dialogue::BreakingNews_2
+
+    .byte SceneCmd::WaitSeconds
+        .byte 3
+
+    .byte SceneCmd::DrawTextFromTable
+        .byte 0 | $80
+        .byte Dialogue::BreakingNews_3
+
+    .byte SceneCmd::DrawTextFromTable
+        .byte 1 | $80
+        .byte Dialogue::BreakingNews_4
+
+    .byte SceneCmd::WaitSeconds
+        .byte 3
+
+    .byte SceneCmd::DrawTextFromTable
+        .byte 0 | $80
+        .byte Dialogue::BreakingNews_5
+
+    .byte SceneCmd::DrawTextFromTable
+        .byte 1 | $80
+        .byte Dialogue::BreakingNews_6
+
+    .byte SceneCmd::WaitSeconds
+        .byte 3
 
     .byte SceneCmd::SetFramePointer
         .word Frame_ScreenTest
@@ -193,3 +237,30 @@ Scene_Intro:
         .byte 10
 
     .byte SceneCmd::GotoInit
+
+; TODO: figure out where text needs to actually wrap.
+DialogueIndex:
+    .word :+
+    .word :++
+    .word :+++
+    .word :++++
+    .word :+++++
+    .word :++++++
+    .word :+++++++
+    .word :++++++++
+    .word :+++++++++
+    .word :++++++++++
+
+; hard wrap limit               .
+:   .asciiz "Breaking news today!"
+:   .asciiz "MegaEvilCorp has"
+:   .asciiz "finally reached a"
+:   .asciiz "global market cap of"
+:   .asciiz "99%! Rejoice as our"
+:   .asciiz "new robot overlords-"
+
+;                               .
+:   .asciiz "It's time to cyber-"
+:   .asciiz "piss in "
+:   .asciiz "MegaEvilCorp's"
+:   .asciiz "cheerios.  You in?"

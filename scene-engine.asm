@@ -19,6 +19,8 @@ RunScene:
     sta sf_AnimPointers+1
     sta sf_AnimPointers+2
     sta sf_AnimPointers+3
+    sta sf_DialogueTable+0
+    sta sf_DialogueTable+1
 
     .NMI_Set NMI_Scene
 
@@ -60,6 +62,7 @@ scene_Functions:
     .word sf_SetSkippable-1
     .word sf_SetUnskippable-1
     .word sf_DrawText-1
+    .word sf_DrawTextFromTable-1
     .word sf_TurnOffPPU-1
     .word sf_TurnOnPPU-1
     .word sf_FillNametable-1
@@ -81,6 +84,7 @@ scene_Functions:
     .word sf_SetNametable3-1
     .word sf_SetExitRoutine-1
     .word sf_PrepareText-1
+    ;.word sf_SetDialogueTable-1
     .word sf_GotoInit-1
 
 fn_lastidx = ((* - scene_Functions) / 2) - 1
@@ -430,6 +434,39 @@ sf_DrawText:
     lda data_Mult16_B, x
     sta AddressPointer6+1
 
+    ; If we came from sf_DrawTextFromTable, modify
+    ; the reader state to read from the dialogue
+    ; table instead of the command stream.
+    lda sf_DialogueSwitch
+    beq :+
+
+    ; Backup pointer
+    lda AddressPointer3+0
+    pha
+    lda AddressPointer3+1
+    pha
+
+    ; Lookup pointer to text
+    lda (AddressPointer3), y
+    tax
+    lda DialogueIndex+0, x
+    sta AddressPointer4+0
+    lda DialogueIndex+1, x
+    sta AddressPointer4+1
+
+    ; Backup Y
+    iny
+    tya
+    pha
+    ldy #0
+
+    ; Grab pointer to text
+    lda AddressPointer4+0
+    sta AddressPointer3+0
+    lda AddressPointer4+1
+    sta AddressPointer3+1
+:
+
     ldx #$FF
 @loop:
     iny
@@ -437,6 +474,25 @@ sf_DrawText:
     lda (AddressPointer3), y
     sta TextBuffer, x
     bne @loop
+
+    ; Restore data reader state after loading the text from a table.
+    lda sf_DialogueSwitch
+    beq :+
+
+    ; Restore y
+    pla
+    tay
+
+    ; Restore pointer to main data
+    pla
+    sta AddressPointer3+1
+    pla
+    sta AddressPointer3+0
+
+    ; Clear switch
+    lda #0
+    sta sf_DialogueSwitch
+:
 
     tya
     pha
@@ -461,6 +517,14 @@ sf_DrawText:
     tay
     iny
     rts
+
+sf_DrawTextFromTable:
+    ; Just set a flag and reuse sf_DrawText.  The
+    ; only difference between these two functions
+    ; is where the text data is read from.
+    lda #$FF
+    sta sf_DialogueSwitch
+    jmp sf_DrawText
 
 sf_PrepareText:
     ; Get the nametable address
@@ -500,6 +564,15 @@ sf_PrepareText:
     pla
     tay
 
+    rts
+
+sf_SetDialogueTable:
+    lda (AddressPointer3), y
+    sta sf_DialogueTable+0
+    iny
+    lda (AddressPointer3), y
+    sta sf_DialogueTable+1
+    iny
     rts
 
 sf_GotoInit:

@@ -121,6 +121,10 @@ CHUNK_DONE = 0 ; no more chunks
     ; Arguments: [start PPU address] [text] $00
     DrawText
 
+    ; Draw null terminated text from the table defined with SetDialogueTable
+    ; Arguments: [start PPU address] [text] $00
+    DrawTextFromTable
+
     ; Turn off the PPU and enable commands to draw
     ; to the screen outside of NMI
     TurnOffPPU
@@ -171,7 +175,17 @@ CHUNK_DONE = 0 ; no more chunks
     ; Set the Init routine to jump to with GotoInit
     SetExitRoutine
 
+    ; Set an anchor on screen to start drawing text.
+    ; This defines the starting nametable address as
+    ; well as a set of 16 tiles to use for the text.
+    ; Arguments: [NT address] [Anchor ID] [Start Tile ID]
     PrepareText
+
+    ; Sets the table used with DrawTextFromTable.
+    ; Argument: [address of table index]
+    ; FIXME: is this really needed?  Currently hardcoded to
+    ;        the table at DialogueIndex
+    ;SetDialogueTable
 
     ; End a scene execution and jump to the given
     ; Init function.  Indexed with values from the
@@ -203,6 +217,8 @@ sf_AnimBank:  .res 1
 sf_Nametable: .res 1
 sf_ExitRoutine: .res 1
 sf_TextStartTiles: .res 2 ; Tile IDs where the two text areas start
+sf_DialogueTable: .res 2
+sf_DialogueSwitch: .res 1 ; used in sf_DrawText and sf_DrawTextFromTable
 
 Sleeping: .res 1
 
