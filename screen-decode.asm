@@ -280,6 +280,7 @@ WriteTvAttr:
     sta $2007
     sta $2007
     rts
+
 WriteNewsAttr:
     ; 23CA
     lda #$23

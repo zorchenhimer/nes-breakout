@@ -63,14 +63,15 @@ scene_Functions:
     .word sf_SetUnskippable-1
     .word sf_DrawText-1
     .word sf_DrawTextFromTable-1
+    .word sf_ClearText-1
     .word sf_TurnOffPPU-1
     .word sf_TurnOnPPU-1
     .word sf_FillNametable-1
     .word sf_LoadChr-1
     .word sf_PadSprites-1
     .word sf_SetPalette-1
-    .word WriteNewsAttr-1
-    .word WriteStaticAttributes-1
+    ;.word WriteNewsAttr-1
+    ;.word WriteStaticAttributes-1
     .word ClearAttrTable0-1
     .word ClearAttrTable1-1
     .word ClearAttrTable2-1
@@ -243,7 +244,10 @@ sf_SetUnskippable:
     rts
 
 sf_TurnOffPPU:
-    .Disable_Drawing
+    ;.Disable_Drawing
+    lda #0
+    sta sf_PpuOn
+    jsr WaitForNMI
     rts
 
 sf_TurnOnPPU:
@@ -409,6 +413,48 @@ sf_SetExitRoutine:
     sta sf_ExitRoutine
     rts
 
+sf_ClearText:
+    ; Get the CHR start tile ID
+    lda (AddressPointer3), y
+    iny
+    tax
+
+    ; TileID -> CHR Address
+    lda data_Mult16_A, x
+    sta AddressPointer0+0
+    lda data_Mult16_B, x
+    sta AddressPointer0+1
+
+    ; Clear all the CHR tiles in PPU RAM
+    ;jsr WriteBufferUnrolled
+    ldx #$FF
+    lda #$00
+    jsr ClearTileRow
+
+    ; Do it again, lmao
+
+    ; Get the CHR start tile ID
+    lda (AddressPointer3), y
+    iny
+    tax
+
+    ; TileID -> CHR Address
+    lda data_Mult16_A, x
+    sta AddressPointer0+0
+    lda data_Mult16_B, x
+    sta AddressPointer0+1
+
+    ; Clear all the CHR tiles in PPU RAM
+    ;jsr WriteBufferUnrolled
+    ldx #$FF
+    lda #$00
+    jsr ClearTileRow
+
+    jsr TextClearStringBuffer
+    jsr TextClearBuffer
+
+    rts
+
 sf_DrawText:
     ;bit $2002
     lda #$00
@@ -440,25 +486,26 @@ sf_DrawText:
     lda sf_DialogueSwitch
     beq :+
 
-    ; Backup pointer
-    lda AddressPointer3+0
-    pha
-    lda AddressPointer3+1
-    pha
-
     ; Lookup pointer to text
+    iny
     lda (AddressPointer3), y
+    asl a
     tax
     lda DialogueIndex+0, x
     sta AddressPointer4+0
     lda DialogueIndex+1, x
     sta AddressPointer4+1
 
+    ; Backup pointer
+    lda AddressPointer3+0
+    pha
+    lda AddressPointer3+1
+    pha
+
     ; Backup Y
-    iny
     tya
     pha
-    ldy #0
+    ldy #$FF
 
     ; Grab pointer to text
     lda AddressPointer4+0
@@ -501,16 +548,33 @@ sf_DrawText:
     ;jsr TextPrepare_v2
     jsr TextPrepare_v3
 
+    ;lda #16 ; number of chars
+    ldx #0
+    ;ldx #$FF
+
+    lda sf_PpuOn
+    beq @fulldraw
+    lda #16 ; CHR count
+
+    jsr PreparePartialTextWrite
+
+@partial:
+    jsr WaitForNMI
+    jsr WritePartialTextBuffer
+    dec ChrCount
+    bne @partial
+    jmp @drawdone
+
+@fulldraw:
     lda AddressPointer6+0
     sta AddressPointer0+0
     lda AddressPointer6+1
     sta AddressPointer0+1
 
-    lda #16 ; number of chars
-    ldx #0
-    ;ldx #$FF
+    lda #16 ; CHR count
     jsr WriteTextBuffer
 
+@drawdone:
     jsr TextClearBuffer
 
     pla
@@ -582,7 +646,7 @@ sf_GotoInit:
 NMI_Scene:
     pha
     lda sf_PpuOn
-    beq :+
+    beq @ppuoff
     ;lda #0
     ;sta sf_PpuOn
 
@@ -602,7 +666,13 @@ NMI_Scene:
     lda #0
     sta $2005
     sta $2005
-:
+    dec Sleeping
+    pla
+    rti
+
+@ppuoff:
+    lda #0
+    sta $2001
     dec Sleeping
     pla
     rti

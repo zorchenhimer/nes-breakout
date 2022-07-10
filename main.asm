@@ -125,6 +125,10 @@ CHUNK_DONE = 0 ; no more chunks
     ; Arguments: [start PPU address] [text] $00
     DrawTextFromTable
 
+    ; Clears out two full rows of tiles.  Takes two
+    ; arguments, one for each tile ID to start from.
+    ClearText
+
     ; Turn off the PPU and enable commands to draw
     ; to the screen outside of NMI
     TurnOffPPU
@@ -149,8 +153,8 @@ CHUNK_DONE = 0 ; no more chunks
     SetPalette
 
     ; TODO: rewrite these functions
-    TvAttr
-    StaticAttr
+    ;TvAttr
+    ;StaticAttr
 
     ; Clear an attribute table to $00
     ClearAttr0
@@ -219,6 +223,7 @@ sf_ExitRoutine: .res 1
 sf_TextStartTiles: .res 2 ; Tile IDs where the two text areas start
 sf_DialogueTable: .res 2
 sf_DialogueSwitch: .res 1 ; used in sf_DrawText and sf_DrawTextFromTable
+sf_LiveSwitch: .res 1 ; Only draw text in NMI
 
 Sleeping: .res 1
 

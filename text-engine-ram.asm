@@ -22,6 +22,8 @@ WorkingRuneB: .res 8
 
 .segment "MAINRAM"
 
+BgTextPal: .res 1
+
 ;ChrAddr:    .res 2
 ChrCount:   .res 1  ; Tile count, not byte count
 

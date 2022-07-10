@@ -8,6 +8,28 @@
 
     SPACE_WIDTH = 5
 
+; Clear a set of 16 tiles, starting at the address in AddressPointer0
+; X holds values for first bit plane
+; A holds values for second bit plane
+ClearTileRow:
+    pha
+    bit $2002
+    lda AddressPointer0+1
+    sta $2006
+    lda AddressPointer0+0
+    sta $2006
+    pla
+
+    .repeat 16
+        .repeat 8
+        stx $2007
+        .endrepeat
+        .repeat 8
+        sta $2007
+        .endrepeat
+    .endrepeat
+    rts
+
 WriteBufferUnrolled:
     bit $2002
     lda AddressPointer0+1
@@ -15,7 +37,7 @@ WriteBufferUnrolled:
     lda AddressPointer0+0
     sta $2006
 
-    .repeat 21, B
+    .repeat 16, B
         .repeat 8, C
         lda ChrBuffer + ((B*8) + C)
         sta $2007
@@ -248,6 +270,58 @@ WriteTextBuffer_LevelSelect:
     lda #$00
     sta ChrBufferReady
     sta TextEor
+    rts
+
+; A has count
+; X has the BG palette value thing in it
+PreparePartialTextWrite:
+    sta ChrCount
+    txa
+    sta BgTextPal
+    lda #0
+    sta TextIdx
+    lda #$FF
+    sta TextEor
+    rts
+
+; Similar to WriteTextBuffer, but only
+; writes a few tiles. (one for now)
+WritePartialTextBuffer:
+    bit $2002
+    lda AddressPointer6+1
+    sta $2006
+    lda AddressPointer6+0
+    sta $2006
+
+    ldx TextIdx
+
+    .repeat 8,i
+    lda ChrBuffer+i, x
+    eor TextEor
+    sta $2007
+    .endrepeat
+
+    txa
+    clc
+    adc #8
+    sta TextIdx
+
+    ; Second plane
+    lda BgTextPal
+    .repeat 8
+    sta $2007
+    .endrepeat
+
+    clc
+    lda #16
+    adc AddressPointer6+0
+    sta AddressPointer6+0
+    bcc :+
+    inc AddressPointer6+1
+:
+    lda #0
+    sta $2005
+    sta $2005
     rts
 
 ; A has count

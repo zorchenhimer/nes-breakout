@@ -199,6 +199,12 @@ Scene_Intro:
         .byte 2
 
     .byte SceneCmd::TurnOffPPU
+
+    ; Clear out the text from before
+    .byte SceneCmd::ClearText
+        .byte $90 ; start tile ID
+        .byte $A0 ; start tile ID
+
     .byte SceneCmd::SetNametable0
 
     .byte SceneCmd::DrawFullScene
@@ -233,8 +239,37 @@ Scene_Intro:
     .byte SceneCmd::SetFramePointer
         .word $0000
 
+    .byte SceneCmd::PrepareText
+        .word $22A8 ; NT address
+        .byte 0     ; ID
+        .byte $90 ; start tile ID
+
+    .byte SceneCmd::PrepareText
+        .word $22C8 ; NT address
+        .byte 1     ; ID
+        .byte $A0 ; start tile ID
+
+    .byte SceneCmd::DrawTextFromTable
+        .byte 0 | $80
+        .byte Dialogue::CyberPiss_1
+
+    .byte SceneCmd::DrawTextFromTable
+        .byte 1 | $80
+        .byte Dialogue::CyberPiss_2
+
     .byte SceneCmd::WaitSeconds
-        .byte 10
+        .byte 3
+
+    .byte SceneCmd::DrawTextFromTable
+        .byte 0 | $80
+        .byte Dialogue::CyberPiss_3
+
+    .byte SceneCmd::DrawTextFromTable
+        .byte 1 | $80
+        .byte Dialogue::CyberPiss_4
+
+    .byte SceneCmd::WaitSeconds
+        .byte 5
 
     .byte SceneCmd::GotoInit
 
