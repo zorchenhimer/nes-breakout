@@ -368,6 +368,7 @@ Frame_Game:
     sta Sprites+(4*6)+1
 
     ; TODO: Make this a proper sprite / UI element
+    ; wtf is this doing? lmao
     bit powerup_ActiveItems
     bvc :+
     lda #$1F
@@ -3147,18 +3148,40 @@ game_ActionSpawn:
     ; Save the brick addresses for when we
     ; leave the child board.
     ; TODO: make this a pointer to a pointer.
-    ;       The idea being it can be loacated after child map data
-    ;       for nested maps.
+    ;       The idea being it can be located after child
+    ;       map data for nested maps.
+    ; NOTE: child board id 0x10 (16) is a board with
+    ;       more spawn blocks.  This breaks things.
     lda BrickAddress
     sta EnteredRam
     lda BrickAddress+1
     sta EnteredRam+1
+
+    ; Remove all powerups on screen
+    lda #0
+    sta PowerupCount
+
+    ; clear powerups from sprite RAM
+    ldx #28
+    lda #$FF
+:
+    sta Sprites, X
+    inx
+    sta Sprites, X
+    inx
+    sta Sprites, X
+    inx
+    sta Sprites, X
+    inx
+    cpx #96
+    bne :-
 
     ldy #1
     lda (BrickAddress), y
     and #$7F
     sta ChildId    ; Child board index.  Either in RAM or ROM.
 
+    ; Is the child board already loaded into memory?
     ldy #0
     lda (BrickAddress), y
     and #$30
