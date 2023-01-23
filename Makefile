@@ -168,10 +168,9 @@ tv-lower.chr: images/tv.bmp
 #level-select.chr: images/level-select.bmp images/level-select-bottom_sprites.bmp
 #	$(CHRUTIL) -o $@ $^ --tile-count 17
 
-level-select-ui.chr: images/level-select-just-bottom.bmp images/level-select-bottom_sprites.bmp
+level-select-ui.chr: images/level-select-just-bottom.bmp
 	$(CHRUTIL) -o $@ \
-		images/level-select-just-bottom.bmp --remove-duplicates --nt-ids lsbg_ui.i \
-		images/level-select-bottom_sprites.bmp --tile-count 17
+		images/level-select-just-bottom.bmp --remove-duplicates --nt-ids lsbg_ui.i
 
 font.i: images/font.bmp
 	$(FONTUTIL) -o $@ -i $< -w font.widths.i -r font.map.i
