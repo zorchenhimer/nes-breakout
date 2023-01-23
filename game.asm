@@ -2954,16 +2954,11 @@ game_DrawRow:
     rts
 
 @noTile:
-
-    lda game_PpuRow
-    and #$07
-    tax
-
-    lda game_PpuCol
-    and #$07
-    clc
-    adc Index_BgAnimRows, x
-    sta $2007
+    ; The animated background is always drawn
+    ; before calling the redraw routine, so
+    ; don't bother re-redrawing it.  Just read
+    ; once to increment the PPU address.
+    lda $2007
 
     inc game_PpuCol
     iny
