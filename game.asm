@@ -418,7 +418,6 @@ Frame_Game:
     jsr UpdatePaddleSprite
     jsr UpdateBoostSprite
 
-
     ;jsr waves_PrepChrWrite
     jsr waves_CacheRow
 
@@ -2711,6 +2710,14 @@ game_ReturnToMain:
     jsr WaitForNMI
 
     .Disable_Drawing
+
+    ; Remove any bricks scheduled to be
+    ; removed from the PPU
+    lda #0
+    sta BrickDestroyA+0
+    sta BrickDestroyA+1
+    sta BrickDestroyB+0
+    sta BrickDestroyB+1
 
     lda #0
     jsr FillNametable0
