@@ -166,4 +166,6 @@ backup_PaddleY:  .res 2
 backup_BallSpeedX: .res 2
 backup_BallSpeedY: .res 2
 
+game_debug: .res 1
+
 .popseg

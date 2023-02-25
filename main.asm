@@ -20,7 +20,10 @@ nes2end
     .charmap ' ', $FF   ; The only one that can't really be auto-generated
 
 ; Remove this line to disable debug code
-DEBUG = 1
+;DEBUG = 1
+.ifdef DEBUG
+    .out "DEBUG turned on"
+.endif
 .include "macros.asm"
 
 .ifdef ROW26

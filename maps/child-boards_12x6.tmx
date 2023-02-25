@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.3.1" orientation="orthogonal" renderorder="right-down" compressionlevel="0" width="12" height="6" tilewidth="8" tileheight="8" infinite="0" nextlayerid="18" nextobjectid="1">
+<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" compressionlevel="0" width="12" height="6" tilewidth="8" tileheight="8" infinite="0" nextlayerid="19" nextobjectid="1">
  <tileset firstgid="1" source="MetaTiles.tsx"/>
  <layer id="1" name="board-00" width="12" height="6" visible="0">
   <data encoding="csv">
@@ -11,7 +11,7 @@
 22,0,0,0,0,0,0,0,0,0,22,0
 </data>
  </layer>
- <layer id="2" name="board-01" width="12" height="6" visible="0">
+ <layer id="2" name="board-01" width="12" height="6">
   <data encoding="csv">
 22,0,0,22,0,0,0,22,0,0,22,0,
 22,0,0,22,0,0,0,22,0,0,22,0,
@@ -31,7 +31,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer id="4" name="board-03" width="12" height="6">
+ <layer id="4" name="board-03" width="12" height="6" visible="0">
   <data encoding="csv">
 22,0,0,0,22,0,0,0,22,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,
@@ -172,6 +172,16 @@
 0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,
 14,0,14,0,14,0,14,0,14,0,14,0
+</data>
+ </layer>
+ <layer id="18" name="board-17" width="12" height="6" visible="0">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,22,0,0,0,0,0,0
 </data>
  </layer>
 </map>

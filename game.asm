@@ -89,7 +89,7 @@ Paddle_Sprite_Tile = Paddle_Sprite_Start + 1
 Paddle_Sprite_Attr = Paddle_Sprite_Start + 2
 
 Pal_Game:
-    .byte $0F, $01, $11, $21
+    .byte $0F, $01, $11, $38
 
 Pal_GameSprites:
     .byte $0F, $00, $10, $20
@@ -369,11 +369,22 @@ Frame_Game:
     sta Sprites+(4*6)+1
 :
 
+.ifdef DEBUG
     lda #BUTTON_SELECT
+    jsr ButtonPressedP1
+    beq :++
+    lda #BUTTON_START
     jsr ButtonPressedP1
     beq :+
     jsr ResetBall
+    jmp :++
 :
+    ; toggle debug mode
+    lda game_debug
+    eor #$FF
+    sta game_debug
+:
+.endif
 
     lda BallDirection
     and #BALL_STATE_INIT
@@ -386,19 +397,62 @@ Frame_Game:
 :
 @Init:
 
+.ifdef DEBUG
+    lda game_debug
+    beq :+
+    jmp @debug_input
+:
+.endif
+
     jsr UpdateBallCoords
     jsr UpdatePaddleCoords
+
+@afterCoordUpdate:
 
     jsr CheckWallCollide
     beq :+
     jmp Frame_Game
 :
 
-    jsr CheckBrickCollide
+.ifdef DEBUG
+    ; Disable collision detection in debug mode
+    ; unless B is held
+    lda game_debug
     beq :+
-    jmp Frame_Game
+    lda #BUTTON_B
+    and controller1
+    beq :++
 :
+.endif
 
+    jsr CheckBrickCollide
+    ; Check for remaining bricks
+    bit CurrentBoard
+    bpl @checkMain
+
+    lda ChildBrickCount
+    bne @doneCountCheck
+    ; Child board finished
+    ; - Redraw the main board
+    ; - Set the NMI pointer
+    ; - Wait for NMI
+    ; - NMI will turn on drawing
+    ; - Wait for NMI again to draw a full screen
+    ; - Go to frame loop top
+    jsr game_ReturnToMain
+    .NMI_Set NMI_Game
+    jsr WaitForNMI  ; wait for non-drawn frame to finish
+    jsr WaitForNMI  ; draw a frame
+    jmp Frame_Game
+
+@checkMain:
+    lda MainBrickCount+0
+    bne @doneCountCheck
+    lda MainBrickCount+1
+    bne @doneCountCheck
+    jmp EndLevel
+
+@doneCountCheck:
     bit CurrentBoard
     bmi :+
     ; Skip these on child boards
@@ -412,6 +466,9 @@ Frame_Game:
     jsr UpdatePaddleSprite
     jsr UpdateBoostSprite
 
+.ifdef DEBUG
+    jsr game_DebugData
+.endif
 
     lda #BUTTON_START
     jsr ButtonPressedP1
@@ -424,8 +481,82 @@ Frame_Game:
     nop
 :
 
+.ifdef DEBUG
+    ; Set the ball direction sprite
+    lda #17
+    sta Sprites+252
+    lda #24
+    sta Sprites+255
+    lda #$1E
+    sta Sprites+253
+    lda BallDirection
+    sta Sprites+254
+.endif
+
     jsr WaitForNMI
     jmp Frame_Game
+
+.ifdef DEBUG
+@debug_input:
+
+    lda #BUTTON_A
+    and controller1
+    beq @dbgMove
+    ; change ball direction
+    lda #BUTTON_LEFT
+    and controller1
+    beq :+
+    lda BallDirection
+    and #BALL_DIR_UP
+    sta BallDirection
+    jmp :++
+:
+    lda #BUTTON_RIGHT
+    and controller1
+    beq :+
+    lda BallDirection
+    ora #BALL_DIR_RIGHT
+    sta BallDirection
+:
+    lda #BUTTON_UP
+    and controller1
+    beq :+
+    lda BallDirection
+    ora #BALL_DIR_UP
+    sta BallDirection
+:
+    lda #BUTTON_DOWN
+    and controller1
+    beq :+
+    lda BallDirection
+    and #BALL_DIR_RIGHT
+    sta BallDirection
+:
+    jmp @afterCoordUpdate
+
+@dbgMove:
+    lda #BUTTON_LEFT
+    and controller1
+    beq :+
+    dec BallX+1
+:
+    lda #BUTTON_RIGHT
+    and controller1
+    beq :+
+    inc BallX+1
+:
+    lda #BUTTON_UP
+    and controller1
+    beq :+
+    dec BallY+1
+:
+    lda #BUTTON_DOWN
+    and controller1
+    beq :+
+    inc BallY+1
+:
+    jmp @afterCoordUpdate
+.endif ; ifdef DEBUG
 
 ; starting positions for sprites
 DEBUG_DATA_Y = 20
@@ -1854,9 +1985,14 @@ CheckPaddleCollide:
     jsr UpdateBallAngle
     jmp BounceVert
 
+; Update the angle of the ball when bouncing on
+; the paddle.  The further from center the lower
+; the angle of attack.  Dead center will bounce
+; the ball directly upwards.
 UpdateBallAngle:
-    ; get the horizontal distance between the center points of the
-    ; ball and paddle as a positive number.
+    ; get the horizontal distance between the
+    ; center points of the ball and paddle as a
+    ; positive number.
     lda #0
     sta IdxA
 
@@ -2771,10 +2907,10 @@ game_ReturnToMain:
     jsr DrawCurrentMap
 
     jsr game_DrawWalls
-
     rts
 
-; Read the current main map in RAM and draw it to the screen
+; Read the current main map in RAM and draw it to
+; the screen
 DrawCurrentMap:
     lda #$90
     sta $2000
@@ -3358,12 +3494,7 @@ game_RemoveBrick:
 game_decBrickCount:
     bit CurrentBoard
     bpl @decMain
-    ; Check if this brick is the last one.
     dec ChildBrickCount
-    bne @rts
-    ; Board is empty, draw parent board
-    jsr game_ReturnToMain
-    lda #0
     rts
 
 @decMain:
@@ -3435,15 +3566,15 @@ Clear_GameRam:
     rts
 
 EndLevel:
+    jsr WaitForNMI
+
     lda CurrentBoard
     cmp #15 ; Boss level
     bne :+
-    jsr WaitForNMI
     lda #InitIDs::GameWon
     jmp JumpToInit
 :
     sta menu_PrevLevel
-    jsr WaitForNMI
     lda #InitIDs::LevelSelect
     jmp JumpToInit
 
