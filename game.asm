@@ -134,19 +134,13 @@ Init_Game:
     lda #ChrData::Game2
     jsr LoadChrData
 
-    lda #$00
-    jsr Waves_LoadFrame
-    jsr Wave_DrawBackground
-
-    lda #8
-    sta z:waves_AnimWait
-    lda #0
-    sta z:waves_AnimOdd
-
     jsr ClearSprites
 
     jsr Clear_GameRam
     jsr Clear_ExtendedRam
+
+    jsr DrawBackground_Main
+    ;jsr DrawBackground_Child
 
     ; Tile
     lda #SPRITE_ID_BALL
@@ -418,10 +412,6 @@ Frame_Game:
     jsr UpdatePaddleSprite
     jsr UpdateBoostSprite
 
-    ;jsr waves_PrepChrWrite
-    jsr waves_CacheRow
-
-    ;jsr game_DebugData
 
     lda #BUTTON_START
     jsr ButtonPressedP1
@@ -572,33 +562,8 @@ NMI_Game:
     jsr WriteSprites
     jsr WritePalettes
 
-    dec z:waves_AnimWait
-    bne @noAnim
-    lda #8
-    sta z:waves_AnimWait
-
-    lda z:waves_AnimOdd
-    beq :+
-    lda #0
-    sta z:waves_AnimOdd
     lda #%10001000
     sta PpuControl
-    jmp @animDone
-:
-    lda #1
-    sta z:waves_AnimOdd
-    lda #%10011000
-    sta PpuControl
-
-@animDone:
-    inc z:waves_currentFrame
-    lda z:waves_currentFrame
-    cmp #15
-    bcc :+
-    lda #0
-    sta z:waves_currentFrame
-:
-@noAnim:
 
     ; Destroy any bricks that need destroying
     lda BrickDestroyA+1  ;check high byte for value
@@ -608,26 +573,11 @@ NMI_Game:
     lda BrickDestroyA
     sta $2006
 
-    lda game_PpuRow
-    and #$07
-    tax
-
-    ; first tile
-    lda game_PpuCol
-    and #$07
-    clc
-    adc Index_BgAnimRows, x
+    lda #0
     sta $2007
 
     bit BrickDestroyHalf
     bmi :+
-
-    ; second tile
-    lda game_PpuCol
-    adc #1
-    and #$07
-    clc
-    adc Index_BgAnimRows, x
     sta $2007
 :
 
@@ -638,26 +588,11 @@ NMI_Game:
     lda BrickDestroyB
     sta $2006
 
-    lda game_PpuRow
-    and #$07
-    tax
-
-    ; first tile
-    lda game_PpuCol
-    and #$07
-    clc
-    adc Index_BgAnimRows, x
+    lda #0
     sta $2007
 
     bit BrickDestroyHalf
     bvs :+
-
-    ; second tile
-    lda game_PpuCol
-    adc #1
-    and #$07
-    clc
-    adc Index_BgAnimRows, x
     sta $2007
 
 :
@@ -667,10 +602,6 @@ NMI_Game:
     sta BrickDestroyB
     sta BrickDestroyB+1
     sta BrickDestroyHalf
-
-    lda z:waves_AnimOdd
-    ;jsr waves_WriteRow
-    jsr waves_WriteCachedRow
 
     bit $2002
     lda game_ScrollX
@@ -920,7 +851,6 @@ UpdatePaddleCoords:
     sta PaddleSpeed
     lda #Initial_Paddle_Speed_WHOLE
     sta PaddleSpeed+1
-
 
     lda BallDirection
     and #BALL_STATE_INIT
@@ -2723,16 +2653,18 @@ game_ReturnToMain:
     jsr FillNametable0
     jsr ClearAttrTable0
 
-    jsr Wave_DrawBackground
+    jsr DrawBackground_Main
 
     lda Gravity_MainMap
     sta game_currentGravity
 
+    ; Playfield bounds
     lda #BOARD_HEIGHT
     sta game_BoardHeight
     lda #BOARD_WIDTH
     sta game_BoardWidth
 
+    ; Playfield offset from 0,0
     lda #BOARD_OFFSET_Y
     sta game_BoardOffsetY
     lda #BOARD_OFFSET_X
@@ -3258,7 +3190,7 @@ game_ActionSpawn:
     jsr FillNametable0
     jsr ClearAttrTable0
 
-    jsr Wave_DrawBackground
+    jsr DrawBackground_Child
 
     lda ChildId
     asl a
@@ -3514,6 +3446,18 @@ EndLevel:
     jsr WaitForNMI
     lda #InitIDs::LevelSelect
     jmp JumpToInit
+
+DrawBackground_Main:
+    lda #0
+    jsr FillNametable0
+    jmp ClearAttrTable0
+    ;rts
+
+DrawBackground_Child:
+    lda #0
+    jsr FillNametable0
+    jmp ClearAttrTable0
+    ;rts
 
 NoTileID = $00
 HalfBrickID = $0E
