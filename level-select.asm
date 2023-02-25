@@ -1,7 +1,7 @@
 ; asmsyntax=ca65
 
 ls_PalStack:
-    .byte $0F, $0F, $20, $20
+    .byte $0F, $0F, $09, $20
 
 ls_PalCables:
     .byte $0F, $12, $1A, $16
@@ -645,6 +645,7 @@ Frame_LevelSelect_ViewMap:
 
     jsr ls_DrawCursorXY
     jsr ls_DoAnimations
+    jsr ls_AnimateSpinner
 
     jsr WaitForSpriteZero
     lda #0
@@ -667,6 +668,7 @@ Frame_LevelSelect_ViewMap:
 
     jsr ls_DrawCursorXY
     jsr ls_DoAnimations
+    jsr ls_AnimateSpinner
 
     jsr WaitForSpriteZero
     lda #0
